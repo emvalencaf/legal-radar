@@ -1,7 +1,11 @@
 [project]
-name = "project-name"
+name = "legal-radar"
 version = "0.1.0"
+description = "A RAG-based project that ingests a given legal topic (pointing to a law) and finds jurisprudence precedents, doctrine, and law amendments via the LexML Brasil portal."
 requires-python = ">=3.11"
+
+[dependency-groups]
+dev = ["pytest"]
 
 [tool.ruff]
 line-length = 100
@@ -11,3 +15,6 @@ extend-exclude = [".agents", ".claude"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

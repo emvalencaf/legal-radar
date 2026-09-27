@@ -58,8 +58,7 @@ tag(subject/subsubject): short summary
 - `subject/subsubject` — the area touched, from broad to narrow, e.g.
   `skills/query`, `docs/contributing`. `subsubject` is optional:
   `feat(skills): ...` is valid.
-- `summary` — imperative mood, lowercase, no trailing period, ≲ 72 characters
-  for the whole title.
+- `summary` — imperative mood, lowercase, no trailing period.
 
 ### Body
 

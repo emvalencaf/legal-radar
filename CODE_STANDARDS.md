@@ -11,14 +11,16 @@ and test conventions when you start from this template.
   document variables in `.env.example`.
 - Every behavior change comes with a test, or a stated reason why not.
 
-## Stack *(stack)*
+## Stack
 
 - Language: Python ≥ 3.11, managed with `uv`.
 - Lint and format: `ruff` (config in `pyproject.toml`), enforced by the `pre-commit` hook.
 - Encoding: UTF-8, NFC-normalized, no BOM, no zero-width or bidi control characters
   (enforced by `scripts/check_unicode.py`).
-- Test command: _to be defined_
-- Directory layout: _to be defined_
+- Type checker: none. Rely on names and tests for intent.
+- Test command: `pytest`, run as `uv run pytest`. Tests live under `tests/`.
+- Directory layout: `src/` layout (`src/legal_radar/`).
+- Docstrings: Google style, where a docstring is warranted.
 
 ## Documentation
 

@@ -30,6 +30,8 @@ jobs:
         run: uvx ruff check .
       - name: Ruff format
         run: uvx ruff format --check .
+      - name: Tests
+        run: uv run pytest
       - name: Wiki bundle
         run: |
           if [ -d .wiki ]; then

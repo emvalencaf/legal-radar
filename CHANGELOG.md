@@ -7,14 +7,6 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
-### Changed
-
-- `README.md` restructured after
-  [Best-README-Template](https://github.com/othneildrew/Best-README-Template).
-- `setup-project-harness` now generates the project's own README from
-  `README.template.md`, which follows the same structure.
-- `CODE_STANDARDS.md` and `AGENTS.md`: documentation standard for READMEs.
-
 ## [0.1.0] - 2026-09-20
 
 First release of the project template.

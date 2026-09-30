@@ -32,6 +32,14 @@ _Avoid_: "The portal" alone without naming it, once multiple sources exist. Don'
 The actual document body a `lei`'s legal-document AST is parsed from. Sourced from the Planalto portal's HTML rendition (`planalto.gov.br/ccivil_03/leis/{law_id}.htm`), reached via the URL published on the `lei`'s resolved LexML URN page — not from LexML directly. See ADR-0001.
 _Avoid_: Assuming this comes from LexML's own XML schema.
 
+**Enriquecimento**:
+The ingestion step that turns bare structural `LegalChunk`s into `EnrichedLegalChunk`s carrying relations (`REFERENCES`, `REVOKES`, dispositivo→conceito) with evidence and `Confidence`. Hybrid: deterministic rules for explicit references and revocations, an LLM for ambiguous cases and concepts. Runs after parsing and before graph load. See ADR-0002.
+_Avoid_: Conflating with parsing — parsing (`PlanaltoHtmlParser`) is structural and rule-only; enrichment is semantic.
+
+**Confidence**:
+The reliability level of an extracted relation, derived from how it was extracted, never self-declared by the LLM: HIGH = a rule matched an explicit pattern in the text; MEDIUM = the LLM inferred it from context; LOW = unresolved target or stub. The origin (`rule` / `llm`) is stored on the edge too. See ADR-0002.
+_Avoid_: Treating an LLM's verbalized confidence as this value.
+
 **Knowledge graph**:
 The graph store holding `lei`, `jurisprudência`, and `doutrina` nodes and the relationships between them (e.g. a `jurisprudência` node citing a `lei` node's `artigo`). This is distinct from LangGraph — see below.
 _Avoid_: "The graph" when LangGraph is also in scope in the same sentence; be explicit about which graph is meant.

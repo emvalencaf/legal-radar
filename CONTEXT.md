@@ -21,12 +21,24 @@ Legal scholarship/commentary (academic writing, treatises) that analyzes a `lei`
 _Avoid_: Commentary, literature.
 
 **AST (legal document structure tree)**:
-In this project, "AST" means the parsed hierarchical structure of a legal document — título → capítulo → artigo → parágrafo → inciso → alínea — derived from LexML's XML schema. It is the intermediate representation between raw LexML documents and graph nodes, anchoring nodes at the right granularity (e.g. one node per artigo, not one node per document).
-_Avoid_: Using "AST" unqualified outside this context, since it collides with the programming-language sense (parsed source code). Always read as "legal document AST" in this project.
+In this project, "AST" means the parsed hierarchical structure of a legal document — título → capítulo → artigo → parágrafo → inciso → alínea. It is the intermediate representation between a `lei`'s full text and graph nodes, anchoring nodes at the right granularity (e.g. one node per artigo, not one node per document). Parsed from the `lei`'s Planalto HTML rendition (see `Lei full text`), not from a LexML XML document — see ADR-0001.
+_Avoid_: Using "AST" unqualified outside this context, since it collides with the programming-language sense (parsed source code). Always read as "legal document AST" in this project. Don't imply it's parsed from LexML's own XML schema — it isn't (ADR-0001).
 
 **LexML**:
-The Brazilian federal legislative/jurisprudential portal (lexml.gov.br) treated as this project's source of truth for `lei` and `jurisprudência`. Publishes documents in a structured XML schema that the legal-document AST is parsed from.
-_Avoid_: "The portal" alone without naming it, once multiple sources exist.
+The Brazilian federal legislative/jurisprudential portal (lexml.gov.br) treated as this project's identity and discovery layer for `lei` and `jurisprudência`: assunto search and URN resolution. Not the source of a `lei`'s full text — see `Lei full text` and ADR-0001.
+_Avoid_: "The portal" alone without naming it, once multiple sources exist. Don't treat it as the full-text source — that's Planalto (ADR-0001).
+
+**Lei full text**:
+The actual document body a `lei`'s legal-document AST is parsed from. Sourced from the Planalto portal's HTML rendition (`planalto.gov.br/ccivil_03/leis/{law_id}.htm`), reached via the URL published on the `lei`'s resolved LexML URN page — not from LexML directly. See ADR-0001.
+_Avoid_: Assuming this comes from LexML's own XML schema.
+
+**Enriquecimento**:
+The ingestion step that turns bare structural `LegalChunk`s into `EnrichedLegalChunk`s carrying relations (`REFERENCES`, `REVOKES`, dispositivo→conceito) with evidence and `Confidence`. Hybrid: deterministic rules for explicit references and revocations, an LLM for ambiguous cases and concepts. Runs after parsing and before graph load. See ADR-0002.
+_Avoid_: Conflating with parsing — parsing (`PlanaltoHtmlParser`) is structural and rule-only; enrichment is semantic.
+
+**Confidence**:
+The reliability level of an extracted relation, derived from how it was extracted, never self-declared by the LLM: HIGH = a rule matched an explicit pattern in the text; MEDIUM = the LLM inferred it from context; LOW = unresolved target or stub. The origin (`rule` / `llm`) is stored on the edge too. See ADR-0002.
+_Avoid_: Treating an LLM's verbalized confidence as this value.
 
 **Knowledge graph**:
 The graph store holding `lei`, `jurisprudência`, and `doutrina` nodes and the relationships between them (e.g. a `jurisprudência` node citing a `lei` node's `artigo`). This is distinct from LangGraph — see below.

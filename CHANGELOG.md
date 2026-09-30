@@ -7,6 +7,11 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Added
+
+- ADR-0002 and `CONTEXT.md` terms (`Enriquecimento`, `Confidence`): hybrid
+  rule + LLM relation extraction with provenance-derived confidence (issue #24).
+
 ## [0.1.0] - 2026-09-20
 
 First release of the project template.

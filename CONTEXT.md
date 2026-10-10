@@ -5,8 +5,12 @@ A graph-RAG system over Brazilian legal sources (LexML) that, given a legal subj
 ## Language
 
 **Assunto**:
-The subject/topic a user searches for — the entry point into the system, e.g. "prescrição intercorrente." Resolves to one or more `lei` as the anchor for graph traversal.
+The subject/topic a user searches for — the entry point into the system, e.g. "prescrição intercorrente." Resolves to one or more `lei` as the anchor for graph traversal. See `Resolução de assunto` for how that resolution happens.
 _Avoid_: Topic, query, search term (in English contexts, prefer keeping "assunto" since it's the domain's own entry-point concept).
+
+**Resolução de assunto**:
+The step that maps a user's raw query text to a known `assunto` in the system's growing catalog, by semantic similarity, yielding the anchor node graph traversal starts from. A one-time step per query, distinct from the graph traversal that follows it.
+_Avoid_: Conflating with traversal itself — resolution picks the starting point; it doesn't walk the graph.
 
 **Lei**:
 A piece of legislation as published and structured by LexML (constitution, statute, decree, etc.). One of the three pillars of the knowledge graph.
@@ -39,6 +43,14 @@ _Avoid_: Conflating with parsing — parsing (`PlanaltoHtmlParser`) is structura
 **Confidence**:
 The reliability level of an extracted relation, derived from how it was extracted, never self-declared by the LLM: HIGH = a rule matched an explicit pattern in the text; MEDIUM = the LLM inferred it from context; LOW = unresolved target or stub. The origin (`rule` / `llm`) is stored on the edge too. See ADR-0002.
 _Avoid_: Treating an LLM's verbalized confidence as this value.
+
+**Conceito jurídico**:
+A recurring legal idea (an institute, actor, requirement, theory, effect, principle, procedure or right) that dispositivos and `jurisprudência` decisions of an `assunto` speak about, e.g. "abuso da personalidade". The central hub of the knowledge graph: it is what lets a `lei` provision and a decision be associated through what they are about. Always belongs to exactly one category and to one `Vocabulário de conceitos`.
+_Avoid_: Tag, keyword, topic (a conceito is a curated, closed-set entry, not free text; "assunto" is the search entry point, a broader thing).
+
+**Vocabulário de conceitos**:
+The curated, versioned, closed list of `conceito jurídico` entries for one `assunto`, shared by every `lei` and `jurisprudência` of that assunto. Enrichment only ever links to entries in it; a term it proposes that is not in the list is recorded for curation but never enters the knowledge graph. See ADR-0003.
+_Avoid_: Ontology, taxonomy (it is flat: no hierarchy between conceitos), "per-lei vocabulary" (scope is the assunto, not the lei).
 
 **Knowledge graph**:
 The graph store holding `lei`, `jurisprudência`, and `doutrina` nodes and the relationships between them (e.g. a `jurisprudência` node citing a `lei` node's `artigo`). This is distinct from LangGraph — see below.

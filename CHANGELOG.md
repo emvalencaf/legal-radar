@@ -11,6 +11,9 @@ heading when `development` is released to `master`.
 
 - ADR-0002 and `CONTEXT.md` terms (`Enriquecimento`, `Confidence`): hybrid
   rule + LLM relation extraction with provenance-derived confidence (issue #24).
+- ADR-0003 and `CONTEXT.md` terms (`Conceito jurídico`, `Vocabulário de conceitos`):
+  one flat, curated concept vocabulary per assunto, shared by lei and
+  jurisprudência (issue #18).
 
 ## [0.1.0] - 2026-09-20
 

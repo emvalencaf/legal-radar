@@ -21,11 +21,20 @@ VOCABULARY_PATHS = {
     / "concepts"
     / "desconsideracao_personalidade.yml",
 }
+# Dispositivo roots the drafter reads (with their parágrafos, incisos and alíneas); every
+# jurisprudência in the graph is read too. CPC arts. 133-137 (ADR-0003) join once the CPC is
+# ingested.
+CORPUS_ROOTS = (
+    "urn:lex:br:federal:lei:2002-01-10;10406#art50",  # CC art. 50
+    "urn:lex:br:federal:lei:1990-09-11;8078#art28",  # CDC art. 28
+)
 CORPUS_QUERY = """
-MATCH (d:Dispositivo) RETURN d.id AS id, d.text AS text
+MATCH (d:Dispositivo)
+WHERE any(root IN $roots WHERE d.id = root OR d.id STARTS WITH root + "_")
+RETURN d.id AS id, d.text AS text
 UNION
 MATCH (j:Jurisprudencia)
-RETURN j.id AS id, j.ementa + coalesce("\n" + j.tese, "") AS text
+RETURN j.id AS id, j.ementa + coalesce("\\n" + j.tese, "") AS text
 """
 PIPELINE_STEP = "concept_vocabulary_draft"
 FENCE = re.compile(r"^```\w*\n(.*?)\n?```\s*$", re.DOTALL)
@@ -148,6 +157,16 @@ def draft_candidates(assunto: str, corpus: list[str], provider: Provider) -> str
 
 
 def graph_corpus(driver: Driver) -> list[str]:
-    """Dispositivo texts and jurisprudência ementa + tese from the loaded graph, in id order."""
-    rows, _, _ = driver.execute_query(CORPUS_QUERY)
+    """Texts of `CORPUS_ROOTS` and every jurisprudência (ementa + tese), in id order."""
+    rows, _, _ = driver.execute_query(CORPUS_QUERY, roots=list(CORPUS_ROOTS))
     return [f"[{row['id']}]\n{row['text']}" for row in sorted(rows, key=lambda r: r["id"])]
+
+
+def with_assunto(assunto: str, draft: str) -> tuple[str, str | None]:
+    """Prefix the draft with its `assunto` and check it loads; returns the text and any error."""
+    text = yaml.safe_dump({"assunto": assunto}, allow_unicode=True) + draft
+    try:
+        parse_vocabulary(text)
+    except VocabularyError as error:
+        return text, str(error)
+    return text, None

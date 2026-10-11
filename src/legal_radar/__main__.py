@@ -53,14 +53,19 @@ def main(argv: list[str] | None = None) -> None:
                 load_seed(store.driver, args.path.read_text(encoding="utf-8"))
             return
         if args.command == "draft-concepts":
-            from legal_radar.concepts import draft_candidates, graph_corpus
+            from legal_radar.concepts import draft_candidates, graph_corpus, with_assunto
             from legal_radar.router_config import build_router, load_config
 
             router = build_router(load_config("router.yaml"))
-            draft = draft_candidates(args.assunto, graph_corpus(store.driver), router)
+            draft, error = with_assunto(
+                args.assunto,
+                draft_candidates(args.assunto, graph_corpus(store.driver), router),
+            )
             target = VOCABULARY_PATHS[args.assunto].with_suffix(".draft.yml")
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(draft, encoding="utf-8")
+            if error:
+                print(f"warning: the draft does not load yet: {error}")
             print(f"wrote {target}; curate it into {VOCABULARY_PATHS[args.assunto]}")
             return
         if args.command == "ingest":

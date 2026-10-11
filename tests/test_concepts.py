@@ -1,4 +1,6 @@
 import pytest
+from neo4j import GraphDatabase
+from testcontainers.neo4j import Neo4jContainer
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.concepts import (
@@ -9,6 +11,20 @@ from legal_radar.concepts import (
     parse_vocabulary,
 )
 from legal_radar.llm import Completion
+
+
+@pytest.fixture(scope="module")
+def neo4j():
+    with Neo4jContainer("neo4j:5-community") as container:
+        yield container
+
+
+@pytest.fixture
+def driver(neo4j):
+    driver = GraphDatabase.driver(neo4j.get_connection_url(), auth=("neo4j", neo4j.password))
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    yield driver
+    driver.close()
 
 
 def valid_yaml(**overrides) -> str:
@@ -118,3 +134,39 @@ def test_committed_vocabulary_is_valid_and_sized():
     for path in VOCABULARY_PATHS.values():
         vocabulary = load_vocabulary(path)
         assert 25 <= len(vocabulary.conceitos) <= 40
+
+
+def test_graph_corpus_reads_the_seed_dispositivos_and_all_jurisprudencia(driver):
+    from legal_radar.concepts import CORPUS_ROOTS, graph_corpus
+
+    root = CORPUS_ROOTS[0]
+    driver.execute_query(
+        "UNWIND $ids AS id CREATE (:Dispositivo {id: id, text: 'texto ' + id})",
+        ids=[root, root + "_par1", root + "0", "outro#art1"],
+    )
+    driver.execute_query(
+        "CREATE (:Jurisprudencia {id: 'STJ:1', ementa: 'ementa', tese: 'tese'}),"
+        " (:Jurisprudencia {id: 'STF:2', ementa: 'so ementa'})"
+    )
+
+    corpus = graph_corpus(driver)
+
+    assert [entry.split("\n")[0] for entry in corpus] == [
+        "[STF:2]",
+        "[STJ:1]",
+        f"[{root}]",
+        f"[{root}_par1]",
+    ]
+    assert "ementa\ntese" in corpus[1]
+
+
+def test_with_assunto_prefixes_and_reports_whether_the_draft_loads():
+    from legal_radar.concepts import with_assunto
+
+    draft = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR}\n"
+
+    text, error = with_assunto("a b", draft)
+    assert text.startswith("assunto: a b\n") and error is None
+
+    _, error = with_assunto("a b", "conceitos: []\n")
+    assert "non-empty list" in error

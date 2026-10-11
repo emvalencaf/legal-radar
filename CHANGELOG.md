@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Embeddings and assunto resolution (#40): `embed()` on the provider port, routed like `complete()`
+  (fallback, retry, daily limits, an `embed_call` wide event) with Gemini `gemini-embedding-001`
+  first and LM Studio `text-embedding-bge-m3` as fallback (Groq has none), configured under
+  `embedding_models` in `router.yaml`. `AssuntoResolver` maps a raw query to an anchor assunto and
+  its leis by in-memory cosine similarity, re-embedding the catalog if a fallback changes the model.
+  See ADR-0005.
 - Versioned graph seed (#39): `legal-radar export-seed` writes the whole graph as sorted JSON lines
   (`seed/graph.jsonl`, byte-stable for an unchanged graph) and `make seed` / `legal-radar seed`
   rebuilds a fresh Neo4j from it with uniqueness constraints and MERGE, so loading twice changes

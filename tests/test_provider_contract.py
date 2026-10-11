@@ -4,6 +4,7 @@ the router (fallback on quota, wait on RPM, single retry on a transient error)."
 import pytest
 
 from legal_radar.adapters.http_providers import GeminiProvider, GroqProvider, LMStudioProvider
+from legal_radar.llm import AllProvidersFailedError
 from legal_radar.router import Router
 from legal_radar.router_config import DEFAULT_PRIORITY, build_router, load_config
 from legal_radar.wide_events import WideEventLog
@@ -149,3 +150,70 @@ def test_router_yaml_in_repo_sets_priority_and_models():
         ("groq", "openai/gpt-oss-20b"),
     ]
     assert router.daily_limits == {"gemini": 500}
+
+
+EMBEDDING_ADAPTERS = {
+    "gemini": (
+        lambda transport: GeminiProvider("m", "key", transport, "emb"),
+        (200, {}, {"embeddings": [{"values": [1, 0]}, {"values": [0, 1]}]}),
+    ),
+    "lmstudio": (
+        lambda transport: LMStudioProvider("m", transport=transport, embedding_model="emb"),
+        (
+            200,
+            {},
+            {
+                "data": [
+                    {"index": 1, "embedding": [0, 1]},
+                    {"index": 0, "embedding": [1, 0]},
+                ],
+                "usage": {"prompt_tokens": 4},
+            },
+        ),
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(EMBEDDING_ADAPTERS))
+def test_embed_maps_vectors_in_input_order(name, tmp_path):
+    factory, response = EMBEDDING_ADAPTERS[name]
+    transport = ScriptedTransport(response)
+    router, _ = router_for(tmp_path, factory(transport))
+
+    result = router.embed(["a", "b"])
+
+    assert result.vectors == [[1, 0], [0, 1]]
+    assert (result.provider, result.model) == (name, "emb")
+    assert "emb" in str(transport.requests[0])
+
+
+def test_groq_has_no_embeddings_so_the_next_provider_serves_them(tmp_path):
+    groq_transport = ScriptedTransport()
+    groq = GroqProvider("m", "key", groq_transport)
+    factory, response = EMBEDDING_ADAPTERS["lmstudio"]
+    router, _ = router_for(tmp_path, groq, factory(ScriptedTransport(response)))
+
+    result = router.embed(["a", "b"])
+
+    assert (result.provider, result.fallback_from) == ("lmstudio", "groq")
+    assert groq_transport.requests == []
+
+
+def test_embed_with_a_wrong_vector_count_is_a_transient_failure(tmp_path):
+    transport = ScriptedTransport(
+        (200, {}, {"embeddings": [{"values": [1]}]}), (200, {}, {"embeddings": [{"values": [1]}]})
+    )
+    router, _ = router_for(tmp_path, GeminiProvider("m", "key", transport, "emb"))
+
+    with pytest.raises(AllProvidersFailedError):
+        router.embed(["a", "b"])
+
+
+def test_build_router_wires_default_embedding_models():
+    router = build_router({}, env={})
+
+    assert {p.name: p.embedding_model for p in router.providers} == {
+        "groq": "",
+        "gemini": "gemini-embedding-001",
+        "lmstudio": "text-embedding-bge-m3",
+    }

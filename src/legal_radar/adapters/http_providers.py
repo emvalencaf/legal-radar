@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from legal_radar.llm import (
     Completion,
     CompletionParams,
+    Embedding,
     ProviderError,
     QuotaExhaustedError,
     RateLimitedError,
@@ -50,9 +51,19 @@ class HttpProvider:
     api_key: str = ""
     base_url: str = ""
     transport: Transport = urllib_transport
+    embedding_model: str = ""
 
     def complete(self, prompt: str, params: CompletionParams | None = None) -> Completion:
         url, headers, body = self.build_request(prompt, params or CompletionParams())
+        return self.parse_response(self._post(url, headers, body))
+
+    def embed(self, texts: list[str], params: CompletionParams | None = None) -> Embedding:
+        if not self.embedding_model:
+            raise ProviderError(f"{self.name} has no embedding model")
+        url, headers, body = self.build_embed_request(texts)
+        return self.parse_embed_response(self._post(url, headers, body), len(texts))
+
+    def _post(self, url: str, headers: dict, body: dict) -> dict:
         try:
             status, response_headers, payload = self.transport(url, headers, body)
         except (TimeoutError, urllib.error.URLError, ConnectionError, OSError) as error:
@@ -63,9 +74,15 @@ class HttpProvider:
             raise TransientError(f"{self.name} returned {status}")
         if status >= 400:
             raise ProviderError(f"{self.name} returned {status}: {payload}")
-        return self.parse_response(payload)
+        return payload
 
     def build_request(self, prompt: str, params: CompletionParams) -> tuple[str, dict, dict]:
+        raise NotImplementedError
+
+    def build_embed_request(self, texts: list[str]) -> tuple[str, dict, dict]:
+        raise NotImplementedError
+
+    def parse_embed_response(self, payload: dict, expected: int) -> Embedding:
         raise NotImplementedError
 
     def parse_response(self, payload: dict) -> Completion:
@@ -93,6 +110,26 @@ class OpenAICompatibleProvider(HttpProvider):
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         return f"{self.base_url}/chat/completions", headers, body
 
+    def build_embed_request(self, texts: list[str]):
+        body = {"model": self.embedding_model, "input": texts}
+        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+        return f"{self.base_url}/embeddings", headers, body
+
+    def parse_embed_response(self, payload: dict, expected: int) -> Embedding:
+        try:
+            rows = sorted(payload["data"], key=lambda row: row["index"])
+            vectors = [[float(x) for x in row["embedding"]] for row in rows]
+        except (KeyError, TypeError, ValueError) as error:
+            raise TransientError(f"{self.name} returned a malformed embedding") from error
+        if len(vectors) != expected:
+            raise TransientError(f"{self.name} returned {len(vectors)} of {expected} embeddings")
+        return Embedding(
+            vectors,
+            tokens_in=(payload.get("usage") or {}).get("prompt_tokens", 0),
+            provider=self.name,
+            model=self.embedding_model,
+        )
+
     def parse_response(self, payload: dict) -> Completion:
         usage = payload.get("usage", {})
         details = usage.get("completion_tokens_details") or {}
@@ -111,6 +148,8 @@ class OpenAICompatibleProvider(HttpProvider):
 
 
 class GroqProvider(OpenAICompatibleProvider):
+    """Groq serves no embedding model, so `embed()` always falls through to the next provider."""
+
     def __init__(self, model: str, api_key: str = "", transport: Transport = urllib_transport):
         super().__init__("groq", model, api_key, "https://api.groq.com/openai/v1", transport)
 
@@ -121,15 +160,44 @@ class LMStudioProvider(OpenAICompatibleProvider):
         model: str,
         base_url: str = "http://localhost:1234/v1",
         transport: Transport = urllib_transport,
+        embedding_model: str = "",
     ):
-        super().__init__("lmstudio", model, "", base_url.rstrip("/"), transport)
+        super().__init__("lmstudio", model, "", base_url.rstrip("/"), transport, embedding_model)
 
 
 class GeminiProvider(HttpProvider):
-    def __init__(self, model: str, api_key: str = "", transport: Transport = urllib_transport):
+    def __init__(
+        self,
+        model: str,
+        api_key: str = "",
+        transport: Transport = urllib_transport,
+        embedding_model: str = "",
+    ):
         super().__init__(
-            "gemini", model, api_key, "https://generativelanguage.googleapis.com/v1beta", transport
+            "gemini",
+            model,
+            api_key,
+            "https://generativelanguage.googleapis.com/v1beta",
+            transport,
+            embedding_model,
         )
+
+    def build_embed_request(self, texts: list[str]):
+        name = f"models/{self.embedding_model}"
+        body = {
+            "requests": [{"model": name, "content": {"parts": [{"text": text}]}} for text in texts]
+        }
+        url = f"{self.base_url}/{name}:batchEmbedContents"
+        return url, {"x-goog-api-key": self.api_key}, body
+
+    def parse_embed_response(self, payload: dict, expected: int) -> Embedding:
+        try:
+            vectors = [[float(x) for x in row["values"]] for row in payload["embeddings"]]
+        except (KeyError, TypeError, ValueError) as error:
+            raise TransientError("gemini returned a malformed embedding") from error
+        if len(vectors) != expected:
+            raise TransientError(f"gemini returned {len(vectors)} of {expected} embeddings")
+        return Embedding(vectors, provider=self.name, model=self.embedding_model)
 
     def build_request(self, prompt: str, params: CompletionParams):
         config = {}

@@ -5,7 +5,7 @@ enrichment idempotency key. `draft_candidates` has an LLM propose candidates for
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import yaml
@@ -53,16 +53,7 @@ class Vocabulary:
     def hash(self) -> str:
         """Depends on the concepts' content only, not on file order or formatting."""
         entries = sorted(
-            (
-                {
-                    "id": c.id,
-                    "label": c.label,
-                    "aliases": sorted(c.aliases),
-                    "instructions": c.instructions,
-                    "category": c.category,
-                }
-                for c in self.conceitos
-            ),
+            ({**asdict(c), "aliases": sorted(c.aliases)} for c in self.conceitos),
             key=lambda entry: entry["id"],
         )
         return content_hash({"assunto": self.assunto, "conceitos": entries})

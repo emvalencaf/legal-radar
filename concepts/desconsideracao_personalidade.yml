@@ -1,5 +1,5 @@
-# Vocabulário de conceitos (ADR-0003) do assunto "desconsideração da personalidade jurídica".
-# Rascunho inicial a ser curado por uma pessoa: revise ids, aliases e instruções antes de usar.
+# Concept vocabulary (ADR-0003) for the assunto "desconsideração da personalidade jurídica".
+# First draft: a person must curate ids, aliases and instructions before it is relied on.
 assunto: desconsideração da personalidade jurídica
 conceitos:
   # DIREITO

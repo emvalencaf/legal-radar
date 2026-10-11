@@ -104,6 +104,14 @@ Cloudflare check rejects bundled Chromium, so this needs Google Chrome installed
 uv run legal-radar ingest-jurisprudencia
 ```
 
+Export the graph to the versioned seed (`seed/graph.jsonl`, commit it), or rebuild a fresh
+Neo4j from it; loading is MERGE-based, so repeating it changes nothing:
+
+```bash
+make export-seed
+make seed
+```
+
 Opt-in live smoke test against the real courts (not run by default): `uv run pytest -m live`.
 
 Tests (need Docker for the Neo4j test container): `uv run pytest`.

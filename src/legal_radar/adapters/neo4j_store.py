@@ -12,6 +12,12 @@ CONSTRAINTS = [
     "CREATE CONSTRAINT conceito_id IF NOT EXISTS FOR (n:Conceito) REQUIRE n.id IS UNIQUE",
 ]
 
+
+def ensure_constraints(session) -> None:
+    for statement in CONSTRAINTS:
+        session.run(statement)
+
+
 MERGE_LEI = "MERGE (l:Lei {id: $id}) SET l.title = $title, l.planalto_url = $planalto_url"
 MERGE_DISPOSITIVO = """
 MERGE (d:Dispositivo {id: $id}) SET d.path = $path, d.text = $text, d.kind = $kind
@@ -43,6 +49,10 @@ class Neo4jGraphStore:
     def connect(cls, uri: str, user: str, password: str) -> "Neo4jGraphStore":
         return cls(GraphDatabase.driver(uri, auth=(user, password)))
 
+    @property
+    def driver(self) -> Driver:
+        return self._driver
+
     def close(self) -> None:
         self._driver.close()
 
@@ -67,8 +77,7 @@ class Neo4jGraphStore:
 
     @staticmethod
     def _ensure_constraints(session) -> None:
-        for statement in CONSTRAINTS:
-            session.run(statement)
+        ensure_constraints(session)
 
     @staticmethod
     def _write(tx, batch: GraphBatch) -> None:

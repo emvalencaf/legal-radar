@@ -172,3 +172,40 @@ def test_usage_skips_a_torn_log_line(tmp_path):
     log.path.write_text('{"event": "llm_ca\n')
 
     assert log.usage_today("gemini", "m", NOW) == 0
+
+
+def test_embed_is_routed_logged_and_falls_back_past_a_provider_without_embeddings(tmp_path):
+    from legal_radar.llm import ProviderError
+
+    first = FakeProvider("groq", script=[ProviderError("no embedding model")])
+    second = FakeProvider("gemini", embedding_model="emb-1")
+    router, log, _ = make_router(tmp_path, [first, second])
+
+    result = router.embed(["abuso", "fraude"], CompletionParams(pipeline_step="resolve"))
+
+    assert (result.provider, result.model, result.fallback_from) == ("gemini", "emb-1", "groq")
+    assert len(result.vectors) == 2
+    (event,) = events(log)
+    assert event["event"] == "embed_call"
+    assert (event["provider"], event["model"], event["outcome"]) == ("gemini", "emb-1", "success")
+    assert (event["pipeline_step"], event["input_count"]) == ("resolve", 2)
+    assert event["prompt_text"] is None
+    assert event["prompt_id"] == content_hash(["abuso", "fraude"])
+
+
+def test_embed_failure_is_logged_and_raised(tmp_path):
+    router, log, _ = make_router(tmp_path, [FakeProvider(script=[QuotaExhaustedError()])])
+
+    with pytest.raises(AllProvidersFailedError):
+        router.embed(["x"])
+
+    assert events(log)[0]["outcome"] == "failed"
+
+
+def test_embed_daily_limit_counts_the_embedding_model(tmp_path):
+    first = FakeProvider("gemini", embedding_model="emb-1")
+    second = FakeProvider("lmstudio")
+    router, log, _ = make_router(tmp_path, [first, second], daily_limits={"gemini": 1})
+
+    assert router.embed(["a"]).provider == "gemini"
+    assert router.embed(["b"]).provider == "lmstudio"

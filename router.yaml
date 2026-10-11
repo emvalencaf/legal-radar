@@ -10,6 +10,12 @@ models:
   gemini: gemini-3.1-flash-lite
   lmstudio: local-model # whichever model is loaded in LM Studio
 
+# Embedding model per provider (Groq serves none, so it is skipped for embed()). Vectors from
+# different models are never compared; see docs/adr/0005.
+embedding_models:
+  gemini: gemini-embedding-001
+  lmstudio: text-embedding-bge-m3
+
 # Daily request caps counted from the wide-event log. LM Studio has no quota.
 daily_limits:
   gemini: 500

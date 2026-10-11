@@ -26,6 +26,16 @@ class Completion:
     extra: dict = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class Embedding:
+    vectors: list[list[float]]
+    tokens_in: int = 0
+    provider: str = ""
+    model: str = ""
+    retry_count: int = 0
+    fallback_from: str | None = None
+
+
 class ProviderError(Exception):
     """Base class for failures a provider adapter reports to the router."""
 

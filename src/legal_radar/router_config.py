@@ -23,6 +23,10 @@ DEFAULT_MODELS = {
     "gemini": "gemini-3.1-flash-lite",
     "lmstudio": "local-model",
 }
+DEFAULT_EMBEDDING_MODELS = {
+    "gemini": "gemini-embedding-001",
+    "lmstudio": "text-embedding-bge-m3",
+}
 DEFAULT_DAILY_LIMITS = {"gemini": 500}
 DEFAULT_LOG_PATH = "logs/llm_calls.jsonl"
 
@@ -40,16 +44,23 @@ def build_router(
 ) -> Router:
     env = os.environ if env is None else env
     models = {**DEFAULT_MODELS, **(config.get("models") or {})}
+    embedding_models = {**DEFAULT_EMBEDDING_MODELS, **(config.get("embedding_models") or {})}
     priority = config.get("providers") or DEFAULT_PRIORITY
     providers: list[Provider] = []
     for name in priority:
         if name == "groq":
             providers.append(GroqProvider(models[name], env.get("GROQ_API_KEY", ""), transport))
         elif name == "gemini":
-            providers.append(GeminiProvider(models[name], env.get("GEMINI_API_KEY", ""), transport))
+            providers.append(
+                GeminiProvider(
+                    models[name], env.get("GEMINI_API_KEY", ""), transport, embedding_models[name]
+                )
+            )
         elif name == "lmstudio":
             base_url = env.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
-            providers.append(LMStudioProvider(models[name], base_url, transport))
+            providers.append(
+                LMStudioProvider(models[name], base_url, transport, embedding_models[name])
+            )
         else:
             raise ValueError(f"unknown provider {name!r} in router.yaml")
     logging_config = config.get("logging") or {}

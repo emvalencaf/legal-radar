@@ -5,11 +5,13 @@ import uuid
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import TypeVar
 
 from legal_radar.llm import (
     AllProvidersFailedError,
     Completion,
     CompletionParams,
+    Embedding,
     ProviderError,
     RateLimitedError,
     TransientError,
@@ -17,6 +19,8 @@ from legal_radar.llm import (
 )
 from legal_radar.ports import Provider
 from legal_radar.wide_events import WideEventLog
+
+T = TypeVar("T", Completion, Embedding)
 
 MAX_RATE_LIMIT_WAITS = 3
 TRANSIENT_BACKOFF_SECONDS = 1.5
@@ -27,6 +31,7 @@ class Router:
 
     name = "router"
     model = "routed"
+    embedding_model = "routed"
 
     def __init__(
         self,
@@ -67,7 +72,7 @@ class Router:
             "retry_count": 0,
         }
         try:
-            result = self._route(prompt, params, event)
+            result = self._route(lambda provider: provider.complete(prompt, params), event)
             event.update(
                 provider=result.provider,
                 model=result.model,
@@ -82,14 +87,56 @@ class Router:
             event["latency_ms"] = round((time.monotonic() - started) * 1000)
             self.events.emit(event)
 
-    def _route(self, prompt: str, params: CompletionParams, event: dict) -> Completion:
+    def embed(self, texts: list[str], params: CompletionParams | None = None) -> Embedding:
+        """Embeds `texts` with the first provider that has an embedding model and quota."""
+        params = params or CompletionParams()
+        started = time.monotonic()
+        event = {
+            "event": "embed_call",
+            "timestamp": self.clock().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "request_id": uuid.uuid4().hex,
+            "provider": None,
+            "model": None,
+            "pipeline_step": params.pipeline_step,
+            "prompt_id": content_hash(texts),
+            "input_count": len(texts),
+            "prompt_text": texts if self.events.log_full_content else None,
+            "tokens_in": 0,
+            "latency_ms": 0,
+            "outcome": "failed",
+            "fallback_from": None,
+            "retry_count": 0,
+        }
+        try:
+            result = self._route(
+                lambda provider: provider.embed(texts, params),
+                event,
+                lambda provider: provider.embedding_model,
+            )
+            event.update(
+                provider=result.provider,
+                model=result.model,
+                outcome="success",
+                tokens_in=result.tokens_in,
+            )
+            return result
+        finally:
+            event["latency_ms"] = round((time.monotonic() - started) * 1000)
+            self.events.emit(event)
+
+    def _route(
+        self,
+        call: Callable[[Provider], T],
+        event: dict,
+        model_of: Callable[[Provider], str] = lambda provider: provider.model,
+    ) -> T:
         fallback_from = None
         for provider in self.providers:
-            if self._over_daily_limit(provider):
+            if self._over_daily_limit(provider, model_of(provider)):
                 fallback_from = provider.name
                 continue
             try:
-                result, retries = self._attempt(provider, prompt, params)
+                result, retries = self._attempt(call, provider)
             except ProviderError:  # quota, throttling, transient, or a rejected request
                 fallback_from = provider.name
                 continue
@@ -98,21 +145,19 @@ class Router:
             return replace(
                 result,
                 provider=provider.name,
-                model=provider.model,
+                model=model_of(provider),
                 retry_count=retries,
                 fallback_from=fallback_from,
             )
         raise AllProvidersFailedError("every provider was exhausted or failed")
 
-    def _attempt(
-        self, provider: Provider, prompt: str, params: CompletionParams
-    ) -> tuple[Completion, int]:
+    def _attempt(self, call: Callable[[Provider], T], provider: Provider) -> tuple[T, int]:
         waits = 0
         transient_retried = False
         retries = 0
         while True:
             try:
-                return provider.complete(prompt, params), retries
+                return call(provider), retries
             except RateLimitedError as error:
                 if waits >= MAX_RATE_LIMIT_WAITS:
                     raise
@@ -126,8 +171,8 @@ class Router:
                 retries += 1
                 self.sleep(TRANSIENT_BACKOFF_SECONDS)
 
-    def _over_daily_limit(self, provider: Provider) -> bool:
+    def _over_daily_limit(self, provider: Provider, model: str) -> bool:
         limit = self.daily_limits.get(provider.name)
         if limit is None:
             return False
-        return self.events.usage_today(provider.name, provider.model, self.clock()) >= limit
+        return self.events.usage_today(provider.name, model, self.clock()) >= limit

@@ -3,7 +3,7 @@
 from typing import Protocol
 
 from legal_radar.domain import GraphBatch, Jurisprudencia
-from legal_radar.llm import Completion, CompletionParams
+from legal_radar.llm import Completion, CompletionParams, Embedding
 
 
 class Provider(Protocol):
@@ -12,8 +12,13 @@ class Provider(Protocol):
 
     name: str
     model: str
+    embedding_model: str
 
     def complete(self, prompt: str, params: CompletionParams | None = None) -> Completion: ...
+
+    def embed(self, texts: list[str], params: CompletionParams | None = None) -> Embedding:
+        """One vector per text, all from `embedding_model`. Vectors from different models live in
+        different spaces and must never be compared."""
 
 
 class GraphStore(Protocol):

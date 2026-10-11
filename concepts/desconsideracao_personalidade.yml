@@ -5,7 +5,7 @@ conceitos:
   # DIREITO
   - id: personalidade_juridica
     label: Personalidade jurídica
-    aliases: [pessoa jurídica, autonomia da pessoa jurídica]
+    aliases: [autonomia da pessoa jurídica]
     instructions: Use quando o texto trata da pessoa jurídica como sujeito de direitos distinto de seus membros.
     category: DIREITO
   - id: autonomia_patrimonial

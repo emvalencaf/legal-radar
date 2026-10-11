@@ -9,6 +9,10 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Walking skeleton: `legal-radar run` parses a fixture lei, tags dispositivos through a
+  fake provider and writes them via a `GraphStore` port to Neo4j (`MERGE` + uniqueness
+  constraints, idempotent); `scripts/skeleton.sh` starts Neo4j with docker compose and
+  runs it; a test container test asserts the graph (issue #35).
 - ADR-0002 and `CONTEXT.md` terms (`Enriquecimento`, `Confidence`): hybrid
   rule + LLM relation extraction with provenance-derived confidence (issue #24).
 - ADR-0003 and `CONTEXT.md` terms (`Conceito jurídico`, `Vocabulário de conceitos`):

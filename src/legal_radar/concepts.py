@@ -72,6 +72,19 @@ def load_vocabulary(path: Path | str) -> Vocabulary:
     return parse_vocabulary(Path(path).read_text(encoding="utf-8"))
 
 
+def load_registered(assunto: str) -> Vocabulary:
+    """The committed vocabulary of a registered assunto; its file must declare that assunto."""
+    if assunto not in VOCABULARY_PATHS:
+        raise VocabularyError(f"no vocabulary registered for assunto {assunto!r}")
+    vocabulary = load_vocabulary(VOCABULARY_PATHS[assunto])
+    if vocabulary.assunto != assunto:
+        raise VocabularyError(
+            f"{VOCABULARY_PATHS[assunto].name} declares assunto {vocabulary.assunto!r}, "
+            f"registered as {assunto!r}"
+        )
+    return vocabulary
+
+
 def parse_vocabulary(text: str) -> Vocabulary:
     try:
         document = yaml.safe_load(text)

@@ -128,12 +128,26 @@ def test_draft_candidates_prompts_with_the_corpus_and_strips_fences():
     assert "DIREITO" in prompt and "snake_case" in prompt
 
 
-def test_committed_vocabulary_is_valid_and_sized():
-    from legal_radar.concepts import VOCABULARY_PATHS
+def test_every_anchor_assunto_has_a_valid_registered_vocabulary():
+    from legal_radar.anchors import ANCHORS
+    from legal_radar.concepts import VOCABULARY_PATHS, load_registered
 
-    for path in VOCABULARY_PATHS.values():
-        vocabulary = load_vocabulary(path)
-        assert 25 <= len(vocabulary.conceitos) <= 40
+    assert set(ANCHORS) == set(VOCABULARY_PATHS)
+    for assunto in VOCABULARY_PATHS:
+        assert 25 <= len(load_registered(assunto).conceitos) <= 40
+
+
+def test_load_registered_rejects_unknown_and_mismatched_assuntos(monkeypatch, tmp_path):
+    from legal_radar import concepts
+
+    with pytest.raises(VocabularyError, match="no vocabulary registered"):
+        concepts.load_registered("outro")
+
+    path = tmp_path / "v.yml"
+    path.write_text(valid_yaml(), encoding="utf-8")  # declares assunto "a"
+    monkeypatch.setitem(concepts.VOCABULARY_PATHS, "b", path)
+    with pytest.raises(VocabularyError, match="declares assunto 'a'"):
+        concepts.load_registered("b")
 
 
 def test_graph_corpus_reads_the_seed_dispositivos_and_all_jurisprudencia(driver):

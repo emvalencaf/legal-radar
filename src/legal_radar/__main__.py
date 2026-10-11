@@ -2,6 +2,7 @@
 `legal-radar ingest <assunto>` ingests the assunto's anchor leis from LexML/Planalto."""
 
 import argparse
+import logging
 import os
 from pathlib import Path
 
@@ -22,6 +23,9 @@ def main(argv: list[str] | None = None) -> None:
     ingest_cmd = commands.add_parser("ingest")
     ingest_cmd.add_argument("assunto", choices=sorted(ANCHORS))
     args = parser.parse_args(argv)
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
 
     store = Neo4jGraphStore.connect(
         os.environ.get("NEO4J_URI", "bolt://localhost:7687"),

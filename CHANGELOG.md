@@ -16,7 +16,8 @@ heading when `development` is released to `master`.
   (`{urn}#{path}` ids, idempotent). Non-Planalto leis are skipped and listed in the report.
   The sibling repo's anchor-based `PlanaltoHtmlParser` was not reused: real compiled pages carry
   almost no usable anchors. LexML and Planalto's redirect agent need a browser
-  (`uv sync --extra browser`).
+  (`uv sync --extra browser`); the browser source retries failed fetches 3 times with backoff and
+  logs every failure.
 - Provider port: stateless `complete()` behind a hexagonal `Provider` port with Groq, Gemini
   and LM Studio adapters, a `Router` configured by `router.yaml` (default priority
   `[groq, gemini, lmstudio]`, secrets from env) that falls back on quota exhaustion, waits on

@@ -1,0 +1,19 @@
+# Model routing for legal-radar. Secrets stay in env vars, never here:
+#   GROQ_API_KEY, GEMINI_API_KEY, LMSTUDIO_BASE_URL (default http://localhost:1234/v1)
+
+# Priority order; it is also the fallback order. Omit to use [groq, gemini, lmstudio].
+providers: [groq, gemini, lmstudio]
+
+# Model per provider. Omitted entries use the defaults below.
+models:
+  groq: openai/gpt-oss-120b
+  gemini: gemini-3.1-flash-lite
+  lmstudio: local-model # whichever model is loaded in LM Studio
+
+# Daily request caps counted from the wide-event log. LM Studio has no quota.
+daily_limits:
+  gemini: 500
+
+logging:
+  path: logs/llm_calls.jsonl
+  log_full_content: false # true also logs prompt and output text

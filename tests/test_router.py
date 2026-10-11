@@ -1,0 +1,174 @@
+import json
+from datetime import UTC, datetime
+
+import pytest
+
+from legal_radar.adapters.fake_provider import FakeProvider
+from legal_radar.llm import (
+    AllProvidersFailedError,
+    Completion,
+    CompletionParams,
+    QuotaExhaustedError,
+    RateLimitedError,
+    TransientError,
+    content_hash,
+)
+from legal_radar.router import Router
+from legal_radar.wide_events import WideEventLog
+
+NOW = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
+
+
+def make_router(tmp_path, providers, daily_limits=None, log_full_content=False):
+    sleeps: list[float] = []
+    log = WideEventLog(tmp_path / "calls.jsonl", log_full_content=log_full_content)
+    router = Router(
+        providers, log, daily_limits=daily_limits or {}, sleep=sleeps.append, clock=lambda: NOW
+    )
+    return router, log, sleeps
+
+
+def events(log):
+    return [json.loads(line) for line in log.path.read_text().splitlines()]
+
+
+def test_falls_back_to_next_provider_on_quota_exhaustion(tmp_path):
+    first = FakeProvider("groq", script=[QuotaExhaustedError()])
+    second = FakeProvider("gemini")
+    router, log, _ = make_router(tmp_path, [first, second])
+
+    result = router.complete("abuso")
+
+    assert result.provider == "gemini"
+    assert result.fallback_from == "groq"
+    (event,) = events(log)
+    assert (event["provider"], event["fallback_from"], event["outcome"]) == (
+        "gemini",
+        "groq",
+        "success",
+    )
+
+
+def test_waits_on_rate_limit_then_retries_same_provider(tmp_path):
+    first = FakeProvider("groq", script=[RateLimitedError(7)])
+    second = FakeProvider("gemini")
+    router, _, sleeps = make_router(tmp_path, [first, second])
+
+    result = router.complete("x")
+
+    assert result.provider == "groq"
+    assert sleeps == [7]
+    assert len(second.calls) == 0
+
+
+def test_retries_transient_error_once_then_succeeds(tmp_path):
+    first = FakeProvider("groq", script=[TransientError()])
+    router, log, sleeps = make_router(tmp_path, [first])
+
+    result = router.complete("x")
+
+    assert result.retry_count == 1
+    assert len(sleeps) == 1
+    assert events(log)[0]["retry_count"] == 1
+
+
+def test_falls_back_after_second_transient_error(tmp_path):
+    first = FakeProvider("groq", script=[TransientError(), TransientError()])
+    second = FakeProvider("gemini")
+    router, _, _ = make_router(tmp_path, [first, second])
+
+    result = router.complete("x")
+
+    assert (result.provider, result.fallback_from) == ("gemini", "groq")
+    assert len(first.calls) == 2
+
+
+def test_gives_up_on_rate_limit_after_bounded_waits(tmp_path):
+    first = FakeProvider("groq", script=[RateLimitedError(1)] * 10)
+    second = FakeProvider("gemini")
+    router, _, sleeps = make_router(tmp_path, [first, second])
+
+    assert router.complete("x").provider == "gemini"
+    assert 0 < len(sleeps) < 10
+
+
+def test_raises_and_logs_failure_when_all_providers_fail(tmp_path):
+    only = FakeProvider("groq", script=[QuotaExhaustedError()])
+    router, log, _ = make_router(tmp_path, [only])
+
+    with pytest.raises(AllProvidersFailedError):
+        router.complete("x")
+
+    (event,) = events(log)
+    assert event["outcome"] == "failed"
+
+
+def test_wide_event_has_hashes_and_breakdown_but_no_text_by_default(tmp_path):
+    provider = FakeProvider(
+        "groq", script=[Completion("out", 10, 5, 2, provider="groq", model="m")]
+    )
+    router, log, _ = make_router(tmp_path, [provider])
+    tool = {"name": "graph_traverse", "parameters": {}}
+
+    router.complete("hello", CompletionParams(pipeline_step="enrich", tools=(tool,)))
+
+    (event,) = events(log)
+    assert event["event"] == "llm_call"
+    assert event["prompt_id"] == content_hash("hello")
+    assert event["tool_schema_ids"] == [content_hash(tool)]
+    assert event["pipeline_step"] == "enrich"
+    assert (event["tokens_in"], event["tokens_out"], event["tokens_thinking"]) == (10, 5, 2)
+    assert event["latency_ms"] >= 0
+    assert event["prompt_text"] is None and event["output_text"] is None
+
+
+def test_full_text_is_logged_when_opted_in(tmp_path):
+    router, log, _ = make_router(tmp_path, [FakeProvider("groq")], log_full_content=True)
+
+    router.complete("abuso")
+
+    (event,) = events(log)
+    assert event["prompt_text"] == "abuso"
+    assert event["output_text"] == "abuso_da_personalidade"
+
+
+def test_quota_is_computed_from_log_lines_and_skips_exhausted_provider(tmp_path):
+    first = FakeProvider("gemini")
+    second = FakeProvider("lmstudio")
+    router, log, _ = make_router(tmp_path, [first, second], daily_limits={"gemini": 2})
+
+    providers = [router.complete("x").provider for _ in range(3)]
+
+    assert providers == ["gemini", "gemini", "lmstudio"]
+    assert log.usage_today("gemini", "fake-model", NOW) == 2
+    assert log.usage_today("lmstudio", "fake-model", NOW) == 1
+
+
+def test_usage_ignores_other_days_and_failures(tmp_path):
+    log = WideEventLog(tmp_path / "calls.jsonl")
+    base = {"event": "llm_call", "provider": "gemini", "model": "m"}
+    lines = [
+        {**base, "timestamp": "2026-10-10T23:59:00Z", "outcome": "success"},
+        {**base, "timestamp": "2026-10-11T01:00:00Z", "outcome": "success"},
+        {**base, "timestamp": "2026-10-11T02:00:00Z", "outcome": "failed"},
+    ]
+    log.path.write_text("\n".join(json.dumps(line) for line in lines) + "\n")
+
+    assert log.usage_today("gemini", "m", NOW) == 1
+
+
+def test_rejected_request_falls_back_instead_of_aborting(tmp_path):
+    from legal_radar.llm import ProviderError
+
+    router, _, _ = make_router(
+        tmp_path, [FakeProvider("groq", script=[ProviderError("401")]), FakeProvider("gemini")]
+    )
+
+    assert router.complete("x").provider == "gemini"
+
+
+def test_usage_skips_a_torn_log_line(tmp_path):
+    log = WideEventLog(tmp_path / "calls.jsonl")
+    log.path.write_text('{"event": "llm_ca\n')
+
+    assert log.usage_today("gemini", "m", NOW) == 0

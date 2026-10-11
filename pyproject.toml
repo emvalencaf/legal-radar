@@ -5,6 +5,7 @@ description = "A RAG-based project that ingests a given legal topic (pointing to
 requires-python = ">=3.11"
 dependencies = [
     "neo4j>=6.4.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.scripts]

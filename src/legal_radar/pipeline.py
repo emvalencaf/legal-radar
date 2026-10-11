@@ -10,7 +10,7 @@ PROMPT = "Return the conceito id (snake_case) that this dispositivo is about:\n{
 def run(raw_lei: str, provider: Provider, store: GraphStore) -> GraphBatch:
     lei, dispositivos = parse_lei(raw_lei)
     links = [
-        ConceptLink(d.id, provider.complete(PROMPT.format(text=d.text)).strip())
+        ConceptLink(d.id, provider.complete(PROMPT.format(text=d.text)).text.strip())
         for d in dispositivos
     ]
     conceitos = [Conceito(cid) for cid in sorted({link.conceito_id for link in links})]

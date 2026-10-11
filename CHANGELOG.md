@@ -9,6 +9,10 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Versioned graph seed (#39): `legal-radar export-seed` writes the whole graph as sorted JSON lines
+  (`seed/graph.jsonl`, byte-stable for an unchanged graph) and `make seed` / `legal-radar seed`
+  rebuilds a fresh Neo4j from it with uniqueness constraints and MERGE, so loading twice changes
+  nothing. Run `make export-seed` after an ingestion to refresh and commit the seed.
 - Jurisprudência ingestion (#38): `legal-radar ingest-jurisprudencia` loads a pinned manifest of
   seed precedents (STJ Tema Repetitivo 1210 core, STF Tema 1232 tangential) plus the top 5 hits
   per court as `Jurisprudencia` nodes (ementa, tese, decisão; no PDFs) keyed `{court}:{native id}`.

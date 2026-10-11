@@ -1,6 +1,7 @@
 """CLI: `legal-radar run [fixture]` runs the skeleton pipeline with a fake provider;
 `legal-radar ingest <assunto>` ingests the assunto's anchor leis from LexML/Planalto;
-`legal-radar ingest-jurisprudencia` ingests the seed precedents and top STF/STJ hits."""
+`legal-radar ingest-jurisprudencia` ingests the seed precedents and top STF/STJ hits;
+`legal-radar export-seed [path]` / `legal-radar seed [path]` write / rebuild the versioned seed."""
 
 import argparse
 import logging
@@ -13,6 +14,7 @@ from legal_radar.anchors import ANCHORS
 from legal_radar.ingest import ingest
 from legal_radar.pipeline import run
 
+DEFAULT_SEED = Path(__file__).resolve().parents[2] / "seed" / "graph.jsonl"
 DEFAULT_FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "mini_lei.txt"
 
 
@@ -24,6 +26,8 @@ def main(argv: list[str] | None = None) -> None:
     ingest_cmd = commands.add_parser("ingest")
     ingest_cmd.add_argument("assunto", choices=sorted(ANCHORS))
     commands.add_parser("ingest-jurisprudencia")
+    for name in ("export-seed", "seed"):
+        commands.add_parser(name).add_argument("path", nargs="?", type=Path, default=DEFAULT_SEED)
     args = parser.parse_args(argv)
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
@@ -35,6 +39,15 @@ def main(argv: list[str] | None = None) -> None:
         os.environ.get("NEO4J_PASSWORD", "legal-radar-dev"),
     )
     try:
+        if args.command in ("export-seed", "seed"):
+            from legal_radar.seed import export_seed, load_seed
+
+            if args.command == "export-seed":
+                args.path.parent.mkdir(parents=True, exist_ok=True)
+                args.path.write_text(export_seed(store.driver), encoding="utf-8")
+            else:
+                load_seed(store.driver, args.path.read_text(encoding="utf-8"))
+            return
         if args.command == "ingest":
             from legal_radar.adapters.pages import BrowserPageSource
 

@@ -23,6 +23,18 @@ class Dispositivo:
 
 
 @dataclass(frozen=True)
+class Jurisprudencia:
+    """A court decision, keyed `{court}:{court-native id}`; ementa, tese and decisão only."""
+
+    id: str
+    court: str
+    number: str
+    ementa: str
+    decisao: str
+    tese: str | None = None
+
+
+@dataclass(frozen=True)
 class Conceito:
     id: str
 

@@ -2,11 +2,13 @@
 
 from neo4j import Driver, GraphDatabase
 
-from legal_radar.domain import GraphBatch
+from legal_radar.domain import GraphBatch, Jurisprudencia
 
 CONSTRAINTS = [
     "CREATE CONSTRAINT lei_id IF NOT EXISTS FOR (n:Lei) REQUIRE n.id IS UNIQUE",
     "CREATE CONSTRAINT dispositivo_id IF NOT EXISTS FOR (n:Dispositivo) REQUIRE n.id IS UNIQUE",
+    "CREATE CONSTRAINT jurisprudencia_id IF NOT EXISTS "
+    "FOR (n:Jurisprudencia) REQUIRE n.id IS UNIQUE",
     "CREATE CONSTRAINT conceito_id IF NOT EXISTS FOR (n:Conceito) REQUIRE n.id IS UNIQUE",
 ]
 
@@ -21,6 +23,10 @@ MERGE (l)-[:PARTS]->(d)
 MERGE_PARTS = """
 MATCH (p:Dispositivo {id: $parent_id}), (d:Dispositivo {id: $id})
 MERGE (p)-[:PARTS]->(d)
+"""
+MERGE_JURISPRUDENCIA = """
+MERGE (j:Jurisprudencia {id: $id})
+SET j.court = $court, j.number = $number, j.ementa = $ementa, j.tese = $tese, j.decisao = $decisao
 """
 MERGE_CONCEITO = "MERGE (:Conceito {id: $id})"
 MERGE_LINK = """
@@ -42,9 +48,27 @@ class Neo4jGraphStore:
 
     def write(self, batch: GraphBatch) -> None:
         with self._driver.session() as session:
-            for statement in CONSTRAINTS:
-                session.run(statement)
+            self._ensure_constraints(session)
             session.execute_write(self._write, batch)
+
+    def write_jurisprudencia(self, items: list[Jurisprudencia]) -> None:
+        with self._driver.session() as session:
+            self._ensure_constraints(session)
+            for j in items:
+                session.run(
+                    MERGE_JURISPRUDENCIA,
+                    id=j.id,
+                    court=j.court,
+                    number=j.number,
+                    ementa=j.ementa,
+                    tese=j.tese,
+                    decisao=j.decisao,
+                )
+
+    @staticmethod
+    def _ensure_constraints(session) -> None:
+        for statement in CONSTRAINTS:
+            session.run(statement)
 
     @staticmethod
     def _write(tx, batch: GraphBatch) -> None:

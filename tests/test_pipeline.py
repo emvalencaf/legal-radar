@@ -6,6 +6,7 @@ from testcontainers.neo4j import Neo4jContainer
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
+from legal_radar.domain import Jurisprudencia
 from legal_radar.pipeline import run
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mini_lei.txt"
@@ -86,3 +87,20 @@ def test_ingested_lei_is_loaded_with_parts_edges_and_reload_is_idempotent(driver
     assert (f"{CC}#art50", "PARTS", f"{CC}#art50_par2") in edges
     assert (f"{CC}#art50_par2", "PARTS", f"{CC}#art50_par2_incI") in edges
     assert (CC, "PARTS", f"{CC}#art50") not in edges
+
+
+def test_jurisprudencia_is_loaded_keyed_by_court_native_id_and_reload_is_idempotent(driver):
+    store = Neo4jGraphStore(driver)
+    items = [
+        Jurisprudencia("STJ:202001090402", "STJ", "REsp 1873811 / SP", "ementa", "acórdão", "tese")
+    ]
+
+    store.write_jurisprudencia(items)
+    store.write_jurisprudencia(items)
+
+    rows, _, _ = driver.execute_query(
+        "MATCH (j:Jurisprudencia) RETURN j.id AS id, j.tese AS tese, j.decisao AS decisao"
+    )
+    assert [(r["id"], r["tese"], r["decisao"]) for r in rows] == [
+        ("STJ:202001090402", "tese", "acórdão")
+    ]

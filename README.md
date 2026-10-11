@@ -97,6 +97,15 @@ Ingest the anchor leis of an assunto from LexML/Planalto (needs `uv sync --extra
 uv run legal-radar ingest "desconsideração da personalidade jurídica"
 ```
 
+Ingest the seed precedents (STJ Tema 1210, STF Tema 1232) and the top hits of each court. STJ's
+Cloudflare check rejects bundled Chromium, so this needs Google Chrome installed:
+
+```bash
+uv run legal-radar ingest-jurisprudencia
+```
+
+Opt-in live smoke test against the real courts (not run by default): `uv run pytest -m live`.
+
 Tests (need Docker for the Neo4j test container): `uv run pytest`.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

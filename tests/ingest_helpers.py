@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from legal_radar.domain import GraphBatch
+from legal_radar.domain import GraphBatch, Jurisprudencia
 from legal_radar.planalto import decode_html
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -22,9 +22,13 @@ class FakePages:
 class MemoryStore:
     def __init__(self):
         self.batches: list[GraphBatch] = []
+        self.jurisprudencia: list[list[Jurisprudencia]] = []
 
     def write(self, batch: GraphBatch) -> None:
         self.batches.append(batch)
+
+    def write_jurisprudencia(self, items: list[Jurisprudencia]) -> None:
+        self.jurisprudencia.append(items)
 
 
 def read(path: str) -> str:

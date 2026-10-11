@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Provider port: stateless `complete()` behind a hexagonal `Provider` port with Groq, Gemini
+  and LM Studio adapters, a `Router` configured by `router.yaml` (default priority
+  `[groq, gemini, lmstudio]`, secrets from env) that falls back on quota exhaustion, waits on
+  RPM throttling and retries transient errors once, one wide-event JSONL line per call
+  (content-hashed prompt/tool ids, token and latency breakdown, full text opt-in), daily quota
+  computed from those lines, and a scriptable `FakeProvider` (issue #36).
 - Walking skeleton: `legal-radar run` parses a fixture lei, tags dispositivos through a
   fake provider and writes them via a `GraphStore` port to Neo4j (`MERGE` + uniqueness
   constraints, idempotent); `scripts/skeleton.sh` starts Neo4j with docker compose and

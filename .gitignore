@@ -24,3 +24,4 @@ graphify-out/
 .wiki/viz.html
 .claude/budget
 .claude/usage/
+logs/

@@ -1,0 +1,133 @@
+"""Routes `complete()` across providers: fallback on quota, wait on RPM, one transient retry."""
+
+import time
+import uuid
+from collections.abc import Callable
+from dataclasses import replace
+from datetime import UTC, datetime
+
+from legal_radar.llm import (
+    AllProvidersFailedError,
+    Completion,
+    CompletionParams,
+    ProviderError,
+    RateLimitedError,
+    TransientError,
+    content_hash,
+)
+from legal_radar.ports import Provider
+from legal_radar.wide_events import WideEventLog
+
+MAX_RATE_LIMIT_WAITS = 3
+TRANSIENT_BACKOFF_SECONDS = 1.5
+
+
+class Router:
+    """Tries providers in priority order and emits one wide event per call."""
+
+    name = "router"
+    model = "routed"
+
+    def __init__(
+        self,
+        providers: list[Provider],
+        events: WideEventLog,
+        daily_limits: dict[str, int] | None = None,
+        sleep: Callable[[float], None] = time.sleep,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ):
+        if not providers:
+            raise ValueError("Router needs at least one provider")
+        self.providers = providers
+        self.events = events
+        self.daily_limits = daily_limits or {}
+        self.sleep = sleep
+        self.clock = clock
+
+    def complete(self, prompt: str, params: CompletionParams | None = None) -> Completion:
+        params = params or CompletionParams()
+        started = time.monotonic()
+        event = {
+            "event": "llm_call",
+            "timestamp": self.clock().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "request_id": uuid.uuid4().hex,
+            "provider": None,
+            "model": None,
+            "pipeline_step": params.pipeline_step,
+            "prompt_id": content_hash(prompt),
+            "tool_schema_ids": [content_hash(tool) for tool in params.tools],
+            "prompt_text": prompt if self.events.log_full_content else None,
+            "output_text": None,
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "tokens_thinking": 0,
+            "latency_ms": 0,
+            "outcome": "failed",
+            "fallback_from": None,
+            "retry_count": 0,
+        }
+        try:
+            result = self._route(prompt, params, event)
+            event.update(
+                provider=result.provider,
+                model=result.model,
+                outcome="success",
+                tokens_in=result.tokens_in,
+                tokens_out=result.tokens_out,
+                tokens_thinking=result.tokens_thinking,
+                output_text=result.text if self.events.log_full_content else None,
+            )
+            return result
+        finally:
+            event["latency_ms"] = round((time.monotonic() - started) * 1000)
+            self.events.emit(event)
+
+    def _route(self, prompt: str, params: CompletionParams, event: dict) -> Completion:
+        fallback_from = None
+        for provider in self.providers:
+            if self._over_daily_limit(provider):
+                fallback_from = provider.name
+                continue
+            try:
+                result, retries = self._attempt(provider, prompt, params)
+            except ProviderError:  # quota, throttling, transient, or a rejected request
+                fallback_from = provider.name
+                continue
+            event["fallback_from"] = fallback_from
+            event["retry_count"] = retries
+            return replace(
+                result,
+                provider=provider.name,
+                model=provider.model,
+                retry_count=retries,
+                fallback_from=fallback_from,
+            )
+        raise AllProvidersFailedError("every provider was exhausted or failed")
+
+    def _attempt(
+        self, provider: Provider, prompt: str, params: CompletionParams
+    ) -> tuple[Completion, int]:
+        waits = 0
+        transient_retried = False
+        retries = 0
+        while True:
+            try:
+                return provider.complete(prompt, params), retries
+            except RateLimitedError as error:
+                if waits >= MAX_RATE_LIMIT_WAITS:
+                    raise
+                waits += 1
+                retries += 1
+                self.sleep(error.retry_after)
+            except TransientError:
+                if transient_retried:
+                    raise
+                transient_retried = True
+                retries += 1
+                self.sleep(TRANSIENT_BACKOFF_SECONDS)
+
+    def _over_daily_limit(self, provider: Provider) -> bool:
+        limit = self.daily_limits.get(provider.name)
+        if limit is None:
+            return False
+        return self.events.usage_today(provider.name, provider.model, self.clock()) >= limit

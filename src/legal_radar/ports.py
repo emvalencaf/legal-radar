@@ -3,10 +3,17 @@
 from typing import Protocol
 
 from legal_radar.domain import GraphBatch
+from legal_radar.llm import Completion, CompletionParams
 
 
 class Provider(Protocol):
-    def complete(self, prompt: str) -> str: ...
+    """A stateless model endpoint. Adapters raise `QuotaExhaustedError`, `RateLimitedError` or
+    `TransientError`; the `Router` owns fallback, waiting, retry and logging."""
+
+    name: str
+    model: str
+
+    def complete(self, prompt: str, params: CompletionParams | None = None) -> Completion: ...
 
 
 class GraphStore(Protocol):

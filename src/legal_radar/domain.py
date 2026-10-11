@@ -7,17 +7,19 @@ from dataclasses import dataclass
 class Lei:
     id: str
     title: str
+    planalto_url: str | None = None
 
 
 @dataclass(frozen=True)
 class Dispositivo:
-    """A structural unit of a lei (artigo or parágrafo), keyed by `{lei_id}#{path}`."""
+    """A structural unit of a lei (títulos down to alíneas), keyed by `{lei_id}#{path}`."""
 
     id: str
     lei_id: str
     path: str
     text: str
     parent_id: str | None = None
+    kind: str = "artigo"
 
 
 @dataclass(frozen=True)

@@ -62,3 +62,27 @@ def test_pipeline_writes_graph_and_is_idempotent(driver):
     assert ("lei:99", "PARTS", "lei:99#art1_par1") not in edges
     assert ("lei:99#art1_par1", "RELATES_TO", "abuso_da_personalidade") in edges
     assert ("lei:99#art2", "RELATES_TO", "decisao_judicial") in edges
+
+
+def test_ingested_lei_is_loaded_with_parts_edges_and_reload_is_idempotent(driver):
+    from ingest_helpers import CC, CC_AGENT, FakePages, lexml_pages, read
+
+    from legal_radar.anchors import AnchorLei
+    from legal_radar.ingest import ingest
+
+    store = Neo4jGraphStore(driver)
+    anchors = [AnchorLei("lei 10406 2002 código civil", "10406", 2002)]
+    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+
+    ingest(anchors, lexml_pages(), planalto, store)
+    first = snapshot(driver)
+    ingest(anchors, lexml_pages(), planalto, store)
+
+    assert snapshot(driver) == first
+    _, edges = first
+    chapter = f"{CC}#parteGeral_livroI_tituloII_capituloI"
+    assert (CC, "PARTS", f"{CC}#parteGeral") in edges
+    assert (chapter, "PARTS", f"{CC}#art50") in edges
+    assert (f"{CC}#art50", "PARTS", f"{CC}#art50_par2") in edges
+    assert (f"{CC}#art50_par2", "PARTS", f"{CC}#art50_par2_incI") in edges
+    assert (CC, "PARTS", f"{CC}#art50") not in edges

@@ -4,9 +4,13 @@ version = "0.1.0"
 description = "A RAG-based project that ingests a given legal topic (pointing to a law) and finds jurisprudence precedents, doctrine, and law amendments via the LexML Brasil portal."
 requires-python = ">=3.11"
 dependencies = [
+    "beautifulsoup4>=4.15.0",
     "neo4j>=6.4.0",
     "pyyaml>=6.0.3",
 ]
+
+[project.optional-dependencies]
+browser = ["playwright>=1.40"]
 
 [project.scripts]
 legal-radar = "legal_radar.__main__:main"
@@ -35,3 +39,4 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "RUF"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]

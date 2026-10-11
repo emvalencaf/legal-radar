@@ -19,3 +19,10 @@ class Provider(Protocol):
 class GraphStore(Protocol):
     def write(self, batch: GraphBatch) -> None:
         """Idempotently upsert the batch's nodes and edges."""
+
+
+class PageSource(Protocol):
+    """Fetches a web page as text, following redirects. LexML sits behind a JS bot-wall, so its
+    production adapter drives a real browser."""
+
+    def get(self, url: str) -> str: ...

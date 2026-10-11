@@ -9,6 +9,14 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Lei ingestion (#37): `legal-radar ingest <assunto>` resolves each anchor lei's LexML URN by
+  keyword search, follows the "Texto Atualizado" Planalto link on the URN page, parses the page
+  into the título → capítulo → artigo → parágrafo → inciso → alínea AST (text-based, dropping
+  struck-through superseded versions) and loads `Lei`/`Dispositivo` nodes with `PARTS` edges
+  (`{urn}#{path}` ids, idempotent). Non-Planalto leis are skipped and listed in the report.
+  The sibling repo's anchor-based `PlanaltoHtmlParser` was not reused: real compiled pages carry
+  almost no usable anchors. LexML and Planalto's redirect agent need a browser
+  (`uv sync --extra browser`).
 - Provider port: stateless `complete()` behind a hexagonal `Provider` port with Groq, Gemini
   and LM Studio adapters, a `Router` configured by `router.yaml` (default priority
   `[groq, gemini, lmstudio]`, secrets from env) that falls back on quota exhaustion, waits on

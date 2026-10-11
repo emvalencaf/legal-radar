@@ -10,9 +10,9 @@ CONSTRAINTS = [
     "CREATE CONSTRAINT conceito_id IF NOT EXISTS FOR (n:Conceito) REQUIRE n.id IS UNIQUE",
 ]
 
-MERGE_LEI = "MERGE (l:Lei {id: $id}) SET l.title = $title"
+MERGE_LEI = "MERGE (l:Lei {id: $id}) SET l.title = $title, l.planalto_url = $planalto_url"
 MERGE_DISPOSITIVO = """
-MERGE (d:Dispositivo {id: $id}) SET d.path = $path, d.text = $text
+MERGE (d:Dispositivo {id: $id}) SET d.path = $path, d.text = $text, d.kind = $kind
 """
 MERGE_LEI_PARTS = """
 MATCH (l:Lei {id: $lei_id}), (d:Dispositivo {id: $id})
@@ -48,9 +48,14 @@ class Neo4jGraphStore:
 
     @staticmethod
     def _write(tx, batch: GraphBatch) -> None:
-        tx.run(MERGE_LEI, id=batch.lei.id, title=batch.lei.title)
+        tx.run(
+            MERGE_LEI,
+            id=batch.lei.id,
+            title=batch.lei.title,
+            planalto_url=batch.lei.planalto_url,
+        )
         for d in batch.dispositivos:
-            tx.run(MERGE_DISPOSITIVO, id=d.id, path=d.path, text=d.text)
+            tx.run(MERGE_DISPOSITIVO, id=d.id, path=d.path, text=d.text, kind=d.kind)
         for d in batch.dispositivos:
             if d.parent_id:
                 tx.run(MERGE_PARTS, id=d.id, parent_id=d.parent_id)

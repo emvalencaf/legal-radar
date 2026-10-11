@@ -90,6 +90,13 @@ Start Neo4j with docker compose and run the pipeline over the fixture lei:
 scripts/skeleton.sh
 ```
 
+Ingest the anchor leis of an assunto from LexML/Planalto (needs `uv sync --extra browser` and
+`playwright install chromium`, since both sites reject plain HTTP clients):
+
+```bash
+uv run legal-radar ingest "desconsideração da personalidade jurídica"
+```
+
 Tests (need Docker for the Neo4j test container): `uv run pytest`.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

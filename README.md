@@ -84,7 +84,13 @@ finds jurisprudence precedents, doctrine, and law amendments via the
 
 ## Usage
 
-<!-- Show useful examples: commands, code, screenshots. -->
+Start Neo4j with docker compose and run the pipeline over the fixture lei:
+
+```bash
+scripts/skeleton.sh
+```
+
+Tests (need Docker for the Neo4j test container): `uv run pytest`.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

@@ -12,8 +12,10 @@ CONSTRAINTS = [
 
 MERGE_LEI = "MERGE (l:Lei {id: $id}) SET l.title = $title"
 MERGE_DISPOSITIVO = """
-MATCH (l:Lei {id: $lei_id})
 MERGE (d:Dispositivo {id: $id}) SET d.path = $path, d.text = $text
+"""
+MERGE_LEI_PARTS = """
+MATCH (l:Lei {id: $lei_id}), (d:Dispositivo {id: $id})
 MERGE (l)-[:PARTS]->(d)
 """
 MERGE_PARTS = """
@@ -48,10 +50,12 @@ class Neo4jGraphStore:
     def _write(tx, batch: GraphBatch) -> None:
         tx.run(MERGE_LEI, id=batch.lei.id, title=batch.lei.title)
         for d in batch.dispositivos:
-            tx.run(MERGE_DISPOSITIVO, id=d.id, lei_id=d.lei_id, path=d.path, text=d.text)
+            tx.run(MERGE_DISPOSITIVO, id=d.id, path=d.path, text=d.text)
         for d in batch.dispositivos:
             if d.parent_id:
                 tx.run(MERGE_PARTS, id=d.id, parent_id=d.parent_id)
+            else:
+                tx.run(MERGE_LEI_PARTS, id=d.id, lei_id=d.lei_id)
         for c in batch.conceitos:
             tx.run(MERGE_CONCEITO, id=c.id)
         for link in batch.links:

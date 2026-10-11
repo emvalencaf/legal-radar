@@ -59,5 +59,6 @@ def test_pipeline_writes_graph_and_is_idempotent(driver):
     ]
     assert ("lei:99", "PARTS", "lei:99#art1") in edges
     assert ("lei:99#art1", "PARTS", "lei:99#art1_par1") in edges
+    assert ("lei:99", "PARTS", "lei:99#art1_par1") not in edges
     assert ("lei:99#art1_par1", "RELATES_TO", "abuso_da_personalidade") in edges
     assert ("lei:99#art2", "RELATES_TO", "decisao_judicial") in edges

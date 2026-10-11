@@ -8,11 +8,6 @@ services:
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-legal-radar-dev}
     volumes:
       - neo4j-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "cypher-shell -u neo4j -p $${NEO4J_PASSWORD:-legal-radar-dev} 'RETURN 1'"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
 
 volumes:
   neo4j-data:

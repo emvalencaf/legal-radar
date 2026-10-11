@@ -205,7 +205,7 @@ def test_embed_failure_is_logged_and_raised(tmp_path):
 def test_embed_daily_limit_counts_the_embedding_model(tmp_path):
     first = FakeProvider("gemini", embedding_model="emb-1")
     second = FakeProvider("lmstudio")
-    router, log, _ = make_router(tmp_path, [first, second], daily_limits={"gemini": 1})
+    router, _, _ = make_router(tmp_path, [first, second], daily_limits={"gemini": 1})
 
     assert router.embed(["a"]).provider == "gemini"
     assert router.embed(["b"]).provider == "lmstudio"

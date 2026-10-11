@@ -18,7 +18,16 @@ def test_paraphrase_resolves_to_anchor_assunto_and_its_leis():
     assert {lei.numero for lei in resolution.anchors} == {"10406", "8078"}
 
 
-@pytest.mark.parametrize("query", ["receita de bolo de cenoura", "previsão do tempo amanhã"])
+@pytest.mark.parametrize(
+    "query",
+    [
+        "receita de bolo de cenoura",
+        "prescrição intercorrente na execução fiscal",
+        "usucapião extraordinária de imóvel urbano",
+        "imunidade tributária das pessoas jurídicas de direito público",
+        "regime de bens no casamento e partilha em divórcio",
+    ],
+)
 def test_unrelated_query_does_not_resolve(query):
     assert AssuntoResolver(FakeProvider()).resolve(query) is None
 

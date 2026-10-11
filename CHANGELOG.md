@@ -14,8 +14,8 @@ heading when `development` is released to `master`.
 - ADR-0003 and `CONTEXT.md` terms (`Conceito jurídico`, `Vocabulário de conceitos`):
   one flat, curated concept vocabulary per assunto, shared by lei and
   jurisprudência (issue #18).
-- ADR-0004: prompts and query-time tracing in a local Langfuse (pinned version,
-  with a repo lockfile), static report published on GitHub Pages (issue #1).
+- ADR-0004: prompts and query-time tracing in LangSmith (pinned, with a local
+  lockfile), static report published on GitHub Pages (issue #1).
 
 ## [0.1.0] - 2026-09-20
 

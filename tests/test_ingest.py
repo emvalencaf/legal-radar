@@ -1,6 +1,9 @@
+import logging
+
 import pytest
 from ingest_helpers import CC, CC_AGENT, FakePages, MemoryStore, lexml_pages, read
 
+from legal_radar import lexml
 from legal_radar.anchors import AnchorLei
 from legal_radar.ingest import ingest
 from legal_radar.lexml import LexmlError, resolve_urn, search_urn
@@ -10,9 +13,32 @@ def test_search_resolves_the_urn_of_the_requested_lei():
     assert search_urn(lexml_pages(), "lei 10406 2002 código civil", "10406", 2002) == CC
 
 
-def test_search_fails_when_the_lei_is_not_in_the_results():
-    with pytest.raises(LexmlError):
-        search_urn(lexml_pages(), "lei 10406 2002 código civil", "99999", 1999)
+@pytest.fixture(autouse=True)
+def no_backoff(monkeypatch):
+    monkeypatch.setattr(lexml.time, "sleep", lambda _: None)
+
+
+def test_search_fails_after_retrying_when_the_lei_is_not_in_the_results(caplog):
+    pages = lexml_pages()
+
+    with caplog.at_level(logging.WARNING, logger=lexml.logger.name), pytest.raises(LexmlError):
+        search_urn(pages, "lei 10406 2002 código civil", "99999", 1999)
+
+    assert len(pages.requested) == 4  # first attempt + 3 retries
+    assert [r.levelname for r in caplog.records] == ["WARNING"] * 3 + ["ERROR"]
+
+
+def test_search_retries_when_a_result_page_misses_the_lei(caplog):
+    pages = lexml_pages()
+    url = "https://www.lexml.gov.br/busca/search?keyword=lei+10406+2002+c%C3%B3digo+civil"
+    good = pages.pages[url]
+    replies = iter(["<html></html>", good])
+    pages.get = lambda u: next(replies)
+
+    with caplog.at_level(logging.WARNING, logger=lexml.logger.name):
+        assert search_urn(pages, "lei 10406 2002 código civil", "10406", 2002) == CC
+
+    assert [r.levelname for r in caplog.records] == ["WARNING"]
 
 
 def test_urn_page_yields_the_planalto_link_and_title():

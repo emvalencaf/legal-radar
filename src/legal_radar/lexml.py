@@ -1,6 +1,8 @@
 """LexML as identity layer: keyword search to a lei's URN, and the URN page's full-text links."""
 
+import logging
 import re
+import time
 from dataclasses import dataclass
 from urllib.parse import quote_plus, urlparse
 
@@ -10,6 +12,7 @@ from legal_radar.ports import PageSource
 
 SEARCH_URL = "https://www.lexml.gov.br/busca/search?keyword={keyword}"
 URN_URL = "https://www.lexml.gov.br/urn/{urn}"
+logger = logging.getLogger(__name__)
 _FEDERAL_LEI = re.compile(r"^urn:lex:br:federal:lei:(\d{4})-\d{2}-\d{2};(\d+)$")
 
 
@@ -25,9 +28,31 @@ class UrnPage:
     destinations: list[str]  # hosts the "Texto Atualizado" links point to, for the report
 
 
-def search_urn(pages: PageSource, keyword: str, numero: str, ano: int) -> str:
-    """Resolve the federal lei `numero`/`ano` to its URN from the keyword search results."""
-    html = pages.get(SEARCH_URL.format(keyword=quote_plus(keyword)))
+def search_urn(
+    pages: PageSource, keyword: str, numero: str, ano: int, retries: int = 3, backoff_s: float = 2.0
+) -> str:
+    """Resolve the federal lei `numero`/`ano` to its URN from the keyword search results.
+
+    LexML's search is flaky (a good query sometimes comes back without the lei), so a miss is
+    retried `retries` times with exponential backoff, logging each one.
+    """
+    url = SEARCH_URL.format(keyword=quote_plus(keyword))
+    for attempt in range(retries + 1):
+        if urn := _find_urn(pages.get(url), numero, ano):
+            return urn
+        message = f"no URN for lei {numero}/{ano} in the results of {keyword!r}"
+        if attempt == retries:
+            logger.error("giving up after %d attempts: %s", attempt + 1, message)
+            raise LexmlError(message)
+        delay = backoff_s * 2**attempt
+        logger.warning(
+            "attempt %d/%d: %s; retrying in %.1fs", attempt + 1, retries + 1, message, delay
+        )
+        time.sleep(delay)
+    raise AssertionError("unreachable")
+
+
+def _find_urn(html: str, numero: str, ano: int) -> str | None:
     for a in BeautifulSoup(html, "html.parser").find_all("a", href=True):
         href = str(a["href"])
         if not href.startswith("/urn/"):
@@ -35,7 +60,7 @@ def search_urn(pages: PageSource, keyword: str, numero: str, ano: int) -> str:
         urn = href.removeprefix("/urn/")
         if (m := _FEDERAL_LEI.match(urn)) and m[2] == numero and int(m[1]) == ano:
             return urn
-    raise LexmlError(f"no URN for lei {numero}/{ano} in the results of {keyword!r}")
+    return None
 
 
 def resolve_urn(pages: PageSource, urn: str) -> UrnPage:

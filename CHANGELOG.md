@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Jurisprudência ingestion (#38): `legal-radar ingest-jurisprudencia` loads a pinned manifest of
+  seed precedents (STJ Tema Repetitivo 1210 core, STF Tema 1232 tangential) plus the top 5 hits
+  per court as `Jurisprudencia` nodes (ementa, tese, decisão; no PDFs) keyed `{court}:{native id}`.
+  STF is read through its in-page JSON API and STJ through its search form + HTML, both behind one
+  `JurisprudenciaFetcher` port. Tested offline from saved responses; `pytest -m live` runs an
+  opt-in smoke test against the real sources.
 - Lei ingestion (#37): `legal-radar ingest <assunto>` resolves each anchor lei's LexML URN by
   keyword search, follows the "Texto Atualizado" Planalto link on the URN page, parses the page
   into the título → capítulo → artigo → parágrafo → inciso → alínea AST (text-based, dropping

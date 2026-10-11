@@ -40,3 +40,5 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "RUF"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["tests"]
+addopts = "-m 'not live'"
+markers = ["live: hits the real STF/STJ sources through a browser; run with `pytest -m live`"]

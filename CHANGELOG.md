@@ -70,7 +70,7 @@ heading when `development` is released to `master`.
   review (no skipping; records accepted/corrected/added), and a `vocabulary_hash` check in
   `load_gold`. `eval_enrichment.py` now scores against the curated vocabulary. The reviewed gold,
   baseline and CI gate wait on the maintainer's annotation.
-- Enrichment evaluation harness (#28): `legal_radar.evaluation` scores enrichment edges against a
+- Enrichment evaluation harness (#28): `legal_radar.answer_evaluation` scores enrichment edges against a
   gold set (per-edge precision/recall/F1 split by origin and relation type), computes the indirect
   metrics (target-resolved, valid-evidence and drop rates), applies a rules gate and an LLM gate
   from `evaluation.yml`, and can persist every input and output as JSONL. Run it with
@@ -99,6 +99,15 @@ heading when `development` is released to `master`.
   rules cannot read is returned in `needs_llm`. `Extraction` also carries the extractor version, the
   dropped-item count and `needs_enrichment` (unread text or an unresolved citation), so the two
   LLM-bound sets are never counted twice.
+- Evaluation harness (#44): `legal-radar eval <assunto>` (`make eval`) answers the question set in
+  `evals/` and scores it under `assayer` (`legal_radar.assayer_harness`, the `eval` extra):
+  custom, table-tested citation correctness, contradiction surfacing and graph-path metrics
+  (`legal_radar.answer_evaluation`), RAGAS faithfulness for flat grounding (`--grounding`, judge model from
+  `RAGAS_BASE_URL`/`RAGAS_MODEL`), and tokens and cost per run (`--price-in`/`--price-out`, USD per
+  million; zero by default). Results are written to `eval-runs/`. `CitedAnswer` now carries the
+  retrieved ids and each `Citation` its source text. Not yet run against the live graph or the
+  `assayer` runtime; the `evals/` ids for jurisprudência and `art50_par*` are unconfirmed.
+
 - Retrieval and cited answer (#43): `legal-radar ask "<query>"` runs a LangGraph pipeline
   (`legal_radar.answer`: resolve assunto, traverse, generate) over the knowledge graph. The
   `GraphReader` port (`Neo4jGraphReader`) walks `PARTS` down from the anchor dispositivos (`AnchorLei.artigos`: CC art. 50, CDC art. 28; a lei with none starts from the whole lei, which was ~4,700 dispositivos and broke the model call), then 1 hop of

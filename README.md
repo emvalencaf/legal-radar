@@ -144,6 +144,16 @@ The `cited-answer` prompt must be published to the Hub and pinned first.
 uv run legal-radar ask "pedido de desconsideração da personalidade jurídica"
 ```
 
+Evaluate the answer pipeline over the question set in `evals/` (needs the graph, the router's
+providers and `uv sync --extra eval`). It scores citation correctness, contradiction surfacing and
+graph paths, plus RAGAS faithfulness with `--grounding` (judge model from `RAGAS_BASE_URL` and
+`RAGAS_MODEL`), tracks tokens and cost (`--price-in`/`--price-out`, USD per million) and writes the
+result to `eval-runs/`.
+
+```bash
+make eval
+```
+
 Opt-in live smoke test against the real courts (not run by default): `uv run pytest -m live`.
 
 Tests (need Docker for the Neo4j test container): `uv run pytest`.

@@ -4,7 +4,7 @@ citations. The LangGraph only orchestrates these steps; the knowledge graph is r
 
 import copy
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TypedDict
 
 import jsonschema
@@ -51,6 +51,7 @@ class Citation:
     id: str
     kind: str  # "Dispositivo" | "Jurisprudencia": the label of the graph node `id` resolves to
     path: list[Hop]  # how the traversal reached it from the anchor lei
+    text: str = ""  # the source text the answer was given, for grounding checks
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,7 @@ class CitedAnswer:
     assunto: str | None  # None: the query matched no known assunto, so nothing was answered
     answer: str | None
     citations: list[Citation]
+    retrieved: list[str] = field(default_factory=list)  # every node id the traversal reached
 
 
 class State(TypedDict, total=False):
@@ -82,11 +84,16 @@ def answer_schema(lock: PromptLock, context_ids: list[str]) -> dict:
     return schema
 
 
-def render_context(context: Context) -> str:
-    blocks = [f"[{d.id}] {d.text}" for d in context.dispositivos]
+def source_texts(context: Context) -> dict[str, str]:
+    """Each retrieved node's id with the text the model is shown for it."""
+    texts = {d.id: d.text for d in context.dispositivos}
     for j in context.jurisprudencias:
-        blocks.append(f"[{j.id}] {j.number}. Tese: {j.tese or '-'}. Ementa: {j.ementa}")
-    return "\n\n".join(blocks)
+        texts[j.id] = f"{j.number}. Tese: {j.tese or '-'}. Ementa: {j.ementa}"
+    return texts
+
+
+def render_context(context: Context) -> str:
+    return "\n\n".join(f"[{id}] {text}" for id, text in source_texts(context).items())
 
 
 def parse_answer(text: str, schema: dict) -> tuple[str, list[str]]:
@@ -163,5 +170,6 @@ def ask(
     context = state["context"]
     kinds = {d.id: "Dispositivo" for d in context.dispositivos}
     kinds |= {j.id: "Jurisprudencia" for j in context.jurisprudencias}
-    citations = [Citation(i, kinds[i], context.paths[i]) for i in state["cited"]]
-    return CitedAnswer(query, resolution.assunto, state["answer"], citations)
+    texts = source_texts(context)
+    citations = [Citation(i, kinds[i], context.paths[i], texts[i]) for i in state["cited"]]
+    return CitedAnswer(query, resolution.assunto, state["answer"], citations, list(texts))

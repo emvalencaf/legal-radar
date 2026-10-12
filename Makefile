@@ -1,4 +1,4 @@
-.PHONY: seed export-seed refresh-prompts
+.PHONY: seed export-seed refresh-prompts eval
 
 # Rebuild a fresh Neo4j from the versioned seed (docker compose up -d neo4j first).
 seed:
@@ -11,3 +11,8 @@ export-seed:
 # Re-snapshot the pinned LangSmith Hub prompts into prompts/lock.json (needs LANGSMITH_API_KEY).
 refresh-prompts:
 	uv run --extra prompts legal-radar refresh-prompts
+
+# Answer the question set over the anchor assunto and score it (needs Neo4j, the router's
+# providers and `uv sync --extra eval`); results land in eval-runs/.
+eval:
+	uv run --extra eval legal-radar eval "desconsideração da personalidade jurídica"

@@ -105,9 +105,12 @@ def test_pipeline_and_drafting_stamp_each_call_with_its_prompt_hash(tmp_path):
         def write(self, batch):
             pass
 
+    schema = {"properties": {"conceito_id": {"type": "string"}}}
+    lock = refresh({"dispositivo-concept": "c1"}, lambda n, c: ("Tag:\n{text}", schema))
     run(
         (Path(__file__).parent / "fixtures" / "mini_lei.txt").read_text(encoding="utf-8"),
         provider,
         Store(),
+        lock,
     )
-    assert {p.prompt_snapshot for p in seen} == {default_lock().prompt_hash("dispositivo-concept")}
+    assert {p.prompt_snapshot for p in seen} == {lock.prompt_hash("dispositivo-concept")}

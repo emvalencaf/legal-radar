@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Structured output for the tagging prompt (#58): `pipeline.run` sends the pinned `dispositivo-concept`
+  schema (`{conceito_id}`, enum filled from the vocabulary ids) as `response_schema`, parses the
+  reply and raises `TaggingError` on an answer outside it instead of writing a bad conceito id.
+  Needs the schema published to the Hub, the pin bumped in `prompts/pins.yml` and `refresh-prompts`.
+
 - Prompts pinned to LangSmith Hub commits and read offline from `prompts/lock.json` (template,
   structured-output schema, commit); `legal-radar refresh-prompts` / `make refresh-prompts`
   re-snapshots them. The wide event carries `prompt_snapshot`, a hash of the prompt used (commit, template, schema).

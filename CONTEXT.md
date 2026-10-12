@@ -44,6 +44,14 @@ _Avoid_: Conflating with parsing — parsing (`PlanaltoHtmlParser`) is structura
 The reliability level of an extracted relation, derived from how it was extracted, never self-declared by the LLM: HIGH = a rule matched an explicit pattern in the text; MEDIUM = the LLM inferred it from context; LOW = unresolved target or stub. The origin (`rule` / `llm`) is stored on the edge too. See ADR-0002.
 _Avoid_: Treating an LLM's verbalized confidence as this value.
 
+**Citação não resolvida**:
+A passage the rules recognised as a citation but could not turn into a target (e.g. "o artigo mencionado no parágrafo anterior"). It yields a LOW `REFERENCES` edge that keeps the citation as written, and it is the only thing the LLM is asked to resolve about references. See ADR-0002.
+_Avoid_: "Referência ambígua" (a vague adjective; the state is verifiable: the rules produced no target).
+
+**Referência inferida**:
+The target the LLM picked for a `citação não resolvida` from a closed list of candidates (dispositivos of the same `lei` and the curated codes), backed by literal evidence: MEDIUM, origin `llm`. If the LLM cannot ground it in a candidate, the edge stays LOW and unresolved; the LLM never creates a `REFERENCES` that has no `citação não resolvida` behind it.
+_Avoid_: Calling any LLM guess a "low-confidence reference": an inferred reference is MEDIUM, a LOW one is, by definition, unresolved.
+
 **Conceito jurídico**:
 A recurring legal idea (an institute, actor, requirement, theory, effect, principle, procedure or right) that dispositivos and `jurisprudência` decisions of an `assunto` speak about, e.g. "abuso da personalidade". The central hub of the knowledge graph: it is what lets a `lei` provision and a decision be associated through what they are about. Always belongs to exactly one category and to one `Vocabulário de conceitos`.
 _Avoid_: Tag, keyword, topic (a conceito is a curated, closed-set entry, not free text; "assunto" is the search entry point, a broader thing).

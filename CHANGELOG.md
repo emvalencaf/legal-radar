@@ -9,6 +9,15 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- LLM concept enricher (#27): `legal_radar.enricher.enrich` is a pure function that turns one
+  dispositivo into `DEFINES`/`APPLIES_TO`/`OBLIGES`/`PROHIBITS`/`EXCEPTS`/`RELATES_TO` edges to
+  vocabulary concepts and grounds the rules' unresolved citations in a closed candidate list
+  (MEDIUM, origin `llm`), per ADR-0002/0003/0007. Evidence must be a literal substring of the
+  dispositivo; out-of-vocabulary, non-literal and ungrounded items are dropped and counted. Triage
+  skips revoked, structural and empty dispositivos, and a per-call input-token ceiling trims the
+  farthest ancestors first. The `dispositivo-enrichment` prompt template ships in the module and
+  is published to the Hub and pinned; the per-call ceiling is `enrichment.max_input_tokens` in
+  `router.yaml`.
 - Revocations in the parser and graph (#26): `Dispositivo` gains `revoked` and `revocations`; a
   fully revoked dispositivo (struck text plus `(Revogado …)` marks) is kept instead of vanishing,
   with the marks moved out of its text. `GraphBatch.relations` writes `REFERENCES` and `REVOKES`

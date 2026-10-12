@@ -148,7 +148,65 @@
         "type": "object"
       },
       "template": "Return the conceito id (snake_case) that this dispositivo is about:\n{text}"
+    },
+    "dispositivo-enrichment": {
+      "commit": "869ba373344b775ec4db4f0167a832486ab3dc68abcff77caecce2a9b0014584",
+      "schema": {
+        "properties": {
+          "conceitos": {
+            "items": {
+              "properties": {
+                "conceito_id": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                },
+                "relacao": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "conceito_id",
+                "relacao",
+                "evidence"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "referencias": {
+            "items": {
+              "properties": {
+                "alvo": {
+                  "type": "string"
+                },
+                "citacao": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "citacao",
+                "alvo",
+                "evidence"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "conceitos",
+          "referencias"
+        ],
+        "title": "dispositivo_enrichment",
+        "type": "object"
+      },
+      "template": "Você relaciona dispositivos legais a conceitos do assunto \"{assunto}\".\n\n## Relações possíveis\n{relacoes}\n\n## Vocabulário de conceitos\nUse somente os ids abaixo. Se nenhum conceito se aplicar, devolva a lista vazia.\n{vocabulario}\n\n## Dispositivo\nLei: {lei}\nCaminho: {caminho}\n\nTexto dos dispositivos superiores (apenas contexto; não use como evidência):\n{ancestrais}\n\nTexto do dispositivo alvo:\n{texto}\n\n## Citações não resolvidas\n{citacoes}\n\nAlvos possíveis para as citações (escolha um da lista ou omita a citação):\n{candidatos}\n\nResponda em JSON. `evidence` é sempre um trecho literal do texto do dispositivo alvo.\nCada item de `conceitos` tem `conceito_id`, `relacao` e `evidence`.\nCada item de `referencias` tem `citacao`, `alvo` e `evidence`."
     }
   },
-  "snapshot_hash": "sha256:b3d26a75d47140414eb54ae66f234fb6175dba3d0035adf649ad2417afe9ba74"
+  "snapshot_hash": "sha256:0b8a9fa4e7ec597d9342932a3781aa9d804f01555faa37c718dcc93c66e300f6"
 }

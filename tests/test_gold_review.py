@@ -57,3 +57,11 @@ def test_review_resumes_without_asking_again_and_saves_after_each_entry():
 
     assert [e["id"] for e in result] == ["d1", "d2"]
     assert saved == [2]
+
+
+def test_adding_the_same_edge_twice_keeps_one():
+    added = {"type": "DEFINES", "target": "a"}
+
+    result = review_entry({"id": "d3", "edges": []}, scripted([added, added, None]))
+
+    assert result["edges"] == [{**added, "review": "added"}]

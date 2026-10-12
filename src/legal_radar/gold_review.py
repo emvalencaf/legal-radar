@@ -27,7 +27,8 @@ def review_entry(entry: dict, decide: Callable[[dict, dict], dict | None]) -> di
                 {**answer, "review": review, **({"was": edge} if review == CORRECTED else {})}
             )
     while (added := decide(entry, {})) is not None:
-        kept.append({**added, "review": ADDED})
+        if _key(added) not in {_key(k) for k in kept}:  # the same edge twice is one edge
+            kept.append({**added, "review": ADDED})
     result = {"id": entry["id"], "edges": kept}
     if rejected:
         result["rejected"] = rejected

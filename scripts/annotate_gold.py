@@ -31,7 +31,9 @@ LEIS = (
 )
 TYPES = [t.value for t in RelationType]
 CONCEPT_TYPES = {t.value for t in CONCEPT_RELATIONS}
-BOLD, DIM, RESET = ("\033[1m", "\033[2m", "\033[0m") if sys.stdout.isatty() else ("", "", "")
+BOLD, DIM, GREEN, RESET = (
+    ("\033[1m", "\033[2m", "\033[32m", "\033[0m") if sys.stdout.isatty() else ("",) * 4
+)
 
 
 def show(edge: dict) -> str:
@@ -73,25 +75,39 @@ def main(args: argparse.Namespace) -> int:
     def save(reviewed: list[dict]) -> None:
         progress.write_text(yaml.safe_dump(reviewed, allow_unicode=True, sort_keys=False), "utf-8")
 
+    added: list[dict] = []  # edges recorded for the dispositivo under review
+
     def decide(entry: dict, edge: dict) -> dict | None:
         if edge:
-            print(f"\n  {BOLD}proposed:{RESET} {show(edge)}")
+            print(f"\n  {BOLD}Proposed relation:{RESET} {show(edge)}")
             answer = ""
             while answer not in ("a", "c", "r"):
-                answer = input("  [a]ccept  [c]orrect  [r]eject > ").strip().lower()
+                answer = input("  a = accept   c = correct   r = reject  > ").strip().lower()
             if answer != "c":
+                print(f"  {DIM}{'accepted' if answer == 'a' else 'rejected'}{RESET}")
                 return edge if answer == "a" else None
         while True:
-            line = input(
-                "  correct to TYPE target > " if edge else "  add TYPE target (empty = done) > "
-            )
+            if edge:
+                prompt = "  Type the correct relation (TYPE target)  > "
+            elif added:
+                prompt = "  Another relation (TYPE target), or Enter for the NEXT dispositivo  > "
+            else:
+                prompt = (
+                    "  Add a relation (TYPE target), or Enter to go to the NEXT dispositivo  > "
+                )
+            line = input(prompt)
             if not line.strip() and not edge:
+                added.clear()
                 return None
             if new := parse_edge(line, concepts):
+                print(f"  {GREEN}recorded:{RESET} {show(new)}")
+                if not edge:
+                    added.append(new)
                 return new
-            print("  expected two fields: TYPE target, e.g. `DEFINES consumidor`")
-            print(f"  types: {', '.join(TYPES)}")
-            print("  target: a curated concept id (or a dispositivo id for REFERENCES)")
+            print("  Not understood. Two fields, e.g. `DEFINES consumidor`.")
+            print(f"  TYPE: {', '.join(TYPES)}")
+            print("  target: a curated concept id; a dispositivo id for REFERENCES;")
+            print("          the revoking act for REVOKES")
 
     for index, entry in enumerate(proposed["dispositivos"], 1):
         if entry["id"] in {e["id"] for e in done}:
@@ -101,7 +117,7 @@ def main(args: argparse.Namespace) -> int:
         if entry.get("note"):
             print(f"  {DIM}note: {entry['note']}{RESET}")
         if not entry["edges"]:
-            print(f"  {DIM}proposed: nothing (a negative){RESET}")
+            print(f"  {DIM}Proposed: nothing. Enter alone confirms it as a negative.{RESET}")
         done = review_all([entry], done, decide, save)
     document = {"vocabulary_hash": vocabulary.hash, "dispositivos": done}
     args.gold.write_text(

@@ -1,0 +1,11 @@
+# Quality gates of the enrichment evaluation (`scripts/eval_enrichment.py`), see ADR-0002.
+# A precision or recall minimum of 0 disables that check. Tune with evidence from the gold set.
+rules:
+  min_precision: 0.9
+  min_recall: 0.8
+llm:
+  min_precision: 0.7
+  min_recall: 0.5 # of the concept edges; references are the rules' job
+min_target_resolved: 0.7
+min_valid_evidence: 0.99
+max_drop_rate: 0.2

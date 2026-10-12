@@ -1,7 +1,7 @@
 """Score the enrichment (rules + LLM) of the anchor slice against a gold set and apply the gates.
 
-Usage: eval_enrichment.py GOLD.yml [--provider gemini|groq|lmstudio] [--persist DIR]
-                          [--thresholds evaluation.yml]
+Usage: eval_enrichment.py GOLD.yml [--provider lmstudio|gemini|groq] [--model NAME]
+                          [--persist DIR] [--thresholds evaluation.yml]
 
 Runs the rules and the LLM over the Planalto excerpts under `tests/fixtures/planalto`, scores the
 dispositivos listed in the gold set per edge (split by origin and relation type), prints the
@@ -11,6 +11,7 @@ JSONL for audit. The gold set itself is annotated by a human (#67).
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from legal_radar.__main__ import load_env
@@ -41,10 +42,37 @@ def fmt(value: float | None) -> str:
     return "  n/a" if value is None else f"{value:5.2f}"
 
 
+def clock(seconds: float) -> str:
+    return f"{int(seconds) // 60}:{int(seconds) % 60:02d}"
+
+
+def progress_printer(started: float):
+    """One line per dispositivo: position, what it yielded, and the time left at this pace."""
+
+    def show(done: int, total: int, outcome) -> None:
+        elapsed = time.monotonic() - started
+        eta = elapsed / done * (total - done)
+        note = outcome.skipped or outcome.failed
+        tokens = outcome.tokens_in + outcome.tokens_out
+        print(
+            f"[{done:>{len(str(total))}}/{total}] {outcome.dispositivo.id.split('#')[1]:<20} "
+            f"{len(outcome.relations):>2} relations  {tokens:>6} tok"
+            f"  elapsed {clock(elapsed)}  eta {clock(eta)}" + (f"  [{note}]" if note else ""),
+            file=sys.stderr,
+            flush=True,
+        )
+
+    return show
+
+
 def main(args: argparse.Namespace) -> int:
     load_env()
     config = load_config(ROOT / "router.yaml")
     config["providers"] = [args.provider]
+    if args.model:
+        config["models"] = {**(config.get("models") or {}), args.provider: args.model}
+    model = (config.get("models") or {}).get(args.provider, "default")
+    print(f"provider {args.provider}, model {model}", file=sys.stderr)
     router = build_router(config)
     vocabulary = load_vocabulary(ROOT / "concepts" / "desconsideracao_personalidade.yml")
     lock = refresh({ENRICHMENT_PROMPT: "local"}, lambda name, commit: (ENRICHMENT_TEMPLATE, None))
@@ -59,12 +87,15 @@ def main(args: argparse.Namespace) -> int:
     if missing:
         print(f"gold dispositivos not in the slice: {sorted(missing)}", file=sys.stderr)
         return 2
+    started = time.monotonic()
     outcomes = enrich_dispositivos(
         dispositivos,
         vocabulary,
         router,
         lock,
         max_input_tokens=enrichment_max_input_tokens(config),
+        only=set(gold),
+        on_progress=progress_printer(started),
     )
     scored = [o for o in outcomes if o.dispositivo.id in gold]
     scores, indirect = score_edges(scored, gold), indirect_metrics(scored)
@@ -82,7 +113,9 @@ def main(args: argparse.Namespace) -> int:
     )
     if args.persist:
         path = persist_run(
-            args.persist, scored, {"provider": args.provider, "gold": str(args.gold)}
+            args.persist,
+            scored,
+            {"provider": args.provider, "model": model, "gold": str(args.gold)},
         )
         print(f"persisted {path}")
     for f in failures:
@@ -93,7 +126,8 @@ def main(args: argparse.Namespace) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("gold", type=Path)
-    parser.add_argument("--provider", default="gemini", choices=["gemini", "groq", "lmstudio"])
+    parser.add_argument("--provider", default="lmstudio", choices=["lmstudio", "gemini", "groq"])
+    parser.add_argument("--model", help="model name; defaults to `models` in router.yaml")
     parser.add_argument("--persist", type=Path)
     parser.add_argument("--thresholds", type=Path, default=ROOT / "evaluation.yml")
     sys.exit(main(parser.parse_args()))

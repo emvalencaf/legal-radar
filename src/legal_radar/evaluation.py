@@ -10,7 +10,7 @@ is an error because an unannotated dispositivo is not a negative.
 """
 
 import json
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -111,10 +111,14 @@ def enrich_dispositivos(
     *,
     resolver=None,
     max_input_tokens: int | None = None,
+    only: Collection[str] | None = None,
+    on_progress: Callable[[int, int, Outcome], None] | None = None,
 ) -> list[Outcome]:
     """Run the rules and then the LLM over each dispositivo, as ingestion will (#29).
 
-    A citation the LLM grounds replaces the unresolved LOW edge the rules left for it.
+    A citation the LLM grounds replaces the unresolved LOW edge the rules left for it. With `only`,
+    just those ids are enriched (the others still serve as ancestors and reference candidates, so
+    no LLM call is spent on them); `on_progress(done, total, outcome)` fires after each one.
     """
     by_id = {d.id: d for d in dispositivos}
     ingested: dict[str, set[str]] = {}
@@ -125,7 +129,8 @@ def enrich_dispositivos(
     }
     limits = {} if max_input_tokens is None else {"max_input_tokens": max_input_tokens}
     outcomes = []
-    for d in dispositivos:
+    wanted = [d for d in dispositivos if only is None or d.id in only]
+    for d in wanted:
         extraction = extract_relations(d, resolver, ingested)
         ancestors, parent = [], by_id.get(d.parent_id or "")
         while parent:
@@ -142,17 +147,18 @@ def enrich_dispositivos(
             **limits,
         )
         kept = [r for r in extraction.relations if r not in result.resolved]
-        outcomes.append(
-            Outcome(
-                d,
-                [*kept, *result.relations],
-                extraction.dropped + result.dropped,
-                result.skipped,
-                result.failed,
-                result.tokens_in,
-                result.tokens_out,
-            )
+        outcome = Outcome(
+            d,
+            [*kept, *result.relations],
+            extraction.dropped + result.dropped,
+            result.skipped,
+            result.failed,
+            result.tokens_in,
+            result.tokens_out,
         )
+        outcomes.append(outcome)
+        if on_progress:
+            on_progress(len(outcomes), len(wanted), outcome)
     return outcomes
 
 

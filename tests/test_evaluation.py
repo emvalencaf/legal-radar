@@ -239,6 +239,23 @@ def test_enrich_dispositivos_merges_rule_and_llm_edges_per_dispositivo():
     assert by_id[ART3.id].tokens_in > 0
 
 
+def test_enrich_dispositivos_only_calls_the_wanted_ones_and_reports_progress():
+    provider = FakeProvider(script=[concept_reply()])
+    seen = []
+
+    outcomes = enrich_dispositivos(
+        [ART50, ART3],
+        VOCABULARY,
+        provider,
+        LOCK,
+        only={ART3.id},
+        on_progress=lambda done, total, outcome: seen.append((done, total, outcome.dispositivo.id)),
+    )
+
+    assert [o.dispositivo.id for o in outcomes] == [ART3.id]
+    assert seen == [(1, 1, ART3.id)]
+
+
 def test_a_grounded_citation_replaces_its_unresolved_rule_edge():
     d = Dispositivo(f"{LEI}#art5", LEI, "art5", "Aplica-se o art. 3º da Lei nº 9.999, de 2000.")
     grounded = {

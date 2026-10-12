@@ -9,6 +9,9 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `eval_enrichment.py`: `--model` next to `--provider`, `lmstudio` as the default provider, only the
+  gold dispositivos are sent to the LLM, and a progress line per dispositivo (position, relations,
+  tokens, elapsed, ETA) (#67).
 - `scripts/gold_editor.py`: edit the enrichment gold set in the browser (graph plus review panel,
   no skipping, accepted/corrected/added marks), sharing progress with the terminal wizard (#67).
 - `scripts/visualize_gold.py`: a read-only, self-contained HTML graph of the enrichment gold set

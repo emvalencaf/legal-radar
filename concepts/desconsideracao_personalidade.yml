@@ -1,7 +1,7 @@
 # Concept vocabulary (ADR-0003) for the assunto "desconsideração da personalidade jurídica".
-# First draft: a person must curate ids, aliases and instructions before it is relied on.
+# Drafted by an LLM and approved concept by concept by the reviewer named on each entry.
 assunto: desconsideração da personalidade jurídica
-status: draft
+status: curated
 conceitos:
   # DIREITO
   - id: personalidade_juridica
@@ -12,6 +12,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: autonomia_patrimonial
     label: Autonomia patrimonial
     aliases: [separação patrimonial, patrimônio da pessoa jurídica]
@@ -20,6 +22,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: limitacao_de_responsabilidade
     label: Limitação de responsabilidade
     aliases: [responsabilidade limitada, benefício da limitação]
@@ -28,6 +32,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: direito_do_consumidor
     label: Direito do consumidor
     aliases: [relação de consumo, proteção do consumidor]
@@ -36,6 +42,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: direito_do_trabalho
     label: Direito do trabalho
     aliases: [execução trabalhista, relação de trabalho]
@@ -44,6 +52,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: direito_ao_credito
     label: Direito ao crédito
     aliases: [satisfação do crédito, pretensão do credor]
@@ -52,6 +62,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   # ATOR
   - id: pessoa_juridica
     label: Pessoa jurídica devedora
@@ -61,6 +73,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: socio
     label: Sócio
     aliases: [quotista, acionista, sócio atingido]
@@ -69,6 +83,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: administrador
     label: Administrador
     aliases: [gestor, diretor, sócio administrador]
@@ -77,6 +93,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: credor
     label: Credor
     aliases: [exequente, autor da execução]
@@ -85,6 +103,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: consumidor
     label: Consumidor
     aliases: [consumidor lesado]
@@ -93,6 +113,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: grupo_economico
     label: Grupo econômico
     aliases: [empresa do mesmo grupo, sociedades coligadas]
@@ -101,6 +123,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: ministerio_publico
     label: Ministério Público
     aliases: [parquet]
@@ -109,6 +133,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   # PROCESSO
   - id: incidente_de_desconsideracao
     label: Incidente de desconsideração da personalidade jurídica
@@ -118,6 +144,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: citacao_do_socio
     label: Citação do sócio
     aliases: [citação para se manifestar, chamamento do sócio]
@@ -126,6 +154,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: suspensao_do_processo
     label: Suspensão do processo
     aliases: [suspensão do feito]
@@ -134,6 +164,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: legitimidade_para_requerer
     label: Legitimidade para requerer
     aliases: [parte legítima, legitimidade ativa]
@@ -142,6 +174,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: pedido_na_inicial
     label: Pedido na petição inicial
     aliases: [requerimento na inicial, desconsideração na inicial]
@@ -150,6 +184,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: fase_de_execucao
     label: Fase de execução
     aliases: [cumprimento de sentença, execução de título]
@@ -158,6 +194,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: desconsideracao_inversa
     label: Desconsideração inversa
     aliases: [desconsideração invertida]
@@ -166,6 +204,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   # REQUISITO
   - id: abuso_da_personalidade
     label: Abuso da personalidade
@@ -175,6 +215,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: desvio_de_finalidade
     label: Desvio de finalidade
     aliases: [finalidade ilícita, propósito fraudulento]
@@ -183,6 +225,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: confusao_patrimonial
     label: Confusão patrimonial
     aliases: [mistura de patrimônios, ausência de separação patrimonial]
@@ -191,6 +235,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: insolvencia
     label: Insolvência
     aliases: [inadimplemento, insuficiência de bens]
@@ -199,6 +245,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: prejuizo_ao_credor
     label: Prejuízo ao credor
     aliases: [dano ao credor, obstáculo ao ressarcimento]
@@ -207,6 +255,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: beneficio_direto_ou_indireto
     label: Benefício direto ou indireto
     aliases: [proveito do abuso]
@@ -215,6 +265,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   # PRINCIPIO
   - id: devido_processo_legal
     label: Devido processo legal
@@ -224,6 +276,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: boa_fe
     label: Boa-fé
     aliases: [boa-fé objetiva, lealdade]
@@ -232,6 +286,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   # TEORIA
   - id: teoria_maior
     label: Teoria maior da desconsideração
@@ -241,6 +297,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: teoria_menor
     label: Teoria menor da desconsideração
     aliases: [teoria menor]
@@ -249,6 +307,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: teoria_do_empregador_unico
     label: Teoria do empregador único
     aliases: [empregador único]
@@ -257,6 +317,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   # EFEITO
   - id: extensao_da_responsabilidade
     label: Extensão da responsabilidade
@@ -266,6 +328,8 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11
   - id: ineficacia_relativa
     label: Ineficácia relativa da personalidade
     aliases: [afastamento episódico da personalidade, superação da personalidade]
@@ -274,3 +338,5 @@ conceitos:
     origin: llm
     model: anthropic/claude-sonnet-5-5
     created_at: 2026-10-11
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-11

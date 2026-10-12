@@ -15,7 +15,10 @@ heading when `development` is released to `master`.
   formatting, for the enrichment idempotency key. `legal-radar draft-concepts <assunto>` has an LLM
   draft candidates from the graph's dispositivos and jurisprudência into a `.draft.yml`. A first
   draft of `concepts/desconsideracao_personalidade.yml` (33 concepts) is committed and still needs
-  human curation. See ADR-0003.
+  human curation. Provenance lives in the file, outside the hash: per-concept `origin`
+  (`llm`/`human`) and `reviewed_by` + `reviewed_on`, and a file `status` (`draft` by default,
+  `curated` only when every concept is reviewed). `load_registered` only warns on a draft and checks
+  the file's `assunto` against `VOCABULARY_PATHS`. See ADR-0003.
 - Embeddings and assunto resolution (#40): `embed()` on the provider port, routed like `complete()`
   (fallback, retry, daily limits, an `embed_call` wide event) with Gemini `gemini-embedding-001`
   first and LM Studio `text-embedding-bge-m3` as fallback (Groq has none), configured under

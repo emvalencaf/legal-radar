@@ -4,8 +4,10 @@
 enrichment idempotency key. `draft_candidates` has an LLM propose candidates for a human to curate.
 """
 
+import logging
 import re
 from dataclasses import asdict, dataclass
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -15,6 +17,8 @@ from legal_radar.llm import CompletionParams, content_hash
 from legal_radar.ports import Provider
 
 CATEGORIES = ("DIREITO", "ATOR", "PROCESSO", "REQUISITO", "PRINCIPIO", "TEORIA", "EFEITO")
+ORIGINS = ("llm", "human")
+STATUSES = ("draft", "curated")
 ID_PATTERN = re.compile(r"[a-z][a-z0-9]*(_[a-z0-9]+)*")
 VOCABULARY_PATHS = {
     "desconsideração da personalidade jurídica": Path(__file__).resolve().parents[2]
@@ -36,6 +40,7 @@ UNION
 MATCH (j:Jurisprudencia)
 RETURN j.id AS id, j.ementa + coalesce("\\n" + j.tese, "") AS text
 """
+logger = logging.getLogger(__name__)
 PIPELINE_STEP = "concept_vocabulary_draft"
 FENCE = re.compile(r"^```\w*\n(.*?)\n?```\s*$", re.DOTALL)
 
@@ -51,21 +56,38 @@ class Concept:
     aliases: tuple[str, ...]
     instructions: str
     category: str
+    # Provenance only: kept out of `Vocabulary.hash` so reviewing never reprocesses chunks.
+    origin: str | None = None
+    reviewed_by: str | None = None
+    reviewed_on: str | None = None  # ISO date
+
+    @property
+    def reviewed(self) -> bool:
+        return self.reviewed_by is not None
 
 
 @dataclass(frozen=True)
 class Vocabulary:
     assunto: str
     conceitos: tuple[Concept, ...]
+    status: str = "draft"
 
     @property
     def hash(self) -> str:
         """Depends on the concepts' content only, not on file order or formatting."""
         entries = sorted(
-            ({**asdict(c), "aliases": sorted(c.aliases)} for c in self.conceitos),
+            (_content(c) for c in self.conceitos),
             key=lambda entry: entry["id"],
         )
         return content_hash({"assunto": self.assunto, "conceitos": entries})
+
+
+def _content(concept: Concept) -> dict:
+    """The fields that define what a concept means; provenance is left out."""
+    content = asdict(concept)
+    for key in ("origin", "reviewed_by", "reviewed_on"):
+        del content[key]
+    return {**content, "aliases": sorted(concept.aliases)}
 
 
 def load_vocabulary(path: Path | str) -> Vocabulary:
@@ -81,6 +103,14 @@ def load_registered(assunto: str) -> Vocabulary:
         raise VocabularyError(
             f"{VOCABULARY_PATHS[assunto].name} declares assunto {vocabulary.assunto!r}, "
             f"registered as {assunto!r}"
+        )
+    if vocabulary.status == "draft":
+        unreviewed = sum(not c.reviewed for c in vocabulary.conceitos)
+        logger.warning(
+            "vocabulary %r is a draft: %d of %d concepts not reviewed",
+            assunto,
+            unreviewed,
+            len(vocabulary.conceitos),
         )
     return vocabulary
 
@@ -101,7 +131,12 @@ def parse_vocabulary(text: str) -> Vocabulary:
 
     concepts = tuple(_concept(entry) for entry in entries)
     _check_unique(concepts)
-    return Vocabulary(assunto, concepts)
+    status = document.get("status", "draft")
+    if status not in STATUSES:
+        raise VocabularyError(f"`status` must be one of {STATUSES}")
+    if status == "curated" and not all(c.reviewed for c in concepts):
+        raise VocabularyError("a curated vocabulary needs every concept reviewed")
+    return Vocabulary(assunto, concepts, status)
 
 
 def _concept(entry) -> Concept:
@@ -118,7 +153,29 @@ def _concept(entry) -> Concept:
         raise VocabularyError(f"{id_}: `aliases` must be a list of non-empty strings")
     if entry.get("category") not in CATEGORIES:
         raise VocabularyError(f"{id_}: category must be one of {CATEGORIES}")
-    return Concept(id_, entry["label"], tuple(aliases), entry["instructions"], entry["category"])
+    origin = entry.get("origin")
+    if origin is not None and origin not in ORIGINS:
+        raise VocabularyError(f"{id_}: origin must be one of {ORIGINS}")
+    reviewed_by, reviewed_on = entry.get("reviewed_by"), entry.get("reviewed_on")
+    if (reviewed_by is None) != (reviewed_on is None):
+        raise VocabularyError(f"{id_}: `reviewed_by` and `reviewed_on` go together")
+    if reviewed_by is not None:
+        if not isinstance(reviewed_by, str) or not reviewed_by.strip():
+            raise VocabularyError(f"{id_}: `reviewed_by` must be a non-empty string")
+        try:
+            reviewed_on = date.fromisoformat(str(reviewed_on)).isoformat()
+        except ValueError as error:
+            raise VocabularyError(f"{id_}: `reviewed_on` must be an ISO date") from error
+    return Concept(
+        id_,
+        entry["label"],
+        tuple(aliases),
+        entry["instructions"],
+        entry["category"],
+        origin,
+        reviewed_by,
+        reviewed_on,
+    )
 
 
 def _check_unique(concepts: tuple[Concept, ...]) -> None:
@@ -176,10 +233,25 @@ def graph_corpus(driver: Driver) -> list[str]:
 
 
 def with_assunto(assunto: str, draft: str) -> tuple[str, str | None]:
-    """Prefix the draft with its `assunto` and check it loads; returns the text and any error."""
-    text = yaml.safe_dump({"assunto": assunto}, allow_unicode=True) + draft
+    """Prefix the draft with its `assunto`, mark it a draft of LLM origin, and check it loads.
+
+    Returns the text and any error; an unparseable draft is returned unmarked with the error.
+    """
     try:
-        parse_vocabulary(text)
+        document = yaml.safe_load(draft)
+    except yaml.YAMLError:
+        document = None
+    if isinstance(document, dict) and isinstance(document.get("conceitos"), list):
+        for entry in document["conceitos"]:
+            if isinstance(entry, dict):
+                entry.setdefault("origin", "llm")
+        body = yaml.safe_dump(
+            {"assunto": assunto, "status": "draft", **document}, allow_unicode=True, sort_keys=False
+        )
+    else:
+        body = yaml.safe_dump({"assunto": assunto}, allow_unicode=True) + draft
+    try:
+        parse_vocabulary(body)
     except VocabularyError as error:
-        return text, str(error)
-    return text, None
+        return body, str(error)
+    return body, None

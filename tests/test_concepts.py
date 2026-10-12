@@ -184,3 +184,75 @@ def test_with_assunto_prefixes_and_reports_whether_the_draft_loads():
 
     _, error = with_assunto("a b", "conceitos: []\n")
     assert "non-empty list" in error
+
+
+def provenance_yaml(status=None, **entry) -> str:
+    import yaml
+
+    base = {"id": "x", "label": "L", "instructions": "i", "category": "ATOR", **entry}
+    document = {"assunto": "a", "conceitos": [base]}
+    if status:
+        document["status"] = status
+    return yaml.safe_dump(document, allow_unicode=True)
+
+
+def test_provenance_is_loaded_but_never_changes_the_hash():
+    plain = parse_vocabulary(provenance_yaml())
+    reviewed = parse_vocabulary(
+        provenance_yaml(origin="llm", reviewed_by="Edson", reviewed_on="2026-10-11")
+    )
+
+    concept = reviewed.conceitos[0]
+    assert (concept.origin, concept.reviewed_by, concept.reviewed_on) == (
+        "llm",
+        "Edson",
+        "2026-10-11",
+    )
+    assert concept.reviewed and not plain.conceitos[0].reviewed
+    assert reviewed.hash == plain.hash
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"origin": "robot"},
+        {"reviewed_by": "Edson"},
+        {"reviewed_on": "2026-10-11"},
+        {"reviewed_by": "Edson", "reviewed_on": "ontem"},
+        {"reviewed_by": " ", "reviewed_on": "2026-10-11"},
+    ],
+)
+def test_rejects_invalid_provenance(entry):
+    with pytest.raises(VocabularyError):
+        parse_vocabulary(provenance_yaml(**entry))
+
+
+def test_status_defaults_to_draft_and_curated_needs_every_concept_reviewed():
+    assert parse_vocabulary(provenance_yaml()).status == "draft"
+    with pytest.raises(VocabularyError, match="status"):
+        parse_vocabulary(provenance_yaml(status="done"))
+    with pytest.raises(VocabularyError, match="every concept reviewed"):
+        parse_vocabulary(provenance_yaml(status="curated"))
+    reviewed = {"reviewed_by": "Edson", "reviewed_on": "2026-10-11"}
+    assert parse_vocabulary(provenance_yaml(status="curated", **reviewed)).status == "curated"
+
+
+def test_a_draft_vocabulary_only_warns_when_loaded(caplog):
+    from legal_radar.concepts import load_registered
+
+    with caplog.at_level("WARNING"):
+        load_registered("desconsideração da personalidade jurídica")
+
+    assert "is a draft: 33 of 33 concepts not reviewed" in caplog.text
+
+
+def test_with_assunto_marks_the_draft_as_llm_origin():
+    from legal_radar.concepts import with_assunto
+
+    draft = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR}\n"
+
+    text, error = with_assunto("a", draft)
+
+    assert error is None
+    vocabulary = parse_vocabulary(text)
+    assert vocabulary.status == "draft" and vocabulary.conceitos[0].origin == "llm"

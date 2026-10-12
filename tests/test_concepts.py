@@ -256,3 +256,26 @@ def test_with_assunto_marks_the_draft_as_llm_origin():
     assert error is None
     vocabulary = parse_vocabulary(text)
     assert vocabulary.status == "draft" and vocabulary.conceitos[0].origin == "llm"
+
+
+def test_sources_are_loaded_but_never_change_the_hash():
+    plain = parse_vocabulary(provenance_yaml())
+    cited = parse_vocabulary(provenance_yaml(sources=["STJ:1", "lei#art50"]))
+
+    assert cited.conceitos[0].sources == ("STJ:1", "lei#art50")
+    assert cited.hash == plain.hash
+    for bad in ("STJ:1", [""], [1]):
+        with pytest.raises(VocabularyError):
+            parse_vocabulary(provenance_yaml(sources=bad))
+
+
+def test_with_assunto_reports_sources_missing_from_the_corpus():
+    from legal_radar.concepts import corpus_ids, with_assunto
+
+    corpus = ["[STJ:1]\nementa", "[lei#art50]\ntexto"]
+    ids = corpus_ids(corpus)
+    assert ids == {"STJ:1", "lei#art50"}
+    entry = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR, sources: [%s]}\n"
+
+    assert with_assunto("a", entry % "STJ:1", ids)[1] is None
+    assert "STF:9" in with_assunto("a", entry % "STJ:1, STF:9", ids)[1]

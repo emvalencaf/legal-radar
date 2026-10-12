@@ -60,6 +60,7 @@ class Concept:
     origin: str | None = None
     reviewed_by: str | None = None
     reviewed_on: str | None = None  # ISO date
+    sources: tuple[str, ...] = ()  # lineage: ids of the Dispositivo/Jurisprudencia it came from
 
     @property
     def reviewed(self) -> bool:
@@ -85,7 +86,7 @@ class Vocabulary:
 def _content(concept: Concept) -> dict:
     """The fields that define what a concept means; provenance is left out."""
     content = asdict(concept)
-    for key in ("origin", "reviewed_by", "reviewed_on"):
+    for key in ("origin", "reviewed_by", "reviewed_on", "sources"):
         del content[key]
     return {**content, "aliases": sorted(concept.aliases)}
 
@@ -166,6 +167,9 @@ def _concept(entry) -> Concept:
             reviewed_on = date.fromisoformat(str(reviewed_on)).isoformat()
         except ValueError as error:
             raise VocabularyError(f"{id_}: `reviewed_on` must be an ISO date") from error
+    sources = entry.get("sources", [])
+    if not isinstance(sources, list) or not all(isinstance(x, str) and x.strip() for x in sources):
+        raise VocabularyError(f"{id_}: `sources` must be a list of non-empty strings")
     return Concept(
         id_,
         entry["label"],
@@ -175,6 +179,7 @@ def _concept(entry) -> Concept:
         origin,
         reviewed_by,
         reviewed_on,
+        tuple(sources),
     )
 
 
@@ -206,6 +211,7 @@ conceitos:
     aliases: [desvio de finalidade]   # termos que o texto usa para o mesmo conceito
     instructions: Quando o texto trata de ... (uma frase, em português)
     category: REQUISITO   # exatamente uma de: {categories}
+    sources: [urn:...#art50, STJ:202001090402]   # ids entre colchetes dos textos onde aparece
 
 Cada conceito tem uma única categoria. Não proponha hierarquia entre conceitos.
 
@@ -232,10 +238,13 @@ def graph_corpus(driver: Driver) -> list[str]:
     return [f"[{row['id']}]\n{row['text']}" for row in sorted(rows, key=lambda r: r["id"])]
 
 
-def with_assunto(assunto: str, draft: str) -> tuple[str, str | None]:
+def with_assunto(
+    assunto: str, draft: str, corpus_ids: set[str] | None = None
+) -> tuple[str, str | None]:
     """Prefix the draft with its `assunto`, mark it a draft of LLM origin, and check it loads.
 
-    Returns the text and any error; an unparseable draft is returned unmarked with the error.
+    Returns the text and any error; an unparseable draft is returned unmarked with the error. With
+    `corpus_ids`, sources the LLM cited that are not in the corpus are reported too.
     """
     try:
         document = yaml.safe_load(draft)
@@ -251,7 +260,16 @@ def with_assunto(assunto: str, draft: str) -> tuple[str, str | None]:
     else:
         body = yaml.safe_dump({"assunto": assunto}, allow_unicode=True) + draft
     try:
-        parse_vocabulary(body)
+        vocabulary = parse_vocabulary(body)
     except VocabularyError as error:
         return body, str(error)
+    if corpus_ids is not None:
+        unknown = sorted({s for c in vocabulary.conceitos for s in c.sources} - corpus_ids)
+        if unknown:
+            return body, f"sources not in the corpus: {', '.join(unknown)}"
     return body, None
+
+
+def corpus_ids(corpus: list[str]) -> set[str]:
+    """The ids `graph_corpus` labels its entries with (`[id]` on the first line)."""
+    return {entry.split("\n", 1)[0][1:-1] for entry in corpus}

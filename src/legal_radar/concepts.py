@@ -58,8 +58,11 @@ class Concept:
     category: str
     # Provenance only: kept out of `Vocabulary.hash` so reviewing never reprocesses chunks.
     origin: str | None = None
+    model: str | None = None  # `provider/model` that drafted it; required when origin is llm
     reviewed_by: str | None = None
     reviewed_on: str | None = None  # ISO date
+    created_at: str | None = None  # ISO dates, maintained by hand or by `draft-concepts`
+    updated_at: str | None = None
     sources: tuple[str, ...] = ()  # lineage: ids of the Dispositivo/Jurisprudencia it came from
 
     @property
@@ -86,7 +89,15 @@ class Vocabulary:
 def _content(concept: Concept) -> dict:
     """The fields that define what a concept means; provenance is left out."""
     content = asdict(concept)
-    for key in ("origin", "reviewed_by", "reviewed_on", "sources"):
+    for key in (
+        "origin",
+        "model",
+        "reviewed_by",
+        "reviewed_on",
+        "created_at",
+        "updated_at",
+        "sources",
+    ):
         del content[key]
     return {**content, "aliases": sorted(concept.aliases)}
 
@@ -157,16 +168,24 @@ def _concept(entry) -> Concept:
     origin = entry.get("origin")
     if origin is not None and origin not in ORIGINS:
         raise VocabularyError(f"{id_}: origin must be one of {ORIGINS}")
+    model = entry.get("model")
+    if origin == "llm" and (not isinstance(model, str) or not model.strip()):
+        raise VocabularyError(f"{id_}: an llm-origin concept needs the `model` that drafted it")
+    if origin != "llm" and model is not None:
+        raise VocabularyError(f"{id_}: `model` only goes with origin llm")
     reviewed_by, reviewed_on = entry.get("reviewed_by"), entry.get("reviewed_on")
     if (reviewed_by is None) != (reviewed_on is None):
         raise VocabularyError(f"{id_}: `reviewed_by` and `reviewed_on` go together")
     if reviewed_by is not None:
         if not isinstance(reviewed_by, str) or not reviewed_by.strip():
             raise VocabularyError(f"{id_}: `reviewed_by` must be a non-empty string")
-        try:
-            reviewed_on = date.fromisoformat(str(reviewed_on)).isoformat()
-        except ValueError as error:
-            raise VocabularyError(f"{id_}: `reviewed_on` must be an ISO date") from error
+        reviewed_on = _iso_date(id_, "reviewed_on", reviewed_on)
+    created_at = _iso_date(id_, "created_at", entry.get("created_at"))
+    updated_at = _iso_date(id_, "updated_at", entry.get("updated_at"))
+    if updated_at and not created_at:
+        raise VocabularyError(f"{id_}: `updated_at` needs `created_at`")
+    if updated_at and updated_at < created_at:
+        raise VocabularyError(f"{id_}: `updated_at` is before `created_at`")
     sources = entry.get("sources", [])
     if not isinstance(sources, list) or not all(isinstance(x, str) and x.strip() for x in sources):
         raise VocabularyError(f"{id_}: `sources` must be a list of non-empty strings")
@@ -177,10 +196,22 @@ def _concept(entry) -> Concept:
         entry["instructions"],
         entry["category"],
         origin,
+        model,
         reviewed_by,
         reviewed_on,
+        created_at,
+        updated_at,
         tuple(sources),
     )
+
+
+def _iso_date(id_: str, key: str, value) -> str | None:
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(str(value)).isoformat()
+    except ValueError as error:
+        raise VocabularyError(f"{id_}: `{key}` must be an ISO date") from error
 
 
 def _check_unique(concepts: tuple[Concept, ...]) -> None:
@@ -220,16 +251,24 @@ Textos:
 """
 
 
-def draft_candidates(assunto: str, corpus: list[str], provider: Provider) -> str:
+@dataclass(frozen=True)
+class Draft:
+    text: str
+    model: str  # `provider/model` that answered, after any fallback
+
+
+def draft_candidates(assunto: str, corpus: list[str], provider: Provider) -> Draft:
     """LLM-drafted candidate YAML; a human curates it into the committed vocabulary."""
     prompt = DRAFT_PROMPT.format(
         assunto=assunto,
         categories=", ".join(CATEGORIES),
         corpus="\n\n---\n\n".join(corpus),
     )
-    text = provider.complete(prompt, CompletionParams(pipeline_step=PIPELINE_STEP)).text.strip()
+    completion = provider.complete(prompt, CompletionParams(pipeline_step=PIPELINE_STEP))
+    text = completion.text.strip()
     fenced = FENCE.match(text)
-    return (fenced.group(1) if fenced else text) + "\n"
+    model = f"{completion.provider or provider.name}/{completion.model or provider.model}"
+    return Draft((fenced.group(1) if fenced else text) + "\n", model)
 
 
 def graph_corpus(driver: Driver) -> list[str]:
@@ -239,12 +278,13 @@ def graph_corpus(driver: Driver) -> list[str]:
 
 
 def with_assunto(
-    assunto: str, draft: str, corpus_ids: set[str] | None = None
+    assunto: str, draft: str, corpus_ids: set[str] | None = None, model: str | None = None
 ) -> tuple[str, str | None]:
     """Prefix the draft with its `assunto`, mark it a draft of LLM origin, and check it loads.
 
     Returns the text and any error; an unparseable draft is returned unmarked with the error. With
-    `corpus_ids`, sources the LLM cited that are not in the corpus are reported too.
+    `corpus_ids`, sources the LLM cited that are not in the corpus are reported too. `model` is
+    recorded on every concept as the LLM that drafted it.
     """
     try:
         document = yaml.safe_load(draft)
@@ -254,6 +294,9 @@ def with_assunto(
         for entry in document["conceitos"]:
             if isinstance(entry, dict):
                 entry.setdefault("origin", "llm")
+                if model:
+                    entry.setdefault("model", model)
+                entry.setdefault("created_at", date.today().isoformat())
         body = yaml.safe_dump(
             {"assunto": assunto, "status": "draft", **document}, allow_unicode=True, sort_keys=False
         )

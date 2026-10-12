@@ -122,7 +122,8 @@ def test_draft_candidates_prompts_with_the_corpus_and_strips_fences():
 
     draft = draft_candidates("desconsideração", ["CC art. 50 abuso", "Tema 1210"], provider)
 
-    assert draft == "conceitos: []\n"
+    assert draft.text == "conceitos: []\n"
+    assert draft.model == "fake/fake-model"
     prompt = provider.calls[0]
     assert "CC art. 50 abuso" in prompt and "Tema 1210" in prompt
     assert "DIREITO" in prompt and "snake_case" in prompt
@@ -179,7 +180,7 @@ def test_with_assunto_prefixes_and_reports_whether_the_draft_loads():
 
     draft = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR}\n"
 
-    text, error = with_assunto("a b", draft)
+    text, error = with_assunto("a b", draft, model="fake/m")
     assert text.startswith("assunto: a b\n") and error is None
 
     _, error = with_assunto("a b", "conceitos: []\n")
@@ -199,7 +200,7 @@ def provenance_yaml(status=None, **entry) -> str:
 def test_provenance_is_loaded_but_never_changes_the_hash():
     plain = parse_vocabulary(provenance_yaml())
     reviewed = parse_vocabulary(
-        provenance_yaml(origin="llm", reviewed_by="Edson", reviewed_on="2026-10-11")
+        provenance_yaml(origin="llm", model="g/m", reviewed_by="Edson", reviewed_on="2026-10-11")
     )
 
     concept = reviewed.conceitos[0]
@@ -251,11 +252,12 @@ def test_with_assunto_marks_the_draft_as_llm_origin():
 
     draft = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR}\n"
 
-    text, error = with_assunto("a", draft)
+    text, error = with_assunto("a", draft, model="fake/m")
 
     assert error is None
     vocabulary = parse_vocabulary(text)
     assert vocabulary.status == "draft" and vocabulary.conceitos[0].origin == "llm"
+    assert vocabulary.conceitos[0].model == "fake/m"
 
 
 def test_sources_are_loaded_but_never_change_the_hash():
@@ -277,5 +279,57 @@ def test_with_assunto_reports_sources_missing_from_the_corpus():
     assert ids == {"STJ:1", "lei#art50"}
     entry = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR, sources: [%s]}\n"
 
-    assert with_assunto("a", entry % "STJ:1", ids)[1] is None
-    assert "STF:9" in with_assunto("a", entry % "STJ:1, STF:9", ids)[1]
+    assert with_assunto("a", entry % "STJ:1", ids, "fake/m")[1] is None
+    assert "STF:9" in with_assunto("a", entry % "STJ:1, STF:9", ids, "fake/m")[1]
+
+
+def test_timestamps_are_loaded_validated_and_outside_the_hash():
+    plain = parse_vocabulary(provenance_yaml())
+    stamped = parse_vocabulary(provenance_yaml(created_at="2026-10-11", updated_at="2026-10-12"))
+
+    assert (stamped.conceitos[0].created_at, stamped.conceitos[0].updated_at) == (
+        "2026-10-11",
+        "2026-10-12",
+    )
+    assert stamped.hash == plain.hash
+    for bad in (
+        {"created_at": "ontem"},
+        {"updated_at": "2026-10-12"},
+        {"created_at": "2026-10-12", "updated_at": "2026-10-11"},
+    ):
+        with pytest.raises(VocabularyError):
+            parse_vocabulary(provenance_yaml(**bad))
+
+
+def test_with_assunto_stamps_created_at_on_a_new_draft():
+    from datetime import date
+
+    from legal_radar.concepts import with_assunto
+
+    draft = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR}\n"
+
+    text, _ = with_assunto("a", draft, model="fake/m")
+
+    assert parse_vocabulary(text).conceitos[0].created_at == date.today().isoformat()
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"origin": "llm"},
+        {"origin": "llm", "model": " "},
+        {"origin": "human", "model": "g/m"},
+        {"model": "g/m"},
+    ],
+)
+def test_model_goes_with_llm_origin_only(entry):
+    with pytest.raises(VocabularyError):
+        parse_vocabulary(provenance_yaml(**entry))
+
+
+def test_model_is_provenance_outside_the_hash():
+    plain = parse_vocabulary(provenance_yaml())
+    drafted = parse_vocabulary(provenance_yaml(origin="llm", model="gemini/flash"))
+
+    assert drafted.conceitos[0].model == "gemini/flash"
+    assert drafted.hash == plain.hash

@@ -10,36 +10,48 @@ conceitos:
     instructions: Use quando o texto trata da pessoa jurídica como sujeito de direitos distinto de seus membros.
     category: DIREITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: autonomia_patrimonial
     label: Autonomia patrimonial
     aliases: [separação patrimonial, patrimônio da pessoa jurídica]
     instructions: Use quando o texto trata da separação entre o patrimônio da pessoa jurídica e o de seus sócios.
     category: DIREITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: limitacao_de_responsabilidade
     label: Limitação de responsabilidade
     aliases: [responsabilidade limitada, benefício da limitação]
     instructions: Use quando o texto trata de a responsabilidade do sócio se limitar ao capital ou às cotas.
     category: DIREITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: direito_do_consumidor
     label: Direito do consumidor
     aliases: [relação de consumo, proteção do consumidor]
     instructions: Use quando o texto trata de relação de consumo ou da proteção do consumidor.
     category: DIREITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: direito_do_trabalho
     label: Direito do trabalho
     aliases: [execução trabalhista, relação de trabalho]
     instructions: Use quando o texto trata de relação de trabalho ou de execução trabalhista.
     category: DIREITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: direito_ao_credito
     label: Direito ao crédito
     aliases: [satisfação do crédito, pretensão do credor]
     instructions: Use quando o texto trata do direito do credor de receber o que lhe é devido.
     category: DIREITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   # ATOR
   - id: pessoa_juridica
     label: Pessoa jurídica devedora
@@ -47,42 +59,56 @@ conceitos:
     instructions: Use quando o texto se refere à pessoa jurídica cujos bens respondem pela obrigação.
     category: ATOR
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: socio
     label: Sócio
     aliases: [quotista, acionista, sócio atingido]
     instructions: Use quando o texto se refere ao sócio que pode ser atingido pela desconsideração.
     category: ATOR
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: administrador
     label: Administrador
     aliases: [gestor, diretor, sócio administrador]
     instructions: Use quando o texto se refere a quem administra a pessoa jurídica.
     category: ATOR
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: credor
     label: Credor
     aliases: [exequente, autor da execução]
     instructions: Use quando o texto se refere a quem tem o crédito a receber.
     category: ATOR
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: consumidor
     label: Consumidor
     aliases: [consumidor lesado]
     instructions: Use quando o texto se refere ao consumidor como parte prejudicada.
     category: ATOR
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: grupo_economico
     label: Grupo econômico
     aliases: [empresa do mesmo grupo, sociedades coligadas]
     instructions: Use quando o texto se refere a empresas integrantes de um mesmo grupo econômico.
     category: ATOR
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: ministerio_publico
     label: Ministério Público
     aliases: [parquet]
     instructions: Use quando o texto atribui ao Ministério Público a legitimidade para requerer a medida.
     category: ATOR
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   # PROCESSO
   - id: incidente_de_desconsideracao
     label: Incidente de desconsideração da personalidade jurídica
@@ -90,42 +116,56 @@ conceitos:
     instructions: Use quando o texto trata do incidente processual que viabiliza a desconsideração.
     category: PROCESSO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: citacao_do_socio
     label: Citação do sócio
     aliases: [citação para se manifestar, chamamento do sócio]
     instructions: Use quando o texto trata de citar o sócio ou a pessoa jurídica para se manifestar e requerer provas.
     category: PROCESSO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: suspensao_do_processo
     label: Suspensão do processo
     aliases: [suspensão do feito]
     instructions: Use quando o texto trata da suspensão do processo durante o incidente.
     category: PROCESSO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: legitimidade_para_requerer
     label: Legitimidade para requerer
     aliases: [parte legítima, legitimidade ativa]
     instructions: Use quando o texto trata de quem pode pedir a desconsideração (parte ou Ministério Público).
     category: PROCESSO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: pedido_na_inicial
     label: Pedido na petição inicial
     aliases: [requerimento na inicial, desconsideração na inicial]
     instructions: Use quando o texto trata de pedir a desconsideração já na petição inicial, dispensando o incidente.
     category: PROCESSO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: fase_de_execucao
     label: Fase de execução
     aliases: [cumprimento de sentença, execução de título]
     instructions: Use quando o texto trata da desconsideração na fase de cumprimento de sentença ou execução.
     category: PROCESSO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: desconsideracao_inversa
     label: Desconsideração inversa
     aliases: [desconsideração invertida]
     instructions: Use quando o texto trata de atingir o patrimônio da pessoa jurídica por dívidas do sócio.
     category: PROCESSO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   # REQUISITO
   - id: abuso_da_personalidade
     label: Abuso da personalidade
@@ -133,36 +173,48 @@ conceitos:
     instructions: Use quando o texto trata do abuso da personalidade como pressuposto da desconsideração.
     category: REQUISITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: desvio_de_finalidade
     label: Desvio de finalidade
     aliases: [finalidade ilícita, propósito fraudulento]
     instructions: Use quando o texto trata da utilização da pessoa jurídica para fins diversos dos seus ou ilícitos.
     category: REQUISITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: confusao_patrimonial
     label: Confusão patrimonial
     aliases: [mistura de patrimônios, ausência de separação patrimonial]
     instructions: Use quando o texto trata da ausência de separação de fato entre os patrimônios da sociedade e dos sócios.
     category: REQUISITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: insolvencia
     label: Insolvência
     aliases: [inadimplemento, insuficiência de bens]
     instructions: Use quando o texto trata da insuficiência de bens da pessoa jurídica para pagar a dívida.
     category: REQUISITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: prejuizo_ao_credor
     label: Prejuízo ao credor
     aliases: [dano ao credor, obstáculo ao ressarcimento]
     instructions: Use quando o texto trata de a personalidade ser obstáculo ao ressarcimento de prejuízos.
     category: REQUISITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: beneficio_direto_ou_indireto
     label: Benefício direto ou indireto
     aliases: [proveito do abuso]
     instructions: Use quando o texto trata de o sócio ter se beneficiado do abuso.
     category: REQUISITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   # PRINCIPIO
   - id: devido_processo_legal
     label: Devido processo legal
@@ -170,12 +222,16 @@ conceitos:
     instructions: Use quando o texto trata de contraditório, ampla defesa ou devido processo legal.
     category: PRINCIPIO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: boa_fe
     label: Boa-fé
     aliases: [boa-fé objetiva, lealdade]
     instructions: Use quando o texto invoca a boa-fé ou a sua violação.
     category: PRINCIPIO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   # TEORIA
   - id: teoria_maior
     label: Teoria maior da desconsideração
@@ -183,18 +239,24 @@ conceitos:
     instructions: Use quando o texto exige abuso (desvio de finalidade ou confusão patrimonial) para desconsiderar.
     category: TEORIA
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: teoria_menor
     label: Teoria menor da desconsideração
     aliases: [teoria menor]
     instructions: Use quando o texto admite desconsiderar pela mera insolvência da pessoa jurídica.
     category: TEORIA
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: teoria_do_empregador_unico
     label: Teoria do empregador único
     aliases: [empregador único]
     instructions: Use quando o texto trata de empresas do grupo tidas como um só empregador.
     category: TEORIA
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   # EFEITO
   - id: extensao_da_responsabilidade
     label: Extensão da responsabilidade
@@ -202,9 +264,13 @@ conceitos:
     instructions: Use quando o texto trata de os efeitos de certas obrigações alcançarem bens de sócios ou administradores.
     category: EFEITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
   - id: ineficacia_relativa
     label: Ineficácia relativa da personalidade
     aliases: [afastamento episódico da personalidade, superação da personalidade]
     instructions: Use quando o texto trata de a personalidade ser afastada só para o caso concreto, sem extinguir a pessoa jurídica.
     category: EFEITO
     origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11

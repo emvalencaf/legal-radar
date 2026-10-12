@@ -209,3 +209,10 @@ def test_unreadable_inciso_range_goes_to_the_llm():
     result = extract_relations(dispositivo("art. 5º, incisos IV a II, do CC"))
 
     assert result.relations == [] and result.needs_llm
+
+
+def test_roman_numerals_round_trip_and_reject_malformed():
+    from legal_radar.relations import _roman, _to_roman
+
+    assert all(_roman(_to_roman(n)) == n for n in range(1, 400))
+    assert _roman("IIII") == 0 and _roman("IC") == 0

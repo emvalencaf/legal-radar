@@ -409,8 +409,16 @@ def _to_roman(n: int) -> str:
     return out
 
 
+_VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+
+
 def _roman(s: str) -> int:
-    return next((n for n in range(1, 4000) if _to_roman(n) == s), 0)
+    """The value of a roman numeral, or 0 when `s` is not a well-formed one."""
+    total = 0
+    for symbol, following in zip(s, [*s[1:], ""], strict=True):
+        value = _VALUES[symbol]
+        total += -value if following and _VALUES[following] > value else value
+    return total if total > 0 and _to_roman(total) == s else 0
 
 
 def _snippet(text: str, start: int) -> str:

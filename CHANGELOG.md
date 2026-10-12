@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Enrichment evaluation harness (#28): `legal_radar.evaluation` scores enrichment edges against a
+  gold set (per-edge precision/recall/F1 split by origin and relation type), computes the indirect
+  metrics (target-resolved, valid-evidence and drop rates), applies a rules gate and an LLM gate
+  from `evaluation.yml`, and can persist every input and output as JSONL. Run it with
+  `scripts/eval_enrichment.py`. The real gold set is annotated in #67.
 - LLM concept enricher (#27): `legal_radar.enricher.enrich` is a pure function that turns one
   dispositivo into `DEFINES`/`APPLIES_TO`/`OBLIGES`/`PROHIBITS`/`EXCEPTS`/`RELATES_TO` edges to
   vocabulary concepts and grounds the rules' unresolved citations in a closed candidate list

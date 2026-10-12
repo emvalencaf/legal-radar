@@ -121,6 +121,16 @@ LangSmith account or network, only a source checkout. To follow new Hub commits,
 make refresh-prompts
 ```
 
+Score the enrichment (rules and LLM) against a hand-validated gold set: per-edge
+precision/recall/F1 split by origin and relation type, the indirect metrics (target-resolved,
+valid-evidence and drop rates) and the quality gates in `evaluation.yml`. It exits non-zero when a
+gate fails; `--persist DIR` keeps each input and output as JSONL for audit. The gold set format is
+documented in `legal_radar.evaluation.load_gold`.
+
+```bash
+uv run scripts/eval_enrichment.py gold.yml --provider gemini --persist eval-runs
+```
+
 Ask a question: resolve the assunto, traverse the graph (`PARTS`, then 1 hop of `REFERENCES`)
 and print an answer citing the dispositivos and jurisprudência it used, with their graph paths.
 The `cited-answer` prompt must be published to the Hub and pinned first.

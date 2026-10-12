@@ -9,6 +9,15 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Retrieval and cited answer (#43): `legal-radar ask "<query>"` runs a LangGraph pipeline
+  (`legal_radar.answer`: resolve assunto, traverse, generate) over the knowledge graph. The
+  `GraphReader` port (`Neo4jGraphReader`) walks `PARTS` down from the anchor leis, then 1 hop of
+  `REFERENCES` (a dispositivo's outgoing ones, a jurisprudência's citations), sorted by id, with
+  no scoring or cap. The reply must validate against the `cited-answer` schema, whose enum is the
+  retrieved ids; each `Citation` carries its node kind and its graph path. The `cited-answer`
+  prompt still has to be published to the Hub and pinned; until then `default_lock()` raises
+  `PromptError`. Adds the `langgraph` dependency.
+
 - Structured output for the tagging prompt (#58): `pipeline.run` sends the `dispositivo-concept`
   schema (`pipeline.TAG_SCHEMA`: `{conceito_id}`, enum filled from the vocabulary ids when
   `legal-radar run --assunto` or `conceito_ids` gives them) as `response_schema` and validates the

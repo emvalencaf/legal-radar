@@ -58,12 +58,14 @@ class FakeProvider:
                 raise step
             return step
         text = "abuso_da_personalidade" if "abuso" in prompt else "decisao_judicial"
-        if (
-            params
-            and params.response_schema
-            and "conceito_id" in params.response_schema.get("properties", {})
-        ):
+        properties = (params.response_schema or {}).get("properties", {}) if params else {}
+        if "conceito_id" in properties:
             text = json.dumps({"conceito_id": text})
+        elif "citations" in properties:  # cites every source it was allowed to
+            sources = properties["citations"]["items"]["enum"]
+            text = json.dumps(
+                {"answer": f"Resposta com base em {len(sources)} fontes.", "citations": sources}
+            )
         return Completion(
             text, tokens_in=len(prompt.split()), tokens_out=1, provider=self.name, model=self.model
         )

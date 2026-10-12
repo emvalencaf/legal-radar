@@ -1,0 +1,160 @@
+"""Query-time LangGraph pipeline: resolve the assunto, traverse the knowledge graph, answer with
+citations. The LangGraph only orchestrates these steps; the knowledge graph is read through
+`GraphReader`."""
+
+import copy
+import json
+from dataclasses import dataclass
+from typing import TypedDict
+
+import jsonschema
+from langgraph.graph import END, START, StateGraph
+
+from legal_radar.assunto import Resolution
+from legal_radar.domain import Context, Hop
+from legal_radar.lexml import FEDERAL_LEI
+from legal_radar.llm import CompletionParams, content_hash
+from legal_radar.ports import GraphReader, Provider
+from legal_radar.prompts import PromptError, PromptLock, default_lock
+
+ANSWER_PROMPT = "cited-answer"
+ANSWER_SCHEMA = {  # published to the Hub as `cited-answer`'s structured output
+    "title": "cited_answer",
+    "type": "object",
+    "description": "A resposta à pergunta, com os ids das fontes em que se apoia.",
+    "properties": {
+        "answer": {"type": "string", "minLength": 1},
+        "citations": {
+            "type": "array",
+            "description": "Ids dos dispositivos e das jurisprudências do contexto citados.",
+            "items": {"type": "string", "enum": ["placeholder"]},  # the context's ids at run time
+            "minItems": 1,
+            "uniqueItems": True,
+        },
+    },
+    "required": ["answer", "citations"],
+    "additionalProperties": False,
+}
+
+
+class CitationError(ValueError):
+    """The LLM's reply is outside the pinned schema, or cites something it was not given."""
+
+
+@dataclass(frozen=True)
+class Citation:
+    id: str
+    kind: str  # "Dispositivo" | "Jurisprudencia": the label of the graph node `id` resolves to
+    path: list[Hop]  # how the traversal reached it from the anchor lei
+
+
+@dataclass(frozen=True)
+class CitedAnswer:
+    query: str
+    assunto: str | None  # None: the query matched no known assunto, so nothing was answered
+    answer: str | None
+    citations: list[Citation]
+
+
+class State(TypedDict, total=False):
+    query: str
+    resolution: Resolution | None
+    context: Context
+    answer: str | None
+    cited: list[str]
+
+
+def answer_schema(lock: PromptLock, context_ids: list[str]) -> dict:
+    """The pinned schema, with the retrieved nodes' ids as the only citable values."""
+    schema = lock.schema(ANSWER_PROMPT)
+    if schema is None:
+        raise PromptError(f"prompt {ANSWER_PROMPT!r} has no pinned schema: run `refresh-prompts`")
+    schema = copy.deepcopy(schema)
+    try:
+        schema["properties"]["citations"]["items"]["enum"] = sorted(context_ids)
+    except (KeyError, TypeError) as error:
+        raise PromptError(f"prompt {ANSWER_PROMPT!r}: its schema has no citations") from error
+    return schema
+
+
+def render_context(context: Context) -> str:
+    blocks = [f"[{d.id}] {d.text}" for d in context.dispositivos]
+    for j in context.jurisprudencias:
+        blocks.append(f"[{j.id}] {j.number}. Tese: {j.tese or '-'}. Ementa: {j.ementa}")
+    return "\n\n".join(blocks)
+
+
+def parse_answer(text: str, schema: dict) -> tuple[str, list[str]]:
+    try:
+        reply = json.loads(text)
+        jsonschema.validate(reply, schema)
+    except (ValueError, jsonschema.ValidationError) as error:
+        raise CitationError(f"the LLM did not answer the cited-answer schema: {error}") from error
+    return reply["answer"], reply["citations"]
+
+
+def lei_ids_of(resolution: Resolution, urns: list[str]) -> list[str]:
+    """The graph's leis that are the resolved assunto's anchors (by lei number and year)."""
+    wanted = {(a.numero, a.ano) for a in resolution.anchors}
+    found = []
+    for urn in urns:
+        if (m := FEDERAL_LEI.match(urn)) and (m[2], int(m[1])) in wanted:
+            found.append(urn)
+    return found
+
+
+def build_graph(resolve, reader: GraphReader, provider: Provider, lock: PromptLock):
+    """Compile the pipeline; `resolve(query) -> Resolution | None` is the assunto resolver."""
+
+    def resolve_assunto(state: State) -> State:
+        return {"resolution": resolve(state["query"])}
+
+    def traverse(state: State) -> State:
+        leis = lei_ids_of(state["resolution"], reader.lei_ids())
+        return {"context": reader.traverse(leis)}
+
+    def generate(state: State) -> State:
+        context = state["context"]
+        ids = [d.id for d in context.dispositivos] + [j.id for j in context.jurisprudencias]
+        if not ids:
+            return {"answer": None, "cited": []}
+        schema = answer_schema(lock, ids)
+        params = CompletionParams(
+            pipeline_step="answer",
+            response_schema=schema,
+            prompt_snapshot=content_hash(
+                {"prompt": lock.prompt_hash(ANSWER_PROMPT), "schema": schema}
+            ),
+        )
+        prompt = lock.render(ANSWER_PROMPT, query=state["query"], context=render_context(context))
+        answer, cited = parse_answer(provider.complete(prompt, params).text, schema)
+        return {"answer": answer, "cited": cited}
+
+    graph = StateGraph(State)
+    graph.add_node("resolve_assunto", resolve_assunto)
+    graph.add_node("traverse", traverse)
+    graph.add_node("generate", generate)
+    graph.add_edge(START, "resolve_assunto")
+    graph.add_conditional_edges("resolve_assunto", lambda s: "traverse" if s["resolution"] else END)
+    graph.add_edge("traverse", "generate")
+    graph.add_edge("generate", END)
+    return graph.compile()
+
+
+def ask(
+    query: str,
+    resolve,
+    reader: GraphReader,
+    provider: Provider,
+    lock: PromptLock | None = None,
+) -> CitedAnswer:
+    """Answers `query` from the knowledge graph, citing the dispositivos and jurisprudência used."""
+    state = build_graph(resolve, reader, provider, lock or default_lock()).invoke({"query": query})
+    resolution = state["resolution"]
+    if resolution is None:
+        return CitedAnswer(query, None, None, [])
+    context = state["context"]
+    kinds = {d.id: "Dispositivo" for d in context.dispositivos}
+    kinds |= {j.id: "Jurisprudencia" for j in context.jurisprudencias}
+    citations = [Citation(i, kinds[i], context.paths[i]) for i in state["cited"]]
+    return CitedAnswer(query, resolution.assunto, state["answer"], citations)

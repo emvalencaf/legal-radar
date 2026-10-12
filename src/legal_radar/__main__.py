@@ -2,6 +2,7 @@
 `legal-radar ingest <assunto>` ingests the assunto's anchor leis from LexML/Planalto;
 `legal-radar ingest-jurisprudencia` ingests the seed precedents and top STF/STJ hits;
 `legal-radar draft-concepts <assunto>` has an LLM draft concept candidates from the graph's corpus;
+`legal-radar ask "<query>"` resolves the assunto, traverses the graph and prints a cited answer;
 `legal-radar refresh-prompts` re-snapshots the pinned LangSmith Hub prompts into prompts/lock.json;
 `legal-radar export-seed [path]` / `legal-radar seed [path]` write / rebuild the versioned seed."""
 
@@ -37,6 +38,7 @@ def main(argv: list[str] | None = None) -> None:
     draft_cmd = commands.add_parser("draft-concepts")
     draft_cmd.add_argument("assunto", choices=sorted(VOCABULARY_PATHS))
     commands.add_parser("refresh-prompts")
+    commands.add_parser("ask").add_argument("query")
     for name in ("export-seed", "seed"):
         commands.add_parser(name).add_argument("path", nargs="?", type=Path, default=DEFAULT_SEED)
     args = parser.parse_args(argv)
@@ -64,6 +66,24 @@ def main(argv: list[str] | None = None) -> None:
                 args.path.write_text(export_seed(store.driver), encoding="utf-8")
             else:
                 load_seed(store.driver, args.path.read_text(encoding="utf-8"))
+            return
+        if args.command == "ask":
+            from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
+            from legal_radar.answer import ask
+            from legal_radar.assunto import AssuntoResolver
+            from legal_radar.router_config import build_router, load_config
+
+            router = build_router(load_config("router.yaml"))
+            result = ask(
+                args.query, AssuntoResolver(router).resolve, Neo4jGraphReader(store.driver), router
+            )
+            if result.assunto is None:
+                print(f"no known assunto matches {args.query!r}")
+            elif result.answer is None:
+                print(f"assunto {result.assunto!r} resolved, but the graph has none of its leis")
+            for c in result.citations:
+                path = " -> ".join(f"{h.type}({h.target})" for h in c.path)
+                print(f"- {c.kind} {c.id}: {path}")
             return
         if args.command == "draft-concepts":
             from legal_radar.concepts import (

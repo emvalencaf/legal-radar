@@ -13,7 +13,7 @@ from legal_radar.ports import PageSource
 SEARCH_URL = "https://www.lexml.gov.br/busca/search?keyword={keyword}"
 URN_URL = "https://www.lexml.gov.br/urn/{urn}"
 logger = logging.getLogger(__name__)
-_FEDERAL_LEI = re.compile(r"^urn:lex:br:federal:lei:(\d{4})-\d{2}-\d{2};(\d+)$")
+FEDERAL_LEI = re.compile(r"^urn:lex:br:federal:lei:(\d{4})-\d{2}-\d{2};(\d+)$")
 
 
 class LexmlError(Exception):
@@ -58,7 +58,7 @@ def _find_urn(html: str, numero: str, ano: int) -> str | None:
         if not href.startswith("/urn/"):
             continue
         urn = href.removeprefix("/urn/")
-        if (m := _FEDERAL_LEI.match(urn)) and m[2] == numero and int(m[1]) == ano:
+        if (m := FEDERAL_LEI.match(urn)) and m[2] == numero and int(m[1]) == ano:
             return urn
     return None
 

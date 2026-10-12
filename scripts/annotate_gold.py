@@ -59,6 +59,7 @@ def parse_edge(line: str, concepts: set[str]) -> dict | None:
 def main(args: argparse.Namespace) -> int:
     vocabulary = load_vocabulary(ROOT / "concepts" / "desconsideracao_personalidade.yml")
     concepts = {c.id for c in vocabulary.conceitos}
+    labels = {c.id: f"   ({c.category}: {c.label})" for c in vocabulary.conceitos}
     dispositivos = {
         d.id: d
         for filename, lei_id in LEIS
@@ -116,7 +117,11 @@ def main(args: argparse.Namespace) -> int:
         print(f"\n{BOLD}[{index}/{total}] {d.id.split('#')[1]}{RESET}  ({d.kind})\n\n  {d.text}")
         if entry.get("note"):
             print(f"  {DIM}note: {entry['note']}{RESET}")
-        if not entry["edges"]:
+        if entry["edges"]:
+            print(f"\n  {BOLD}Inferred ({len(entry['edges'])}) by Claude Code, to check:{RESET}")
+            for n, edge in enumerate(entry["edges"], 1):
+                print(f"   {n}. {show(edge)}{labels.get(edge.get('target'), '')}")
+        else:
             print(f"  {DIM}Proposed: nothing. Enter alone confirms it as a negative.{RESET}")
         done = review_all([entry], done, decide, save)
     document = {"vocabulary_hash": vocabulary.hash, "dispositivos": done}

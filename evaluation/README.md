@@ -22,6 +22,17 @@ proposals are kept under `rejected`, so the share of accepted proposals can be a
 `vocabulary_hash` pins the vocabulary the file was annotated against; `load_gold` rejects the file
 when the vocabulary changes.
 
+## Seeing the whole graph
+
+```bash
+uv run python scripts/visualize_gold.py   # writes evaluation/gold.html (git-ignored)
+```
+
+A read-only page with dispositivos on the left and the curated concepts on the right, edges coloured
+by relation type (dashed = added, dotted = corrected). Switch between the proposal, the review
+progress and the gold; click a dispositivo or a concept to isolate its edges. Concepts with no edge
+are greyed out, which is where vocabulary gaps and dead concepts show.
+
 ## Reviewing
 
 ```bash

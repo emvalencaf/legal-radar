@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Enrichment gold set</title>
+<style>
+:root{--bg:#fff;--fg:#1c1c1e;--mute:#8a8a8e;--line:#d9d9de;--panel:#f6f6f8}
+@media (prefers-color-scheme:dark){:root{--bg:#18181a;--fg:#ececee;--mute:#8d8d93;--line:#3a3a3f;--panel:#232326}}
+body{margin:0;font:13px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;height:100vh}
+#main{flex:1;overflow:auto;padding:12px}#side{width:340px;border-left:1px solid var(--line);background:var(--panel);padding:12px;overflow:auto}
+header{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+select,button{font:inherit;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:2px 6px}
+.chip{display:inline-flex;gap:4px;align-items:center;cursor:pointer;user-select:none}.chip i{width:14px;height:3px;display:inline-block}
+.chip.off{opacity:.35}text{fill:var(--fg);font-size:11px}.mute{fill:var(--mute)}.cat{font-weight:600;fill:var(--mute)}
+.node{cursor:pointer}.node:hover text{font-weight:600}.edge{fill:none;stroke-width:1.4;opacity:.45}
+.edge.dim{opacity:.05}.edge.hot{opacity:1;stroke-width:2.2}h3{margin:8px 0 4px}.rev{color:var(--mute)}
+code{background:var(--bg);padding:0 3px;border-radius:3px}.t{display:inline-block;width:10px;height:10px;margin-right:4px}
+</style>
+<div id="main"><header><b>Enrichment gold set</b><label>file <select id="set"></select></label>
+<span id="legend"></span><span id="stats" class="rev"></span><button id="clear">clear selection</button></header>
+<svg id="g"></svg></div><div id="side"><i class="rev">Click a dispositivo or a concept.</i></div>
+<script>
+const DATA=__DATA__;
+const COLORS={REFERENCES:"#7a7a80",REVOKES:"#b3261e",DEFINES:"#0b6bcb",APPLIES_TO:"#1a8f5a",OBLIGES:"#c77700",
+PROHIBITS:"#a1229c",EXCEPTS:"#d6336c",RELATES_TO:"#5f6caf"};
+const ROW=20,LX=330,RX=760,TOP=30,off=new Set();let sel=null;
+const $=s=>document.querySelector(s),NS="http://www.w3.org/2000/svg";
+const el=(n,a={},p)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+const setSel=$("#set");Object.keys(DATA.sets).forEach(k=>setSel.add(new Option(k,k)));
+setSel.onchange=draw;$("#clear").onclick=()=>{sel=null;draw()};
+$("#legend").innerHTML=Object.entries(COLORS).map(([t,c])=>`<span class="chip" data-t="${t}"><i style="background:${c}"></i>${t}</span>`).join(" ");
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{off.has(c.dataset.t)?off.delete(c.dataset.t):off.add(c.dataset.t);c.classList.toggle("off");draw()});
+function draw(){
+ const set=DATA.sets[setSel.value]||[],byId=Object.fromEntries(set.map(e=>[e.id,e]));
+ const svg=$("#g");svg.innerHTML="";
+ const pos={},cpos={};let y=TOP;
+ let lei=null;DATA.dispositivos.forEach(d=>{if(d.lei!==lei){lei=d.lei;y+=ROW;pos["#"+lei]=y;y+=ROW}pos[d.id]=y;y+=ROW});
+ const cats=[...new Set(DATA.concepts.map(c=>c.category))];let cy=TOP;
+ const catY={};cats.forEach(k=>{catY[k]=cy;cy+=ROW;DATA.concepts.filter(c=>c.category===k).forEach(c=>{cpos[c.id]=cy;cy+=ROW});cy+=6});
+ const H=Math.max(y,cy)+20;svg.setAttribute("width",RX+260);svg.setAttribute("height",H);
+ const edges=[];set.forEach(e=>(e.edges||[]).forEach(x=>edges.push({...x,from:e.id})));
+ const deg={};edges.forEach(x=>{if(x.target in cpos)deg[x.target]=(deg[x.target]||0)+1});
+ const gE=el("g",{},svg),gN=el("g",{},svg);
+ edges.filter(x=>!off.has(x.type)).forEach(x=>{
+  const y1=pos[x.from],concept=x.target in cpos;
+  if(y1==null)return;let d,y2;
+  if(concept){y2=cpos[x.target];d=`M${LX+6},${y1} C${LX+170},${y1} ${RX-170},${y2} ${RX-6},${y2}`}
+  else if(x.type==="REFERENCES"&&pos[x.target]!=null){y2=pos[x.target];const bx=LX-Math.min(200,30+Math.abs(y1-y2)/3);d=`M${LX-6},${y1} C${bx},${y1} ${bx},${y2} ${LX-6},${y2}`}
+  else return;
+  const p=el("path",{d,class:"edge",stroke:COLORS[x.type]},gE);
+  if(x.review==="added")p.setAttribute("stroke-dasharray","5 3");
+  if(x.review==="corrected")p.setAttribute("stroke-dasharray","1 3");
+  x._p=p;x._ids=[x.from,x.target];
+  if(sel&&!x._ids.includes(sel))p.classList.add("dim");if(sel&&x._ids.includes(sel))p.classList.add("hot")});
+ let lei2=null;
+ DATA.dispositivos.forEach(d=>{
+  if(d.lei!==lei2){lei2=d.lei;el("text",{x:LX,y:pos["#"+lei2],"text-anchor":"end",class:"cat"},gN).textContent=lei2}
+  const g=el("g",{class:"node"},gN),e=byId[d.id],n=e?e.edges.length:null;
+  const t=el("text",{x:LX-12,y:pos[d.id]+4,"text-anchor":"end"},g);
+  t.textContent=d.path+(e==null?"  ·  not in set":n===0?"  ·  negative":"");
+  if(e==null||n===0)t.setAttribute("class","mute");if(sel===d.id)t.style.fontWeight="700";
+  el("circle",{cx:LX,cy:pos[d.id],r:4,fill:n?"var(--fg)":"var(--mute)"},g);g.onclick=()=>{sel=d.id;draw();showD(d,e)}});
+ cats.forEach(k=>el("text",{x:RX,y:catY[k]+4,class:"cat"},gN).textContent=k);
+ DATA.concepts.forEach(c=>{const g=el("g",{class:"node"},gN);
+  el("circle",{cx:RX,cy:cpos[c.id],r:4,fill:deg[c.id]?"var(--fg)":"none",stroke:"var(--mute)"},g);
+  const t=el("text",{x:RX+12,y:cpos[c.id]+4},g);t.textContent=`${c.id} (${deg[c.id]||0})`;
+  if(!deg[c.id])t.setAttribute("class","mute");if(sel===c.id)t.style.fontWeight="700";g.onclick=()=>{sel=c.id;draw();showC(c,edges)}});
+ const unused=DATA.concepts.filter(c=>!deg[c.id]).length;
+ $("#stats").textContent=`${set.length} dispositivos · ${edges.length} edges · ${DATA.concepts.length-unused}/${DATA.concepts.length} concepts used`;
+}
+const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const tag=t=>`<span class="t" style="background:${COLORS[t]}"></span>${t}`;
+function showD(d,e){
+ const rows=e?(e.edges||[]).map(x=>`<li>${tag(x.type)} → <code>${esc(x.target||x.source)}</code> <span class="rev">${x.review||"proposed"}${x.was?` (was ${esc(x.was.type)} ${esc(x.was.target)})`:""}</span></li>`).join(""):"";
+ const rej=e&&e.rejected?`<h3>Rejected</h3><ul>${e.rejected.map(x=>`<li class="rev">${esc(x.type)} → ${esc(x.target)}</li>`).join("")}</ul>`:"";
+ $("#side").innerHTML=`<b>${esc(d.lei)} · ${esc(d.path)}</b><p>${esc(d.text)}</p>${e?`<h3>Edges</h3><ul>${rows||"<li class=rev>none (negative)</li>"}</ul>${rej}${e.note?`<h3>Note</h3><p>${esc(e.note)}</p>`:""}`:"<p class=rev>Not in this file.</p>"}`}
+function showC(c,edges){
+ const into=edges.filter(x=>x.target===c.id);
+ $("#side").innerHTML=`<b>${esc(c.label)}</b> <span class="rev">${c.category}</span><p>${esc(c.hint)}</p><h3>${into.length} edges in</h3><ul>${into.map(x=>`<li>${tag(x.type)} ← <code>${esc(x.from.split("#")[1])}</code></li>`).join("")}</ul>`}
+draw();
+</script></html>

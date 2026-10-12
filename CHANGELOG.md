@@ -9,6 +9,8 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `scripts/visualize_gold.py`: a read-only, self-contained HTML graph of the enrichment gold set
+  (proposal, review progress or gold) to see every edge and the unused concepts at once (#67).
 - Vocabulary `desconsideracao_personalidade` grows from 33 to 40 concepts, found missing while
   proposing the gold set (#67): `sociedade_controlada`, `sociedade_consorciada`,
   `sociedade_coligada`, `culpa_ou_dolo`, `excesso_de_poder_ou_infracao`,

@@ -132,44 +132,87 @@ def concept_json(**overrides) -> str:
     return json.dumps({"conceitos": [entry]})
 
 
-def test_draft_candidates_asks_for_structured_output_over_the_corpus():
-    provider = FakeProvider(script=[Completion(concept_json(), provider="g", model="m")])
+def count_json(n=1) -> str:
+    return f'{{"quantidade": {n}}}'
+
+
+def test_draft_candidates_counts_then_extracts_that_many():
+    provider = FakeProvider(
+        script=[Completion(count_json(7)), Completion(concept_json(), provider="g", model="m")]
+    )
     corpus = ["[CC#art50]\nabuso", "[STJ:1]\nTema 1210"]
 
     draft = draft_candidates("desconsideração", corpus, provider)
 
     assert [c["id"] for c in draft.conceitos] == ["x"]
-    assert draft.model == "g/m"
-    assert "abuso" in provider.calls[0] and "Tema 1210" in provider.calls[0]
-    assert "YAML" not in provider.calls[0]
+    assert (draft.model, draft.expected) == ("g/m", 7)
+    count_prompt, extract_prompt = provider.calls
+    assert "Tema 1210" in count_prompt and "Tema 1210" in extract_prompt
+    assert "7" not in count_prompt and "exatamente esses 7 conceitos" in extract_prompt
 
 
-def test_draft_schema_limits_categories_and_sources():
-    from legal_radar.concepts import draft_schema
+def test_each_step_sends_its_own_schema_and_pipeline_step():
+    seen = []
+    provider = FakeProvider(script=[Completion(count_json(2)), Completion(concept_json())])
+    complete = provider.complete
+    provider.complete = lambda prompt, params=None: seen.append(params) or complete(prompt, params)
 
-    concept = draft_schema(["b", "a"])["properties"]["conceitos"]["items"]
+    draft_candidates("a", ["[x]\nt"], provider)
 
+    count, extract = seen
+    assert (count.pipeline_step, extract.pipeline_step) == (
+        "concept_vocabulary_count",
+        "concept_vocabulary_draft",
+    )
+    assert count.response_schema["required"] == ["quantidade"]
+    assert extract.response_schema["required"] == ["conceitos"]
+
+
+def test_schemas_describe_every_field_and_limit_categories_and_sources():
+    from legal_radar.concepts import count_schema, extract_schema
+
+    def described(schema):
+        assert schema["description"]
+        for prop in schema.get("properties", {}).values():
+            assert prop["description"], prop
+            described_items = prop.get("items")
+            if isinstance(described_items, dict) and described_items.get("type") == "object":
+                described(described_items)
+
+    described(count_schema())
+    described(extract_schema(["a"]))
+    concept = extract_schema(["b", "a"])["properties"]["conceitos"]["items"]
     assert concept["properties"]["category"]["enum"] == list(CATEGORIES)
     assert concept["properties"]["sources"]["items"]["enum"] == ["a", "b"]
     assert concept["additionalProperties"] is False
     assert set(concept["required"]) == set(concept["properties"])
 
 
-@pytest.mark.parametrize("text", ["not json", "{}", '{"conceitos": 3}', "[]"])
-def test_draft_candidates_rejects_an_answer_off_the_schema(text):
-    with pytest.raises(VocabularyError, match="draft schema"):
-        draft_candidates("a", ["[x]\nt"], FakeProvider(script=[Completion(text)]))
+@pytest.mark.parametrize(
+    "script",
+    [
+        ["not json"],
+        ["{}"],
+        [count_json(0)],
+        ['{"quantidade": "3"}'],
+        ['{"quantidade": true}'],
+        [count_json(2), "not json"],
+        [count_json(2), '{"conceitos": 3}'],
+    ],
+)
+def test_draft_candidates_rejects_an_answer_off_the_schema(script):
+    provider = FakeProvider(script=[Completion(text) for text in script])
+
+    with pytest.raises(VocabularyError):
+        draft_candidates("a", ["[x]\nt"], provider)
 
 
-def test_draft_candidates_sends_the_schema_to_the_provider():
-    seen = []
-    provider = FakeProvider(script=[Completion(concept_json())])
-    complete = provider.complete
-    provider.complete = lambda prompt, params=None: seen.append(params) or complete(prompt, params)
+def test_with_assunto_reports_a_count_mismatch():
+    from legal_radar.concepts import Draft, with_assunto
 
-    draft_candidates("a", ["[x]\nt"], provider)
-
-    assert seen[0].response_schema["required"] == ["conceitos"]
+    entry = draft_of().conceitos
+    assert with_assunto("a", Draft(entry, "fake/m", expected=1))[1] is None
+    assert "counted 3 concepts but extracted 1" in with_assunto("a", Draft(entry, "f/m", 3))[1]
 
 
 def test_every_anchor_assunto_has_a_valid_registered_vocabulary():

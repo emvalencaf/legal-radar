@@ -42,6 +42,7 @@ MATCH (j:Jurisprudencia)
 RETURN j.id AS id, j.ementa + coalesce("\\n" + j.tese, "") AS text
 """
 logger = logging.getLogger(__name__)
+COUNT_STEP = "concept_vocabulary_count"
 PIPELINE_STEP = "concept_vocabulary_draft"
 
 
@@ -229,39 +230,93 @@ def _check_unique(concepts: tuple[Concept, ...]) -> None:
                 )
 
 
-DRAFT_PROMPT = """\
+COUNT_PROMPT = """\
 Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto
-"{assunto}". Leia os textos abaixo (artigos de lei e ementas/teses de decisões) e proponha de 25 a
-40 conceitos candidatos que aparecem neles de forma recorrente.
+"{assunto}". Leia os textos abaixo (artigos de lei e ementas/teses de decisões) e conte quantos
+conceitos jurídicos distintos e recorrentes eles contêm (institutos, atores, requisitos, teorias,
+princípios, efeitos, procedimentos e direitos). Sinônimos contam como um único conceito.
 
-Para cada conceito: `id` em minúsculas, ASCII e snake_case; `label` e `instructions` (uma frase
-começando por "Quando o texto...") em português; `aliases` com os termos que os textos usam para o
-mesmo conceito; uma única `category`; e `sources` com os ids, entre colchetes, dos textos onde ele
-aparece. Não proponha hierarquia entre conceitos.
+Textos:
+{corpus}
+"""
+
+EXTRACT_PROMPT = """\
+Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto
+"{assunto}". Os textos abaixo (artigos de lei e ementas/teses de decisões) contêm {quantidade}
+conceitos jurídicos distintos e recorrentes. Extraia exatamente esses {quantidade} conceitos.
+
+Não proponha hierarquia entre conceitos: cada um tem uma única categoria.
 
 Textos:
 {corpus}
 """
 
 
-def draft_schema(source_ids: list[str]) -> dict:
-    """The JSON Schema the drafting LLM must answer with; `sources` may only cite corpus ids."""
+def count_schema() -> dict:
+    """The JSON Schema of step 1: how many legal concepts the corpus holds."""
+    return {
+        "type": "object",
+        "description": "Contagem dos conceitos jurídicos distintos presentes nos textos.",
+        "properties": {
+            "quantidade": {
+                "type": "integer",
+                "description": (
+                    "Número de conceitos jurídicos distintos e recorrentes nos textos, "
+                    "contando sinônimos como um só."
+                ),
+            }
+        },
+        "required": ["quantidade"],
+        "additionalProperties": False,
+    }
+
+
+def extract_schema(source_ids: list[str]) -> dict:
+    """The JSON Schema of step 2; `sources` may only cite corpus ids."""
     concept = {
         "type": "object",
+        "description": "Um conceito jurídico candidato ao vocabulário controlado do assunto.",
         "properties": {
-            "id": {"type": "string"},
-            "label": {"type": "string"},
-            "aliases": {"type": "array", "items": {"type": "string"}},
-            "instructions": {"type": "string"},
-            "category": {"type": "string", "enum": list(CATEGORIES)},
-            "sources": {"type": "array", "items": {"type": "string", "enum": sorted(source_ids)}},
+            "id": {
+                "type": "string",
+                "description": "Identificador em minúsculas, ASCII e snake_case, "
+                "ex.: abuso_da_personalidade.",
+            },
+            "label": {"type": "string", "description": "Nome do conceito, em português."},
+            "aliases": {
+                "type": "array",
+                "description": "Outros termos que os textos usam para o mesmo conceito.",
+                "items": {"type": "string"},
+            },
+            "instructions": {
+                "type": "string",
+                "description": "Uma frase, em português, começando por 'Quando o texto...', "
+                "que diz quando um trecho trata do conceito.",
+            },
+            "category": {
+                "type": "string",
+                "description": "O que o conceito é: " + ", ".join(CATEGORIES) + ".",
+                "enum": list(CATEGORIES),
+            },
+            "sources": {
+                "type": "array",
+                "description": "Ids, entre colchetes nos textos, dos trechos onde ele aparece.",
+                "items": {"type": "string", "enum": sorted(source_ids)},
+            },
         },
         "required": ["id", "label", "aliases", "instructions", "category", "sources"],
         "additionalProperties": False,
     }
     return {
         "type": "object",
-        "properties": {"conceitos": {"type": "array", "items": concept}},
+        "description": "Os conceitos jurídicos extraídos dos textos.",
+        "properties": {
+            "conceitos": {
+                "type": "array",
+                "description": "Um item por conceito jurídico distinto.",
+                "items": concept,
+            }
+        },
         "required": ["conceitos"],
         "additionalProperties": False,
     }
@@ -270,24 +325,44 @@ def draft_schema(source_ids: list[str]) -> dict:
 @dataclass(frozen=True)
 class Draft:
     conceitos: list[dict]
-    model: str  # `provider/model` that answered, after any fallback
+    model: str  # `provider/model` that answered the extraction, after any fallback
+    expected: int | None = None  # how many concepts the counting step found
+
+
+def _answer(provider: Provider, prompt: str, step: str, schema: dict, key: str):
+    completion = provider.complete(
+        prompt, CompletionParams(pipeline_step=step, response_schema=schema)
+    )
+    try:
+        return json.loads(completion.text)[key], completion
+    except (ValueError, KeyError, TypeError) as error:
+        raise VocabularyError(f"the LLM did not answer the {step} schema: {error}") from error
 
 
 def draft_candidates(assunto: str, corpus: list[str], provider: Provider) -> Draft:
-    """LLM-drafted candidates, as structured output; a human curates them into the vocabulary."""
-    prompt = DRAFT_PROMPT.format(assunto=assunto, corpus="\n\n---\n\n".join(corpus))
-    params = CompletionParams(
-        pipeline_step=PIPELINE_STEP, response_schema=draft_schema(sorted(corpus_ids(corpus)))
+    """LLM-drafted candidates in two structured steps (count, then extract that many); a human
+    curates them into the vocabulary."""
+    text = "\n\n---\n\n".join(corpus)
+    quantidade, _ = _answer(
+        provider,
+        COUNT_PROMPT.format(assunto=assunto, corpus=text),
+        COUNT_STEP,
+        count_schema(),
+        "quantidade",
     )
-    completion = provider.complete(prompt, params)
-    try:
-        conceitos = json.loads(completion.text)["conceitos"]
-    except (ValueError, KeyError, TypeError) as error:
-        raise VocabularyError(f"the LLM did not answer the draft schema: {error}") from error
+    if isinstance(quantidade, bool) or not isinstance(quantidade, int) or quantidade < 1:
+        raise VocabularyError(f"the LLM counted {quantidade!r} concepts")
+    conceitos, completion = _answer(
+        provider,
+        EXTRACT_PROMPT.format(assunto=assunto, quantidade=quantidade, corpus=text),
+        PIPELINE_STEP,
+        extract_schema(sorted(corpus_ids(corpus))),
+        "conceitos",
+    )
     if not isinstance(conceitos, list):
-        raise VocabularyError("the LLM did not answer the draft schema: `conceitos` is not a list")
+        raise VocabularyError("the LLM did not answer the extract schema: not a list")
     model = f"{completion.provider or provider.name}/{completion.model or provider.model}"
-    return Draft(conceitos, model)
+    return Draft(conceitos, model, quantidade)
 
 
 def graph_corpus(driver: Driver) -> list[str]:
@@ -317,6 +392,8 @@ def with_assunto(
         vocabulary = parse_vocabulary(body)
     except VocabularyError as error:
         return body, str(error)
+    if draft.expected is not None and len(conceitos) != draft.expected:
+        return body, f"the LLM counted {draft.expected} concepts but extracted {len(conceitos)}"
     if corpus_ids is not None:
         unknown = sorted({s for c in vocabulary.conceitos for s in c.sources} - corpus_ids)
         if unknown:

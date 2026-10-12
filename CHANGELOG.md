@@ -13,7 +13,7 @@ heading when `development` is released to `master`.
   assunto (snake_case ASCII ids, Portuguese label/aliases/instructions, one of seven categories,
   no duplicate ids or shared terms) and exposes `Vocabulary.hash`, independent of order and
   formatting, for the enrichment idempotency key. `legal-radar draft-concepts <assunto>` has an LLM
-  draft candidates from the graph's dispositivos and jurisprudência into a `.draft.yml`. A first
+  draft candidates from the graph's dispositivos and jurisprudência into a `.draft.yml`, in two structured-output steps (count the concepts, then extract exactly that many). A first
   draft of `concepts/desconsideracao_personalidade.yml` (33 concepts) is committed and still needs
   human curation. Provenance lives in the file, outside the hash: per-concept `origin` (with the `model` when `llm`)
   (`llm`/`human`) and `reviewed_by` + `reviewed_on`, and a file `status` (`draft` by default,

@@ -9,6 +9,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Deterministic relation extractor (#26): `legal_radar.relations.extract_relations` turns a
+  dispositivo into `REFERENCES` and `REVOKES` edges (`Relation`, `Confidence`, `Origin` in
+  `legal_radar.domain`) with literal evidence, per ADR-0002. It covers explicit citations
+  (`art. 50 do Código Civil`, `Lei nº 8.078/1990`), relatives (`deste artigo`, `artigo anterior`),
+  inciso and artigo ranges, and Planalto `(Revogado pela …)` marks. Law names resolve through a
+  curated code table with an optional LexML fallback; unresolved targets are LOW, and what the
+  rules cannot resolve is returned in `needs_llm`.
 - Retrieval and cited answer (#43): `legal-radar ask "<query>"` runs a LangGraph pipeline
   (`legal_radar.answer`: resolve assunto, traverse, generate) over the knowledge graph. The
   `GraphReader` port (`Neo4jGraphReader`) walks `PARTS` down from the anchor dispositivos (`AnchorLei.artigos`: CC art. 50, CDC art. 28; a lei with none starts from the whole lei, which was ~4,700 dispositivos and broke the model call), then 1 hop of

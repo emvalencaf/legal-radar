@@ -7,6 +7,13 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Fixed
+
+- The enricher's structured-output schema no longer sends an empty `enum` for `referencias` when a
+  dispositivo has no unresolved citation: LM Studio rejected it (`enum must be a non-empty array`),
+  so no dispositivo could be enriched locally. `LLM_TIMEOUT_SECONDS` raises the per-call timeout
+  for slow local models; `eval_enrichment.py --timeout` sets it (default 600).
+
 ### Added
 
 - `eval_enrichment.py`: `--model` next to `--provider`, `lmstudio` as the default provider, only the

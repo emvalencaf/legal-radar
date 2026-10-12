@@ -1,7 +1,7 @@
 """Score the enrichment (rules + LLM) of the anchor slice against a gold set and apply the gates.
 
 Usage: eval_enrichment.py GOLD.yml [--provider lmstudio|gemini|groq] [--model NAME]
-                          [--persist DIR] [--thresholds evaluation.yml]
+                          [--timeout SECONDS] [--persist DIR] [--thresholds evaluation.yml]
 
 Runs the rules and the LLM over the Planalto excerpts under `tests/fixtures/planalto`, scores the
 dispositivos listed in the gold set per edge (split by origin and relation type), prints the
@@ -10,6 +10,7 @@ JSONL for audit. The gold set itself is annotated by a human (#67).
 """
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -67,6 +68,7 @@ def progress_printer(started: float):
 
 def main(args: argparse.Namespace) -> int:
     load_env()
+    os.environ.setdefault("LLM_TIMEOUT_SECONDS", str(args.timeout))
     config = load_config(ROOT / "router.yaml")
     config["providers"] = [args.provider]
     if args.model:
@@ -128,6 +130,9 @@ if __name__ == "__main__":
     parser.add_argument("gold", type=Path)
     parser.add_argument("--provider", default="lmstudio", choices=["lmstudio", "gemini", "groq"])
     parser.add_argument("--model", help="model name; defaults to `models` in router.yaml")
+    parser.add_argument(
+        "--timeout", type=int, default=600, help="seconds per LLM call (local models are slow)"
+    )
     parser.add_argument("--persist", type=Path)
     parser.add_argument("--thresholds", type=Path, default=ROOT / "evaluation.yml")
     sys.exit(main(parser.parse_args()))

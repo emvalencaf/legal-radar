@@ -1,6 +1,7 @@
 """Groq, Gemini and LM Studio adapters over plain HTTP (stdlib only)."""
 
 import json
+import os
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -21,7 +22,7 @@ Transport = Callable[[str, dict[str, str], dict], Response]
 
 DAILY_MARKERS = ("per day", "perday", "(rpd)", "(tpd)")
 DEFAULT_RETRY_AFTER = 2.0
-TIMEOUT_SECONDS = 60
+TIMEOUT_SECONDS = 60  # `LLM_TIMEOUT_SECONDS` overrides it: local models can take minutes
 
 
 def urllib_transport(url: str, headers: dict[str, str], body: dict) -> Response:
@@ -32,7 +33,9 @@ def urllib_transport(url: str, headers: dict[str, str], body: dict) -> Response:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+        with urllib.request.urlopen(
+            request, timeout=float(os.environ.get("LLM_TIMEOUT_SECONDS", TIMEOUT_SECONDS))
+        ) as response:
             return response.status, dict(response.headers), json.load(response)
     except urllib.error.HTTPError as error:
         try:

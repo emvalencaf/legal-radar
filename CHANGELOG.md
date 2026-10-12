@@ -20,7 +20,7 @@ heading when `development` is released to `master`.
   `curated` only when every concept is reviewed), plus per-concept `created_at` and `updated_at` dates. Lineage: per-concept `sources` lists the dispositivo
   and jurisprudência ids it came from; the draft asks the LLM to cite them and flags any not in the
   corpus. `load_registered` only warns on a draft and checks
-  the file's `assunto` against `VOCABULARY_PATHS`. See ADR-0003.
+  the file's `assunto` against `VOCABULARY_PATHS`. See ADR-0003 and ADR-0006.
 - Embeddings and assunto resolution (#40): `embed()` on the provider port, routed like `complete()`
   (fallback, retry, daily limits, an `embed_call` wide event) with Gemini `gemini-embedding-001`
   first and LM Studio `text-embedding-bge-m3` as fallback (Groq has none), configured under

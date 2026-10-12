@@ -209,3 +209,10 @@ def test_embed_daily_limit_counts_the_embedding_model(tmp_path):
 
     assert router.embed(["a"]).provider == "gemini"
     assert router.embed(["b"]).provider == "lmstudio"
+
+
+def test_event_carries_the_prompt_snapshot(tmp_path):
+    log = WideEventLog(tmp_path / "calls.jsonl")
+    router = Router([FakeProvider()], log)
+    router.complete("hi", CompletionParams(prompt_snapshot="sha256:abc"))
+    assert events(log)[0]["prompt_snapshot"] == "sha256:abc"

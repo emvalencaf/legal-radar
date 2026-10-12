@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Prompts pinned to LangSmith Hub commits and read offline from `prompts/lock.json` (template,
+  structured-output schema, commit); `legal-radar refresh-prompts` / `make refresh-prompts`
+  re-snapshots them. The wide event carries `prompt_snapshot`, a hash of the prompt used (commit, template, schema).
+  The drafting steps now read prompts and schemas from it, and the tagging call in `pipeline.run`
+  now sends `pipeline_step="tag"` instead of the default.
+
 - Concept vocabulary (#41): `legal_radar.concepts` loads and validates one flat YAML vocabulary per
   assunto (snake_case ASCII ids, Portuguese label/aliases/instructions, one of seven categories,
   no duplicate ids or shared terms) and exposes `Vocabulary.hash`, independent of order and

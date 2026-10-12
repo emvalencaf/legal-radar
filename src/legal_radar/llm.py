@@ -12,6 +12,7 @@ class CompletionParams:
     temperature: float | None = None
     tools: tuple[dict, ...] = ()
     response_schema: dict | None = None  # JSON Schema the reply must conform to (structured output)
+    prompt_snapshot: str | None = None  # hash of the prompt lockfile the prompt was rendered from
 
 
 @dataclass(frozen=True)

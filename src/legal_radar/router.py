@@ -60,6 +60,7 @@ class Router:
             "model": None,
             "pipeline_step": params.pipeline_step,
             "prompt_id": content_hash(prompt),
+            "prompt_snapshot": params.prompt_snapshot,
             "tool_schema_ids": [content_hash(tool) for tool in params.tools],
             "response_schema_id": (
                 content_hash(params.response_schema) if params.response_schema else None

@@ -2,6 +2,7 @@
 `legal-radar ingest <assunto>` ingests the assunto's anchor leis from LexML/Planalto;
 `legal-radar ingest-jurisprudencia` ingests the seed precedents and top STF/STJ hits;
 `legal-radar draft-concepts <assunto>` has an LLM draft concept candidates from the graph's corpus;
+`legal-radar refresh-prompts` re-snapshots the pinned LangSmith Hub prompts into prompts/lock.json;
 `legal-radar export-seed [path]` / `legal-radar seed [path]` write / rebuild the versioned seed."""
 
 import argparse
@@ -30,12 +31,19 @@ def main(argv: list[str] | None = None) -> None:
     commands.add_parser("ingest-jurisprudencia")
     draft_cmd = commands.add_parser("draft-concepts")
     draft_cmd.add_argument("assunto", choices=sorted(VOCABULARY_PATHS))
+    commands.add_parser("refresh-prompts")
     for name in ("export-seed", "seed"):
         commands.add_parser(name).add_argument("path", nargs="?", type=Path, default=DEFAULT_SEED)
     args = parser.parse_args(argv)
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
+    if args.command == "refresh-prompts":
+        from legal_radar.prompts import LOCK_PATH, langsmith_fetch, refresh_lock
+
+        lock = refresh_lock(langsmith_fetch)
+        print(f"wrote {LOCK_PATH} ({len(lock.prompts)} prompts, {lock.snapshot_hash})")
+        return
 
     store = Neo4jGraphStore.connect(
         os.environ.get("NEO4J_URI", "bolt://localhost:7687"),

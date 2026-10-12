@@ -1,0 +1,105 @@
+{
+  "prompts": {
+    "concepts-count": {
+      "commit": "2a7f98d218db17f1208f41443889d168643a588e7d2d2c7dc9586156811a1ff5",
+      "schema": {
+        "additionalProperties": false,
+        "description": "Contagem dos conceitos jurídicos distintos presentes nos textos.",
+        "properties": {
+          "quantidade": {
+            "description": "Número de conceitos jurídicos distintos e recorrentes nos textos, contando sinônimos como um só.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quantidade"
+        ],
+        "title": "concepts_count",
+        "type": "object"
+      },
+      "template": "Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto\n\"{assunto}\". Leia os textos abaixo (artigos de lei e ementas/teses de decisões) e conte quantos\nconceitos jurídicos distintos e recorrentes eles contêm (institutos, atores, requisitos, teorias,\nprincípios, efeitos, procedimentos e direitos). Sinônimos contam como um único conceito.\n\nTextos:\n{corpus}\n"
+    },
+    "concepts-extract": {
+      "commit": "773dfbfc658ca4da42340288682a644a22561fe583203d1e7364247e2d85dff8",
+      "schema": {
+        "additionalProperties": false,
+        "description": "Os conceitos jurídicos extraídos dos textos.",
+        "properties": {
+          "conceitos": {
+            "description": "Um item por conceito jurídico distinto.",
+            "items": {
+              "additionalProperties": false,
+              "description": "Um conceito jurídico candidato ao vocabulário controlado do assunto.",
+              "properties": {
+                "aliases": {
+                  "description": "Outros termos que os textos usam para o mesmo conceito.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "category": {
+                  "description": "O que o conceito é: DIREITO, ATOR, PROCESSO, REQUISITO, PRINCIPIO, TEORIA, EFEITO.",
+                  "enum": [
+                    "DIREITO",
+                    "ATOR",
+                    "PROCESSO",
+                    "REQUISITO",
+                    "PRINCIPIO",
+                    "TEORIA",
+                    "EFEITO"
+                  ],
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Identificador em minúsculas, ASCII e snake_case, ex.: abuso_da_personalidade.",
+                  "type": "string"
+                },
+                "instructions": {
+                  "description": "Uma frase, em português, começando por 'Quando o texto...', que diz quando um trecho trata do conceito.",
+                  "type": "string"
+                },
+                "label": {
+                  "description": "Nome do conceito, em português.",
+                  "type": "string"
+                },
+                "sources": {
+                  "description": "Ids, entre colchetes nos textos, dos trechos onde ele aparece.",
+                  "items": {
+                    "enum": [
+                      "placeholder"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "aliases",
+                "instructions",
+                "category",
+                "sources"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "conceitos"
+        ],
+        "title": "concepts_extract",
+        "type": "object"
+      },
+      "template": "Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto\n\"{assunto}\". Os textos abaixo (artigos de lei e ementas/teses de decisões) contêm {quantidade}\nconceitos jurídicos distintos e recorrentes. Extraia exatamente esses {quantidade} conceitos.\n\nNão proponha hierarquia entre conceitos: cada um tem uma única categoria.\n\nTextos:\n{corpus}\n"
+    },
+    "dispositivo-concept": {
+      "commit": "9e5ffc96e04e0d59b6dcc6428d4f8622f9cee3302c076c10bad93e990453bfc1",
+      "schema": null,
+      "template": "Return the conceito id (snake_case) that this dispositivo is about:\n{text}"
+    }
+  },
+  "snapshot_hash": "sha256:c886acb065fa44f314d5f9ea9919278d4f5d5fc4f974a23ad580fb2e75300e6b"
+}

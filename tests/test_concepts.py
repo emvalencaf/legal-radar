@@ -169,7 +169,10 @@ def test_each_step_sends_its_own_schema_and_pipeline_step():
 
 
 def test_schemas_describe_every_field_and_limit_categories_and_sources():
-    from legal_radar.concepts import count_schema, extract_schema
+    from legal_radar.concepts import extract_schema
+    from legal_radar.prompts import default_lock
+
+    lock = default_lock()
 
     def described(schema):
         assert schema["description"]
@@ -179,9 +182,9 @@ def test_schemas_describe_every_field_and_limit_categories_and_sources():
             if isinstance(described_items, dict) and described_items.get("type") == "object":
                 described(described_items)
 
-    described(count_schema())
-    described(extract_schema(["a"]))
-    concept = extract_schema(["b", "a"])["properties"]["conceitos"]["items"]
+    described(lock.schema("concepts-count"))
+    described(extract_schema(lock, ["a"]))
+    concept = extract_schema(lock, ["b", "a"])["properties"]["conceitos"]["items"]
     assert concept["properties"]["category"]["enum"] == list(CATEGORIES)
     assert concept["properties"]["sources"]["items"]["enum"] == ["a", "b"]
     assert concept["additionalProperties"] is False

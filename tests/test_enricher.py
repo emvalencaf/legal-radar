@@ -201,3 +201,42 @@ def test_a_reference_with_non_literal_evidence_is_dropped_once():
     result, _ = run(answer=reply(referencias=[item]), unresolved=[citation])
 
     assert result.dropped == 1
+
+
+def test_ancestors_reach_the_prompt_from_the_farthest_to_the_nearest():
+    far = Dispositivo(f"{LEI}#far", LEI, "far", "TEXTO-LONGE")
+    near = Dispositivo(f"{LEI}#near", LEI, "near", "TEXTO-PERTO")
+
+    _, provider = run(ancestors=[far, near])
+
+    assert provider.calls[0].index("TEXTO-LONGE") < provider.calls[0].index("TEXTO-PERTO")
+
+
+def test_a_reply_with_the_wrong_shape_is_flagged_as_failed():
+    for text in ('{"conceitos": "x", "referencias": []}', '{"conceitos": []}', "[]"):
+        result, _ = run(answer=Completion(text))
+        assert result.failed and result.relations == []
+
+
+def test_it_enriches_a_dispositivo_parsed_from_planalto_with_its_unresolved_citations():
+    from pathlib import Path
+
+    from legal_radar.enricher import candidate_targets
+    from legal_radar.planalto import decode_html, parse_planalto
+    from legal_radar.relations import extract_relations
+
+    raw = (Path(__file__).parent / "fixtures" / "planalto" / "l10406_excerpt.htm").read_bytes()
+    everything = parse_planalto(decode_html(raw), LEI)
+    d = next(x for x in everything if x.path == "art50")
+    unresolved = [r for r in extract_relations(d).relations if r.unresolved]
+
+    result, provider = run(
+        d=d,
+        ancestors=[],
+        unresolved=unresolved,
+        candidates=candidate_targets(everything),
+        answer=reply(),
+    )
+
+    assert result.skipped is None and d.text in provider.calls[0]
+    assert all(c.unresolved in provider.calls[0] for c in unresolved)

@@ -44,6 +44,10 @@ _Avoid_: Conflating with parsing — parsing (`PlanaltoHtmlParser`) is structura
 The reliability level of an extracted relation, derived from how it was extracted, never self-declared by the LLM: HIGH = a rule matched an explicit pattern in the text; MEDIUM = the LLM inferred it from context; LOW = unresolved target or stub. The origin (`rule` / `llm`) is stored on the edge too. See ADR-0002.
 _Avoid_: Treating an LLM's verbalized confidence as this value.
 
+**Gold set de enriquecimento**:
+The hand-validated list of the relations (`REFERENCES`, `REVOKES`, dispositivo→conceito + relation type) that each dispositivo of the anchor slice should yield, including the dispositivos reviewed and confirmed to yield none. An LLM proposes it, one human corrects it; it measures agreement with that one annotator, not absolute truth. Enrichment output is scored against it per edge, split by origin (`rule` / `llm`). See ADR-0002.
+_Avoid_: "Ground truth" (there is a single annotator), and treating a dispositivo with no annotation as a confirmed negative (a negative is recorded explicitly).
+
 **Citação não resolvida**:
 A passage the rules recognised as a citation but could not turn into a target (e.g. "o artigo mencionado no parágrafo anterior"). It yields a LOW `REFERENCES` edge that keeps the citation as written, and it is the only thing the LLM is asked to resolve about references. See ADR-0002.
 _Avoid_: "Referência ambígua" (a vague adjective; the state is verifiable: the rules produced no target).

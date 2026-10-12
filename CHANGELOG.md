@@ -16,7 +16,8 @@ heading when `development` is released to `master`.
   dispositivo; out-of-vocabulary, non-literal and ungrounded items are dropped and counted. Triage
   skips revoked, structural and empty dispositivos, and a per-call input-token ceiling trims the
   farthest ancestors first. The `dispositivo-enrichment` prompt template ships in the module and
-  must still be published to the Hub and pinned (`refresh-prompts`).
+  is published to the Hub and pinned; the per-call ceiling is `enrichment.max_input_tokens` in
+  `router.yaml`.
 - Revocations in the parser and graph (#26): `Dispositivo` gains `revoked` and `revocations`; a
   fully revoked dispositivo (struck text plus `(Revogado …)` marks) is kept instead of vanishing,
   with the marks moved out of its text. `GraphBatch.relations` writes `REFERENCES` and `REVOKES`

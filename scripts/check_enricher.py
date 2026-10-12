@@ -15,7 +15,7 @@ from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE, candida
 from legal_radar.planalto import decode_html, parse_planalto
 from legal_radar.prompts import refresh
 from legal_radar.relations import extract_relations
-from legal_radar.router_config import build_router, load_config
+from legal_radar.router_config import build_router, enrichment_max_input_tokens, load_config
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"
@@ -30,6 +30,7 @@ def main(provider: str) -> int:
     config = load_config(ROOT / "router.yaml")
     config["providers"] = [provider]
     router = build_router(config)
+    max_input_tokens = enrichment_max_input_tokens(config)
     vocabulary = load_vocabulary(ROOT / "concepts" / "desconsideracao_personalidade.draft.yml")
     lock = refresh({ENRICHMENT_PROMPT: "local"}, lambda name, commit: (ENRICHMENT_TEMPLATE, None))
 
@@ -49,6 +50,7 @@ def main(provider: str) -> int:
             result = enrich(
                 d, vocabulary, router, lock,
                 ancestors=ancestors, unresolved=unresolved, candidates=candidates,
+                max_input_tokens=max_input_tokens,
             )  # fmt: skip
             print(f"\n{d.id}  [{d.kind}]")
             if result.skipped:

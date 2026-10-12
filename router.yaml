@@ -20,6 +20,11 @@ embedding_models:
 daily_limits:
   gemini: 500
 
+# LLM enricher (ADR-0007): input-token ceiling per call. The farthest ancestors are trimmed first;
+# a dispositivo that does not fit even without ancestors is skipped.
+enrichment:
+  max_input_tokens: 8000
+
 logging:
   path: logs/llm_calls.jsonl
   log_full_content: false # true also logs prompt and output text

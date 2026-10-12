@@ -13,6 +13,7 @@ from legal_radar.adapters.http_providers import (
     Transport,
     urllib_transport,
 )
+from legal_radar.enricher import MAX_INPUT_TOKENS
 from legal_radar.ports import Provider
 from legal_radar.router import Router
 from legal_radar.wide_events import WideEventLog
@@ -35,6 +36,14 @@ def load_config(path: Path | str | None) -> dict:
     if path is None or not Path(path).exists():
         return {}
     return yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+
+
+def enrichment_max_input_tokens(config: dict) -> int:
+    """The per-call input-token ceiling of the enricher (`enrichment.max_input_tokens`)."""
+    value = (config.get("enrichment") or {}).get("max_input_tokens", MAX_INPUT_TOKENS)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"enrichment.max_input_tokens must be a positive integer, got {value!r}")
+    return value
 
 
 def build_router(

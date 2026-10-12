@@ -240,3 +240,17 @@ def test_it_enriches_a_dispositivo_parsed_from_planalto_with_its_unresolved_cita
 
     assert result.skipped is None and d.text in provider.calls[0]
     assert all(c.unresolved in provider.calls[0] for c in unresolved)
+
+
+def test_the_token_ceiling_is_read_from_router_yaml_with_a_default():
+    import pytest
+
+    from legal_radar.enricher import MAX_INPUT_TOKENS
+    from legal_radar.router_config import enrichment_max_input_tokens, load_config
+
+    assert enrichment_max_input_tokens({"enrichment": {"max_input_tokens": 123}}) == 123
+    assert enrichment_max_input_tokens({}) == MAX_INPUT_TOKENS
+    assert enrichment_max_input_tokens(load_config("router.yaml")) == MAX_INPUT_TOKENS
+    for bad in (0, -1, "8000", True):
+        with pytest.raises(ValueError):
+            enrichment_max_input_tokens({"enrichment": {"max_input_tokens": bad}})

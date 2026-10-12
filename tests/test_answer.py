@@ -11,16 +11,16 @@ from legal_radar.assunto import AssuntoResolver
 from legal_radar.domain import Dispositivo, GraphBatch, Hop, Jurisprudencia, Lei
 from legal_radar.prompts import refresh
 
-ART_50 = f"{CC}#art-50"
-ART_50_1 = f"{CC}#art-50.par-1"
-ART_51 = f"{CC}#art-51"
-CDC_28 = f"{CDC}#art-28"
+ART_50 = f"{CC}#art50"
+ART_50_1 = f"{CC}#art50_par1"
+ART_51 = f"{CC}#art51"
+CDC_28 = f"{CDC}#art28"
 CP = "urn:lex:br:federal:lei:1940-12-07;2848"
-CP_121 = f"{CP}#art-121"
-CP_122 = f"{CP}#art-122"
+CP_121 = f"{CP}#art121"
+CP_122 = f"{CP}#art122"
 TEMA = "STJ:202001090402"
 OTHER = "STF:unrelated"
-EXPECTED = [ART_50, ART_50_1, ART_51, CDC_28, CP_121, TEMA]
+EXPECTED = [ART_50, ART_50_1, CDC_28, CP_121, TEMA]
 
 
 @pytest.fixture(scope="module")
@@ -51,20 +51,20 @@ def d(lei: str, path: str, text: str, parent: str | None = None) -> Dispositivo:
 
 @pytest.fixture
 def graph(driver):
-    """Two anchor leis, a third lei outside the assunto, and decisions citing dispositivos.
+    """Two anchor leis, a third lei, and decisions citing dispositivos.
 
-    art-50 PARTS art-50.par-1; CDC art-28 REFERENCES CP art-121 (one hop from a reached node);
-    CP art-121 REFERENCES CP art-122 (a second hop: out of reach); TEMA cites art-50; OTHER
-    cites nothing.
+    The anchors are CC art. 50 and CDC art. 28 (art51 is outside them). art50 PARTS art50_par1;
+    art28 REFERENCES CP art121 (one hop from a reached node); CP art121 REFERENCES CP art122 (a
+    second hop: out of reach); TEMA cites art50; OTHER cites nothing.
     """
     store = Neo4jGraphStore(driver)
     store.write(
         GraphBatch(
             Lei(CC, "Código Civil"),
             [
-                d(CC, "art-50", "Desconsideração da personalidade em caso de abuso."),
-                d(CC, "art-50.par-1", "Desvio de finalidade.", "art-50"),
-                d(CC, "art-51", "Outro artigo."),
+                d(CC, "art50", "Desconsideração da personalidade em caso de abuso."),
+                d(CC, "art50_par1", "Desvio de finalidade.", "art50"),
+                d(CC, "art51", "Outro artigo."),
             ],
             [],
             [],
@@ -73,7 +73,7 @@ def graph(driver):
     store.write(
         GraphBatch(
             Lei(CDC, "CDC"),
-            [d(CDC, "art-28", "Desconsideração no consumo.")],
+            [d(CDC, "art28", "Desconsideração no consumo.")],
             [],
             [],
         )
@@ -82,8 +82,8 @@ def graph(driver):
         GraphBatch(
             Lei(CP, "CP"),
             [
-                d(CP, "art-121", "Homicídio."),
-                d(CP, "art-122", "Equiparação."),
+                d(CP, "art121", "Homicídio."),
+                d(CP, "art122", "Equiparação."),
             ],
             [],
             [],
@@ -117,13 +117,15 @@ def test_resolves_the_assunto_and_cites_graph_nodes_with_their_paths(graph, lock
     assert result.answer
     assert [c.id for c in result.citations] == sorted(EXPECTED)
     by_id = {c.id: c for c in result.citations}
-    assert by_id[ART_50].path == [Hop("PARTS", CC, ART_50)]
-    assert by_id[ART_50_1].path == [Hop("PARTS", CC, ART_50), Hop("PARTS", ART_50, ART_50_1)]
-    assert by_id[CDC_28].path == [Hop("PARTS", CDC, CDC_28)]
-    assert by_id[CP_121].path == [Hop("PARTS", CDC, CDC_28), Hop("REFERENCES", CDC_28, CP_121)]
-    assert by_id[TEMA].path == [Hop("PARTS", CC, ART_50), Hop("REFERENCES", TEMA, ART_50)]
+    assert by_id[ART_50].path == []
+    assert by_id[ART_50_1].path == [Hop("PARTS", ART_50, ART_50_1)]
+    assert by_id[CDC_28].path == []
+    assert by_id[CP_121].path == [Hop("REFERENCES", CDC_28, CP_121)]
+    assert by_id[TEMA].path == [Hop("REFERENCES", TEMA, ART_50)]
     assert {c.id: c.kind for c in result.citations}[TEMA] == "Jurisprudencia"
-    assert OTHER not in by_id and CP_122 not in by_id  # no 2-hop REFERENCES, no unrelated nodes
+    assert (
+        ART_51 not in by_id and OTHER not in by_id and CP_122 not in by_id
+    )  # no 2-hop REFERENCES, no unrelated nodes
 
 
 def test_a_decision_citing_a_node_reached_by_references_is_not_retrieved(graph, driver):
@@ -133,7 +135,7 @@ def test_a_decision_citing_a_node_reached_by_references_is_not_retrieved(graph, 
         d=CP_121,
     )
 
-    assert OTHER not in [j.id for j in graph.traverse([CC, CDC]).jurisprudencias]
+    assert OTHER not in [j.id for j in graph.traverse([ART_50, CDC_28]).jurisprudencias]
 
 
 def test_every_citation_resolves_to_a_graph_node(graph, lock, driver):
@@ -147,7 +149,7 @@ def test_every_citation_resolves_to_a_graph_node(graph, lock, driver):
 
 
 def test_traversal_returns_the_same_context_for_the_same_anchor(graph):
-    leis = [CDC, CC]
+    leis = [CDC_28, ART_50]
 
     first = graph.traverse(leis)
 

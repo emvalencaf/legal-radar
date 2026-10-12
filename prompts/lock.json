@@ -1,5 +1,37 @@
 {
   "prompts": {
+    "cited-answer": {
+      "commit": "d13f0038e067f9bec93d9fadef5d925025fac29ddacf27f17f6e70cd594bb508",
+      "schema": {
+        "additionalProperties": false,
+        "description": "A resposta à pergunta, com os ids das fontes em que se apoia.",
+        "properties": {
+          "answer": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "citations": {
+            "description": "Ids dos dispositivos e das jurisprudências do contexto citados.",
+            "items": {
+              "enum": [
+                "placeholder"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "answer",
+          "citations"
+        ],
+        "title": "cited_answer",
+        "type": "object"
+      },
+      "template": "Responda à pergunta usando apenas as fontes abaixo, e cite em `citations` o id de cada fonte em que a resposta se apoia. Se as fontes não bastarem, diga isso.\n\nPergunta: {query}\n\nFontes:\n{context}"
+    },
     "concepts-count": {
       "commit": "2a7f98d218db17f1208f41443889d168643a588e7d2d2c7dc9586156811a1ff5",
       "schema": {
@@ -118,5 +150,5 @@
       "template": "Return the conceito id (snake_case) that this dispositivo is about:\n{text}"
     }
   },
-  "snapshot_hash": "sha256:aeb133f910c76e087d2911d9172df5e4cbba565c1fc093249e3df2294baf4d33"
+  "snapshot_hash": "sha256:b3d26a75d47140414eb54ae66f234fb6175dba3d0035adf649ad2417afe9ba74"
 }

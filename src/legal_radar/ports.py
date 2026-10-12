@@ -33,10 +33,10 @@ class GraphReader(Protocol):
     def lei_ids(self) -> list[str]:
         """The ids (URNs) of every lei in the graph, sorted."""
 
-    def traverse(self, lei_ids: list[str]) -> Context:
-        """Walk `PARTS` down from the leis, then 1 hop of `REFERENCES` (a dispositivo's outgoing
-        ones, a jurisprudência's citations of reached dispositivos), with no scoring or cap.
-        Deterministic: the same anchors give the same context, sorted by id."""
+    def traverse(self, anchor_ids: list[str]) -> Context:
+        """Walk `PARTS` down from the anchors (leis or dispositivos), then 1 hop of `REFERENCES`
+        (a dispositivo's outgoing ones, a jurisprudência's citations of reached dispositivos),
+        with no scoring or cap. Deterministic: same anchors, same context, sorted by id."""
 
 
 class PageSource(Protocol):

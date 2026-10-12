@@ -6,10 +6,10 @@ from legal_radar.domain import Context, Dispositivo, Hop, Jurisprudencia
 
 LEI_IDS = "MATCH (l:Lei) RETURN l.id AS id ORDER BY id"
 PARTS_DOWN = """
-MATCH p = (l:Lei)-[:PARTS*]->(d:Dispositivo)
-WHERE l.id IN $lei_ids
+MATCH p = (a)-[:PARTS*0..]->(d:Dispositivo)
+WHERE a.id IN $anchor_ids AND (a:Lei OR a:Dispositivo)
 RETURN d AS node, [r IN relationships(p) | [startNode(r).id, endNode(r).id]] AS hops
-ORDER BY d.id
+ORDER BY d.id, length(p)
 """
 REFERENCED = """
 MATCH (s:Dispositivo)-[:REFERENCES]->(t:Dispositivo)
@@ -58,11 +58,13 @@ class Neo4jGraphReader:
     def lei_ids(self) -> list[str]:
         return [r["id"] for r in self._rows(LEI_IDS)]
 
-    def traverse(self, lei_ids: list[str]) -> Context:
+    def traverse(self, anchor_ids: list[str]) -> Context:
         dispositivos: dict[str, Dispositivo] = {}
         paths: dict[str, list[Hop]] = {}
-        for r in self._rows(PARTS_DOWN, lei_ids=lei_ids):
+        for r in self._rows(PARTS_DOWN, anchor_ids=anchor_ids):
             node = r["node"]
+            if node["id"] in dispositivos:  # reached from two anchors: the nearer one is kept
+                continue
             dispositivos[node["id"]] = _dispositivo(node)
             paths[node["id"]] = [Hop("PARTS", a, b) for a, b in r["hops"]]
         parts = list(dispositivos)

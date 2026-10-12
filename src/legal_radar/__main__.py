@@ -93,8 +93,10 @@ def main(argv: list[str] | None = None) -> None:
                 print(f"no known assunto matches {args.query!r}")
             elif result.answer is None:
                 print(f"assunto {result.assunto!r} resolved, but the graph has none of its leis")
+            else:
+                print(result.answer)
             for c in result.citations:
-                path = " -> ".join(f"{h.type}({h.target})" for h in c.path)
+                path = " -> ".join(f"{h.type}({h.target})" for h in c.path) or "anchor"
                 print(f"- {c.kind} {c.id}: {path}")
             return
         if args.command == "draft-concepts":

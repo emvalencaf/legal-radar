@@ -11,7 +11,7 @@ heading when `development` is released to `master`.
 
 - Retrieval and cited answer (#43): `legal-radar ask "<query>"` runs a LangGraph pipeline
   (`legal_radar.answer`: resolve assunto, traverse, generate) over the knowledge graph. The
-  `GraphReader` port (`Neo4jGraphReader`) walks `PARTS` down from the anchor leis, then 1 hop of
+  `GraphReader` port (`Neo4jGraphReader`) walks `PARTS` down from the anchor dispositivos (`AnchorLei.artigos`: CC art. 50, CDC art. 28; a lei with none starts from the whole lei, which was ~4,700 dispositivos and broke the model call), then 1 hop of
   `REFERENCES` (a dispositivo's outgoing ones, a jurisprudência's citations), sorted by id, with
   no scoring or cap. The reply must validate against the `cited-answer` schema, whose enum is the
   retrieved ids; each `Citation` carries its node kind and its graph path. The `cited-answer`

@@ -98,13 +98,15 @@ def parse_answer(text: str, schema: dict) -> tuple[str, list[str]]:
     return reply["answer"], reply["citations"]
 
 
-def lei_ids_of(resolution: Resolution, urns: list[str]) -> list[str]:
-    """The graph's leis that are the resolved assunto's anchors (by lei number and year)."""
-    wanted = {(a.numero, a.ano) for a in resolution.anchors}
+def anchor_ids_of(resolution: Resolution, urns: list[str]) -> list[str]:
+    """The graph nodes the traversal starts from: for each anchor lei present in the graph (by
+    number and year), its anchor dispositivos, or the whole lei when it names none."""
     found = []
     for urn in urns:
-        if (m := FEDERAL_LEI.match(urn)) and (m[2], int(m[1])) in wanted:
-            found.append(urn)
+        m = FEDERAL_LEI.match(urn)
+        for anchor in resolution.anchors:
+            if m and (m[2], int(m[1])) == (anchor.numero, anchor.ano):
+                found += [f"{urn}#{path}" for path in anchor.artigos] or [urn]
     return found
 
 
@@ -115,7 +117,7 @@ def build_graph(resolve, reader: GraphReader, provider: Provider, lock: PromptLo
         return {"resolution": resolve(state["query"])}
 
     def traverse(state: State) -> State:
-        leis = lei_ids_of(state["resolution"], reader.lei_ids())
+        leis = anchor_ids_of(state["resolution"], reader.lei_ids())
         return {"context": reader.traverse(leis)}
 
     def generate(state: State) -> State:

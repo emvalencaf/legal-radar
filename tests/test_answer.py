@@ -188,3 +188,23 @@ def test_a_citation_outside_the_retrieved_context_is_rejected():
     for reply in ['{"answer": "x", "citations": ["b"]}', '{"answer": "x", "citations": []}', "no"]:
         with pytest.raises(CitationError):
             parse_answer(reply, schema)
+
+
+def test_the_cli_loads_env_without_overriding_the_environment(tmp_path, monkeypatch):
+    from legal_radar.__main__ import load_env
+
+    env = tmp_path / ".env"
+    env.write_text('# c\nNEW_KEY=abc\nKEPT=from-file\nQUOTED="x y"\n', encoding="utf-8")
+    monkeypatch.delenv("NEW_KEY", raising=False)
+    monkeypatch.delenv("QUOTED", raising=False)
+    monkeypatch.setenv("KEPT", "from-env")
+
+    load_env(env)
+
+    import os
+
+    assert (os.environ["NEW_KEY"], os.environ["KEPT"], os.environ["QUOTED"]) == (
+        "abc",
+        "from-env",
+        "x y",
+    )

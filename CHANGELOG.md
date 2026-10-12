@@ -17,6 +17,9 @@ heading when `development` is released to `master`.
   retrieved ids; each `Citation` carries its node kind and its graph path. The `cited-answer`
   prompt still has to be published to the Hub and pinned; until then `default_lock()` raises
   `PromptError`. Adds the `langgraph` dependency.
+  `scripts/setup-langsmith-answer-prompt.sh` publishes `cited-answer` (`ANSWER_TEMPLATE` and
+  `ANSWER_SCHEMA`) to the Hub, pins its commit and refreshes the lockfile. The CLI now loads `.env`
+  (without overriding variables already set).
 
 - Structured output for the tagging prompt (#58): `pipeline.run` sends the `dispositivo-concept`
   schema (`pipeline.TAG_SCHEMA`: `{conceito_id}`, enum filled from the vocabulary ids when

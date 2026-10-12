@@ -18,8 +18,19 @@ from legal_radar.concepts import VOCABULARY_PATHS
 from legal_radar.ingest import ingest
 from legal_radar.pipeline import run
 
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 DEFAULT_SEED = Path(__file__).resolve().parents[2] / "seed" / "graph.jsonl"
 DEFAULT_FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "mini_lei.txt"
+
+
+def load_env(path: Path = ENV_PATH) -> None:
+    """Export the KEY=VALUE lines of `.env` that the environment does not already set."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.partition("=")
+        if sep and not key.lstrip().startswith("#"):
+            os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -42,6 +53,7 @@ def main(argv: list[str] | None = None) -> None:
     for name in ("export-seed", "seed"):
         commands.add_parser(name).add_argument("path", nargs="?", type=Path, default=DEFAULT_SEED)
     args = parser.parse_args(argv)
+    load_env()
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )

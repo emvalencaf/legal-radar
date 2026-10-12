@@ -18,6 +18,11 @@ from legal_radar.ports import GraphReader, Provider
 from legal_radar.prompts import PromptError, PromptLock, default_lock
 
 ANSWER_PROMPT = "cited-answer"
+ANSWER_TEMPLATE = (
+    "Responda à pergunta usando apenas as fontes abaixo, e cite em `citations` o id de cada "
+    "fonte em que a resposta se apoia. Se as fontes não bastarem, diga isso.\n\n"
+    "Pergunta: {query}\n\nFontes:\n{context}"
+)
 ANSWER_SCHEMA = {  # published to the Hub as `cited-answer`'s structured output
     "title": "cited_answer",
     "type": "object",

@@ -30,6 +30,7 @@ _CODES: dict[str, tuple[str, ...]] = {
     f"{_FEDERAL}:decreto.lei:1943-05-01;5452": ("Consolidação das Leis do Trabalho", "CLT"),
     f"{_FEDERAL}:constituicao:1988-10-05;1988": ("Constituição Federal", "CF"),
 }
+CURATED_CODES = tuple(_CODES)  # URNs of the most-cited codes, valid targets of a citation
 _NAME_URN = {name: urn for urn, names in _CODES.items() for name in names}
 _URN_KEY = re.compile(r"^urn:lex:br:federal:([\w.]+):(\d{4})-\d{2}-\d{2};(\d+)$")
 _ACT_URN = {

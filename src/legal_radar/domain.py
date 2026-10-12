@@ -78,6 +78,13 @@ class Context:
 class RelationType(StrEnum):
     REFERENCES = "REFERENCES"
     REVOKES = "REVOKES"
+    # dispositivo → conceito, from the LLM enricher (ADR-0002)
+    DEFINES = "DEFINES"
+    APPLIES_TO = "APPLIES_TO"
+    OBLIGES = "OBLIGES"
+    PROHIBITS = "PROHIBITS"
+    EXCEPTS = "EXCEPTS"
+    RELATES_TO = "RELATES_TO"
 
 
 class Confidence(StrEnum):

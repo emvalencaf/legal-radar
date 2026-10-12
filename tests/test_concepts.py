@@ -337,13 +337,30 @@ def test_status_defaults_to_draft_and_curated_needs_every_concept_reviewed():
     assert parse_vocabulary(provenance_yaml(status="curated", **reviewed)).status == "curated"
 
 
-def test_a_draft_vocabulary_only_warns_when_loaded(caplog):
-    from legal_radar.concepts import load_registered
+def test_a_draft_vocabulary_only_warns_when_loaded(caplog, monkeypatch, tmp_path):
+    from legal_radar import concepts
+
+    path = tmp_path / "v.yml"
+    path.write_text(valid_yaml().replace("assunto: a", "assunto: b"), encoding="utf-8")
+    monkeypatch.setitem(concepts.VOCABULARY_PATHS, "b", path)
 
     with caplog.at_level("WARNING"):
-        load_registered("desconsideração da personalidade jurídica")
+        vocabulary = concepts.load_registered("b")
 
-    assert "is a draft: 33 of 33 concepts not reviewed" in caplog.text
+    assert vocabulary.status == "draft"
+    assert "is a draft: 1 of 1 concepts not reviewed" in caplog.text
+
+
+def test_the_committed_vocabulary_is_curated_and_loads_without_a_warning(caplog):
+    from legal_radar.concepts import VOCABULARY_PATHS, load_registered
+
+    with caplog.at_level("WARNING"):
+        for assunto in VOCABULARY_PATHS:
+            vocabulary = load_registered(assunto)
+            assert vocabulary.status == "curated"
+            assert all(c.reviewed for c in vocabulary.conceitos)
+
+    assert "is a draft" not in caplog.text
 
 
 def test_with_assunto_marks_the_draft_as_llm_origin():

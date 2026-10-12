@@ -147,7 +147,8 @@ uv run legal-radar ask "pedido de desconsideração da personalidade jurídica"
 Evaluate the answer pipeline over the question set in `evals/` (needs the graph, the router's
 providers and `uv sync --extra eval`). It scores citation correctness, contradiction surfacing and
 graph paths, plus RAGAS faithfulness with `--grounding` (judge model from `RAGAS_BASE_URL` and
-`RAGAS_MODEL`), tracks tokens and cost (`--price-in`/`--price-out`, USD per million) and writes the
+`RAGAS_MODEL`, `RAGAS_API_KEY`; the endpoint must accept `json_object` output, so not LM Studio),
+tracks tokens and cost (`--price-in`/`--price-out`, USD per million) and writes the
 result to `eval-runs/`.
 
 ```bash

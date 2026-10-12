@@ -46,7 +46,8 @@ class Report:
     def render(self) -> str:
         lines = [f"experiment {self.experiment}: {len(self.questions)} questions"]
         for name, value in {**self.scores, **self.grounding}.items():
-            lines.append(f"  {name}: {'n/a' if value is None else f'{value:.3f}'}")
+            shown = f"{value:.3f}" if isinstance(value, float) else value
+            lines.append(f"  {name}: {'n/a' if value is None else shown}")
         lines.append(
             f"  tokens: {self.input_tokens} in, {self.output_tokens} out; "
             f"cost: ${self.cost_usd:.4f} (zero unless --price-in/--price-out are set; "
@@ -109,14 +110,32 @@ def build_registries(flags_contradiction: Callable[[str], bool]):
     return evaluators, MetricRegistry()
 
 
+def _import_ragas() -> None:
+    """ragas 0.4 imports `ChatVertexAI`, which langchain-community 0.4 dropped; stub that one
+    module so ragas imports (we never use Vertex)."""
+    import sys
+    import types
+
+    name = "langchain_community.chat_models.vertexai"
+    if name not in sys.modules:
+        try:
+            __import__(name)
+        except ImportError:
+            stub = types.ModuleType(name)
+            stub.ChatVertexAI = type("ChatVertexAI", (), {})
+            sys.modules[name] = stub
+
+
 def ragas_faithfulness(rows: list[dict], llm) -> list[float]:
     """RAGAS `Faithfulness` per row (`user_input`, `response`, `retrieved_contexts`): the share of
     the answer's claims its contexts support. `llm` is a RAGAS-compatible judge model."""
+    _import_ragas()
     from ragas import EvaluationDataset, evaluate
     from ragas.metrics import Faithfulness
 
     result = evaluate(EvaluationDataset.from_list(rows), metrics=[Faithfulness()], llm=llm)
-    return [float(row["faithfulness"]) for row in result.scores]
+    scores = [float(row["faithfulness"]) for row in result.scores]
+    return [score for score in scores if score == score]  # RAGAS reports a failed judge as nan
 
 
 def aggregate(runs) -> dict[str, float | None]:
@@ -203,6 +222,7 @@ def run_evaluation(
         ]
         faithfulness = ragas_faithfulness(rows, grounding_llm)
         grounding["faithfulness"] = sum(faithfulness) / len(faithfulness) if faithfulness else None
+        grounding["faithfulness_scored"] = f"{len(faithfulness)}/{len(rows)}"
     return Report(
         name,
         aggregate(result.runs),
@@ -235,6 +255,8 @@ def ragas_llm_from_env():
     import os
 
     from openai import OpenAI
+
+    _import_ragas()
     from ragas.llms import llm_factory
 
     client = OpenAI(

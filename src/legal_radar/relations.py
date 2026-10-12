@@ -6,14 +6,17 @@ Whatever looks like a citation but no rule resolved is returned in `Extraction.n
 LLM enricher. `(Redação dada por …)` and other amendment marks are masked, never read as citations.
 """
 
+import logging
 import re
 from collections.abc import Callable, Collection, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from legal_radar.domain import Confidence, Dispositivo, Origin, Relation, RelationType
+from legal_radar.enrichment import EXTRACTOR_VERSION
 from legal_radar.lexml import LexmlError, search_urn
 from legal_radar.ports import PageSource
 
+logger = logging.getLogger(__name__)
 UrnResolver = Callable[[str, str, int], str | None]  # (kind, numero, ano) -> URN, e.g. ("lei", ...)
 
 _FEDERAL = "urn:lex:br:federal"
@@ -79,8 +82,19 @@ _SNIPPET = 80
 
 @dataclass(frozen=True)
 class Extraction:
+    """Per-chunk result (ADR-0002): the edges, what is left for the LLM, and the audit counters."""
+
     relations: list[Relation]
-    needs_llm: list[str]  # literal snippets of the chunk the rules could not resolve
+    needs_llm: list[
+        str
+    ]  # snippets with no edge at all; an unresolved citation is a LOW edge instead
+    dropped: int  # items discarded for failing validation (evidence not literal)
+    extractor_version: str
+
+    @property
+    def needs_enrichment(self) -> bool:
+        """Whether the chunk goes to the LLM: something unread, or a citation left unresolved."""
+        return bool(self.needs_llm) or any(r.unresolved for r in self.relations)
 
 
 def lexml_resolver(pages: PageSource) -> UrnResolver:
@@ -107,85 +121,207 @@ def extract_relations(
     `ingested` maps each lei in the graph to its dispositivo ids: a target in a lei missing from it
     is a stub, and one missing from its lei's ids does not exist, both LOW. `None` skips the check.
     """
-    text = d.text
-    masked = _AMENDMENT.sub(lambda m: " " * len(m[0]), text)
-    out: list[Relation] = []
-    flags: list[str] = []
-    covered: list[tuple[int, int]] = []
+    scan = _Scan(d, resolver, ingested)
+    for pattern in (
+        _revocations,
+        _artigo_citations,
+        _this_artigo,
+        _previous_artigo,
+        _act_mentions,
+        _leftover_marks,
+    ):
+        pattern(scan)
+    return scan.result()
 
-    def edge(type_, source, target, evidence, unresolved=None):
+
+@dataclass
+class _Scan:
+    """The state one pass over a dispositivo shares between the pattern functions."""
+
+    d: Dispositivo
+    resolver: UrnResolver | None
+    ingested: Mapping[str, Collection[str]] | None
+    out: list[Relation] = field(default_factory=list)
+    flags: list[str] = field(default_factory=list)
+    covered: list[tuple[int, int]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.text = self.d.text
+        self.masked = _AMENDMENT.sub(lambda m: " " * len(m[0]), self.text)  # same offsets as text
+        self.own = next((s for s in self.d.path.split("_") if _OWN_ARTIGO.match(s)), None)
+
+    def edge(
+        self,
+        type_: RelationType,
+        source: str | None,
+        target: str | None,
+        evidence: str,
+        unresolved: str | None = None,
+    ) -> None:
         node = source if type_ is RelationType.REVOKES else target
-        known = unresolved is None and _exists(node, ingested)
+        known = unresolved is None and _exists(node, self.ingested)
         confidence = Confidence.HIGH if known else Confidence.LOW
-        out.append(Relation(type_, source, target, confidence, Origin.RULE, evidence, unresolved))
+        self.out.append(
+            Relation(type_, source, target, confidence, Origin.RULE, evidence, unresolved)
+        )
 
-    for m in _REVOKED.finditer(text):
-        urn, label = _act(m, resolver)
-        edge(RelationType.REVOKES, urn, d.id, m[0], label if urn is None else None)
+    def reference_in(self, urn: str, path: str, evidence: str) -> None:
+        self.edge(RelationType.REFERENCES, self.d.id, f"{urn}#{path}", evidence)
 
-    own = _own_artigo(d)
+    def reference(self, target: str, evidence: str) -> None:
+        self.edge(RelationType.REFERENCES, self.d.id, f"{self.d.lei_id}#{target}", evidence)
 
-    for m in _ARTIGO.finditer(masked):
-        loc = _LOCATOR.match(masked, m.end())
+    def cover(self, start: int, end: int) -> None:
+        self.covered.append((start, end))
+
+    def is_covered(self, position: int) -> bool:
+        return any(a <= position < b for a, b in self.covered)
+
+    def flag(self, start: int) -> None:
+        self.flags.append(self.text[start : start + _SNIPPET].strip())
+
+    def result(self) -> Extraction:
+        seen: set[tuple] = set()
+        relations: list[Relation] = []
+        dropped = 0
+        for r in self.out:
+            if r.evidence not in self.text:
+                dropped += 1
+                logger.warning("dropped %s edge of %s: evidence is not literal", r.type, self.d.id)
+                continue
+            key = (r.type, r.source_id, r.target_id, r.unresolved)
+            if key not in seen and r.source_id != r.target_id:  # a self-reference is no edge
+                seen.add(key)
+                relations.append(r)
+        return Extraction(relations, list(dict.fromkeys(self.flags)), dropped, EXTRACTOR_VERSION)
+
+
+def _revocations(s: _Scan) -> None:
+    """`(Revogado pela Lei nº …)`: the revoking act revokes this dispositivo."""
+    for m in _REVOKED.finditer(s.text):
+        urn, label = _act(m, s.resolver)
+        s.edge(RelationType.REVOKES, urn, s.d.id, m[0], label if urn is None else None)
+
+
+def _artigo_citations(s: _Scan) -> None:
+    """`art. 5º, § 2º, incisos I a III, do Código Civil`, including artigo ranges."""
+    for m in _ARTIGO.finditer(s.masked):
+        loc = _LOCATOR.match(s.masked, m.end())
         end = loc.end() if loc else m.end()
-        law = _LAW.match(masked, end)
+        law = _LAW.match(s.masked, end)
         if law:
             end = law.end()
-        elif _UNKNOWN_LAW.match(masked, end):
-            flags.append(_snippet(text, m.start()))
-            covered.append((m.start(), end))
+        s.cover(m.start(), end)
+        if law is None and _UNKNOWN_LAW.match(s.masked, end):
+            s.flag(m.start())  # a law the table does not know: not the same lei, not guessable
             continue
-        covered.append((m.start(), end))
-        urn, label = (d.lei_id, None) if law is None else _law(law, d.lei_id, resolver)
-        artigos = _artigo_range(m)
-        paths = [p for a in artigos for p in _expand(a, loc)] if artigos else None
+        urn, label = (s.d.lei_id, "") if law is None else _law(law, s.d.lei_id, s.resolver)
+        paths = _paths(m, loc)
         if paths is None:
-            flags.append(_snippet(text, m.start()))
+            s.flag(m.start())
             continue
         for path in paths:
-            if urn is None:
-                edge(RelationType.REFERENCES, d.id, None, text[m.start() : end], f"{label} {path}")
+            if urn is None:  # unresolved: the LOW edge carries the citation, no need to flag it too
+                s.edge(
+                    RelationType.REFERENCES,
+                    s.d.id,
+                    None,
+                    s.text[m.start() : end],
+                    f"{label} {path}",
+                )
             else:
-                edge(RelationType.REFERENCES, d.id, f"{urn}#{path}", text[m.start() : end])
-        if urn is None:
-            flags.append(_snippet(text, m.start()))
+                s.reference_in(urn, path, s.text[m.start() : end])
 
-    for m in _THIS_ARTIGO.finditer(masked):
-        covered.append((m.start(), m.end()))
-        if own is None:
-            flags.append(_snippet(text, m.start()))
+
+def _this_artigo(s: _Scan) -> None:
+    """`deste artigo`, optionally prefixed by `§ 2º` or `incisos I a III`."""
+    for m in _THIS_ARTIGO.finditer(s.masked):
+        s.cover(m.start(), m.end())
+        paths = _expand(s.own, m) if s.own else None
+        if paths is None:
+            s.flag(m.start())
             continue
-        for path in _expand(own, m):
-            edge(RelationType.REFERENCES, d.id, f"{d.lei_id}#{path}", m[0])
+        for path in paths:
+            s.reference(path, m[0])
 
-    for m in _PREVIOUS_ARTIGO.finditer(masked):
-        covered.append((m.start(), m.end()))
-        previous = _previous(own)
+
+def _previous_artigo(s: _Scan) -> None:
+    """`o artigo anterior`: only for an artigo numbered above 1 and without a letter suffix."""
+    for m in _PREVIOUS_ARTIGO.finditer(s.masked):
+        s.cover(m.start(), m.end())
+        previous = _previous(s.own)
         if previous is None:
-            flags.append(_snippet(text, m.start()))
+            s.flag(m.start())
         else:
-            edge(RelationType.REFERENCES, d.id, f"{d.lei_id}#{previous}", m[0])
+            s.reference(previous, m[0])
 
-    for m in _ACT_MENTION.finditer(masked):
-        if any(a <= m.start() < b for a, b in covered):
+
+def _act_mentions(s: _Scan) -> None:
+    """`Lei nº 8.078/1990` on its own: a reference to the lei, not to one of its dispositivos."""
+    for m in _ACT_MENTION.finditer(s.masked):
+        if s.is_covered(m.start()):
             continue
-        urn, label = _act(m, resolver)
-        if urn == d.lei_id:
+        urn, label = _act(m, s.resolver)
+        if urn != s.d.lei_id:
+            s.edge(RelationType.REFERENCES, s.d.id, urn, m[0], label if urn is None else None)
+
+
+def _leftover_marks(s: _Scan) -> None:
+    """Whatever still looks like a citation after the other patterns goes to the LLM."""
+    for m in _CITATION_MARK.finditer(s.masked):
+        if not s.is_covered(m.start()):
+            s.flag(m.start())
+
+
+def _exists(node_id: str | None, ingested: Mapping[str, Collection[str]] | None) -> bool:
+    if ingested is None or node_id is None:
+        return True
+    lei = node_id.split("#", 1)[0]
+    return lei in ingested and ("#" not in node_id or node_id in ingested[lei])
+
+
+def _act(m: re.Match[str], resolver: UrnResolver | None) -> tuple[str | None, str]:
+    key = (_KINDS[m["kind"]], m["numero"].replace(".", ""), int(m["ano"] or m["ano2"]))
+    urn = _ACT_URN.get(key) or (resolver(*key) if resolver else None)
+    return urn, f"{key[0]}:{key[1]}/{key[2]}"
+
+
+def _law(m: re.Match[str], this_lei: str, resolver: UrnResolver | None) -> tuple[str | None, str]:
+    if m["same"]:
+        return this_lei, m["same"]
+    if m["name"]:
+        return _NAME_URN[m["name"]], m["name"]
+    if m["kind"]:
+        return _act(m, resolver)
+    return None, m["other"]
+
+
+def _previous_artigo(s: _Scan) -> None:
+    """`o artigo anterior`: only for an artigo numbered above 1 and without a letter suffix."""
+    for m in _PREVIOUS_ARTIGO.finditer(s.masked):
+        s.cover(m.start(), m.end())
+        previous = _previous(s.own)
+        if previous is None:
+            s.flag(m.start())
+        else:
+            s.reference(previous, m[0])
+
+
+def _act_mentions(s: _Scan) -> None:
+    """`Lei nº 8.078/1990` on its own: a reference to the lei, not to one of its dispositivos."""
+    for m in _ACT_MENTION.finditer(s.masked):
+        if s.is_covered(m.start()):
             continue
-        edge(RelationType.REFERENCES, d.id, urn, m[0], label if urn is None else None)
+        urn, label = _act(m, s.resolver)
+        if urn != s.d.lei_id:
+            s.edge(RelationType.REFERENCES, s.d.id, urn, m[0], label if urn is None else None)
 
-    for m in _CITATION_MARK.finditer(masked):
-        if not any(a <= m.start() < b for a, b in covered):
-            flags.append(_snippet(text, m.start()))
 
-    seen: set[tuple] = set()
-    relations = []
-    for r in out:
-        key = (r.type, r.source_id, r.target_id, r.unresolved)
-        if key not in seen and r.evidence in text and r.source_id != r.target_id:
-            seen.add(key)
-            relations.append(r)
-    return Extraction(relations, list(dict.fromkeys(flags)))
+def _leftover_marks(s: _Scan) -> None:
+    """Whatever still looks like a citation after the other patterns goes to the LLM."""
+    for m in _CITATION_MARK.finditer(s.masked):
+        if not s.is_covered(m.start()):
+            s.flag(m.start())
 
 
 def _exists(node_id: str | None, ingested: Mapping[str, Collection[str]] | None) -> bool:
@@ -231,8 +367,19 @@ def _artigo_range(m: re.Match[str]) -> list[str] | None:
     return [f"art{n}" for n in range(first, last + 1)]
 
 
-def _expand(artigo: str, loc: re.Match[str] | None) -> list[str]:
-    """The paths a locator (`§ 2º`, `incisos I a III`) selects inside `artigo`, one per inciso."""
+def _paths(m: re.Match[str], loc: re.Match[str] | None) -> list[str] | None:
+    artigos = _artigo_range(m)
+    if artigos is None:
+        return None
+    expanded = [_expand(a, loc) for a in artigos]
+    return None if None in expanded else [p for paths in expanded for p in paths or []]
+
+
+def _expand(artigo: str, loc: re.Match[str] | None) -> list[str] | None:
+    """The paths a locator (`§ 2º`, `incisos I a III`) selects inside `artigo`, one per inciso.
+
+    `None` when the inciso range is unreadable (reversed or too wide).
+    """
     base = artigo
     if loc and loc["par"]:
         base += f"_par{loc['par']}"
@@ -243,7 +390,7 @@ def _expand(artigo: str, loc: re.Match[str] | None) -> list[str]:
     first = _roman(loc["i1"])
     last = _roman(loc["i2"]) if loc["i2"] else first
     if not 0 < first <= last <= first + _MAX_EXPANSION:
-        return [base]  # unreadable range: keep the dispositivo, drop the inciso
+        return None
     return [f"{base}_inc{_to_roman(n)}" for n in range(first, last + 1)]
 
 

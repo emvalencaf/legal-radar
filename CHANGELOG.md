@@ -15,7 +15,9 @@ heading when `development` is released to `master`.
   (`art. 50 do Código Civil`, `Lei nº 8.078/1990`), relatives (`deste artigo`, `artigo anterior`),
   inciso and artigo ranges, and Planalto `(Revogado pela …)` marks. Law names resolve through a
   curated code table with an optional LexML fallback; unresolved targets are LOW, and what the
-  rules cannot resolve is returned in `needs_llm`.
+  rules cannot read is returned in `needs_llm`. `Extraction` also carries the extractor version, the
+  dropped-item count and `needs_enrichment` (unread text or an unresolved citation), so the two
+  LLM-bound sets are never counted twice.
 - Retrieval and cited answer (#43): `legal-radar ask "<query>"` runs a LangGraph pipeline
   (`legal_radar.answer`: resolve assunto, traverse, generate) over the knowledge graph. The
   `GraphReader` port (`Neo4jGraphReader`) walks `PARTS` down from the anchor dispositivos (`AnchorLei.artigos`: CC art. 50, CDC art. 28; a lei with none starts from the whole lei, which was ~4,700 dispositivos and broke the model call), then 1 hop of

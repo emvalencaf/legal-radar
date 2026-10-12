@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from legal_radar.domain import Confidence, Dispositivo, Origin, RelationType
+from legal_radar.enrichment import EXTRACTOR_VERSION
 from legal_radar.planalto import decode_html, parse_planalto
 from legal_radar.relations import extract_relations
 
@@ -98,14 +99,14 @@ def test_numbered_act_resolves_from_the_table_or_the_resolver():
     ]
 
 
-def test_unresolved_target_is_low_with_the_citation_kept_and_flagged():
+def test_unresolved_target_is_low_with_the_citation_kept():
     text = "art. 3º da Lei nº 9.999, de 2000"
 
     result = extract_relations(dispositivo(text))
 
     (r,) = result.relations
     assert (r.target_id, r.confidence, r.unresolved) == (None, Confidence.LOW, "lei:9999/2000 art3")
-    assert result.needs_llm == [text]
+    assert result.needs_llm == [] and result.needs_enrichment
 
 
 def test_act_mention_without_artigo_references_the_lei():
@@ -184,3 +185,27 @@ def test_real_planalto_chunks():
 
 def test_act_number_without_the_no_sign_still_resolves():
     assert targets("art. 50 da Lei 10.406/2002") == [CC + "#art50"]
+
+
+def test_unresolved_citation_is_not_counted_twice():
+    result = extract_relations(dispositivo("art. 3º da Lei nº 9.999, de 2000"))
+
+    assert len(result.relations) == 1 and result.needs_llm == []
+    assert result.needs_enrichment
+
+
+def test_resolved_chunk_needs_no_enrichment_and_unread_text_does():
+    assert not extract_relations(dispositivo("art. 50 do Código Civil")).needs_enrichment
+    assert extract_relations(dispositivo("art. 5º, § 1º e § 2º")).needs_enrichment
+
+
+def test_result_carries_the_extractor_version_and_dropped_count():
+    result = extract_relations(dispositivo("art. 50 do CC"))
+
+    assert (result.extractor_version, result.dropped) == (EXTRACTOR_VERSION, 0)
+
+
+def test_unreadable_inciso_range_goes_to_the_llm():
+    result = extract_relations(dispositivo("art. 5º, incisos IV a II, do CC"))
+
+    assert result.relations == [] and result.needs_llm

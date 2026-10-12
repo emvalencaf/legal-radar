@@ -9,6 +9,8 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `scripts/gold_editor.py`: edit the enrichment gold set in the browser (graph plus review panel,
+  no skipping, accepted/corrected/added marks), sharing progress with the terminal wizard (#67).
 - `scripts/visualize_gold.py`: a read-only, self-contained HTML graph of the enrichment gold set
   (proposal, review progress or gold) to see every edge and the unused concepts at once (#67).
 - Vocabulary `desconsideracao_personalidade` grows from 33 to 40 concepts, found missing while

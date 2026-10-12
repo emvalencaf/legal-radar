@@ -1,4 +1,6 @@
-from legal_radar.gold_review import review_all, review_entry
+import pytest
+
+from legal_radar.gold_review import assemble, review_all, review_entry
 
 ENTRY = {
     "id": "d1",
@@ -65,3 +67,11 @@ def test_adding_the_same_edge_twice_keeps_one():
     result = review_entry({"id": "d3", "edges": []}, scripted([added, added, None]))
 
     assert result["edges"] == [{**added, "review": "added"}]
+
+
+def test_assemble_keeps_proposal_order_and_refuses_unreviewed_dispositivos():
+    reviewed = [{"id": "b", "edges": []}, {"id": "a", "edges": []}]
+
+    assert [e["id"] for e in assemble(["a", "b"], reviewed)] == ["a", "b"]
+    with pytest.raises(ValueError, match=r"1 dispositivos not reviewed.*c"):
+        assemble(["a", "b", "c"], reviewed)

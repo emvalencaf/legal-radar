@@ -52,5 +52,14 @@ def review_all(
     return reviewed
 
 
+def assemble(order: Sequence[str], reviewed: Sequence[dict]) -> list[dict]:
+    """The reviewed entries in proposal order; refuses while any dispositivo is unreviewed."""
+    by_id = {e["id"]: e for e in reviewed}
+    missing = [id_ for id_ in order if id_ not in by_id]
+    if missing:
+        raise ValueError(f"{len(missing)} dispositivos not reviewed yet, first: {missing[0]}")
+    return [by_id[id_] for id_ in order]
+
+
 def _key(edge: dict) -> tuple:
     return edge["type"], edge.get("source"), edge.get("target")

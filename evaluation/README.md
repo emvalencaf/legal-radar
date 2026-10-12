@@ -33,7 +33,19 @@ by relation type (dashed = added, dotted = corrected). Switch between the propos
 progress and the gold; click a dispositivo or a concept to isolate its edges. Concepts with no edge
 are greyed out, which is where vocabulary gaps and dead concepts show.
 
-## Reviewing
+## Reviewing in the browser
+
+```bash
+uv run python scripts/gold_editor.py   # then open http://localhost:8765
+```
+
+The same graph, editable. For each dispositivo, accept, correct or reject what Claude Code
+inferred, add what it missed, then confirm. A dispositivo only counts once confirmed (a proposal
+with nothing is confirmed as a negative), so none can be skipped, and the gold file is written only
+when all are confirmed. It shares `enrichment_gold.progress.yml` with the terminal wizard below, so
+the two can be mixed.
+
+## Reviewing in the terminal
 
 ```bash
 uv run python scripts/annotate_gold.py

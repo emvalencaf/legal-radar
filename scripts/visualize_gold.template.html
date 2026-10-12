@@ -12,6 +12,11 @@ select,button{font:inherit;background:var(--panel);color:var(--fg);border:1px so
 .node{cursor:pointer}.node:hover text{font-weight:600}.edge{fill:none;stroke-width:1.4;opacity:.45}
 .edge.dim{opacity:.05}.edge.hot{opacity:1;stroke-width:2.2}h3{margin:8px 0 4px}.rev{color:var(--mute)}
 code{background:var(--bg);padding:0 3px;border-radius:3px}.t{display:inline-block;width:10px;height:10px;margin-right:4px}
+
+.edge.pend{opacity:.2;stroke-dasharray:2 3}.row{display:flex;gap:4px;align-items:center;margin:3px 0;flex-wrap:wrap}
+.row .grow{flex:1;min-width:140px}button.on{background:var(--fg);color:var(--bg)}button.go{font-weight:600}
+button:disabled{opacity:.4;cursor:not-allowed}input{font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:2px 6px}
+.ok{color:#1a8f5a}.err{color:#b3261e}.bar{height:6px;background:var(--line);border-radius:3px;margin:6px 0}.bar i{display:block;height:100%;background:#1a8f5a;border-radius:3px}
 </style>
 <div id="main"><header><b>Enrichment gold set</b><label>file <select id="set"></select></label>
 <span id="legend"></span><span id="stats" class="rev"></span><button id="clear">clear selection</button></header>
@@ -20,22 +25,24 @@ code{background:var(--bg);padding:0 3px;border-radius:3px}.t{display:inline-bloc
 const DATA=__DATA__;
 const COLORS={REFERENCES:"#7a7a80",REVOKES:"#b3261e",DEFINES:"#0b6bcb",APPLIES_TO:"#1a8f5a",OBLIGES:"#c77700",
 PROHIBITS:"#a1229c",EXCEPTS:"#d6336c",RELATES_TO:"#5f6caf"};
+const EDIT=!!DATA.editable;
 const ROW=20,LX=330,RX=760,TOP=30,off=new Set();let sel=null;
 const $=s=>document.querySelector(s),NS="http://www.w3.org/2000/svg";
 const el=(n,a={},p)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
 const setSel=$("#set");Object.keys(DATA.sets).forEach(k=>setSel.add(new Option(k,k)));
+if(EDIT){setSel.parentElement.style.display="none"}
 setSel.onchange=draw;$("#clear").onclick=()=>{sel=null;draw()};
 $("#legend").innerHTML=Object.entries(COLORS).map(([t,c])=>`<span class="chip" data-t="${t}"><i style="background:${c}"></i>${t}</span>`).join(" ");
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{off.has(c.dataset.t)?off.delete(c.dataset.t):off.add(c.dataset.t);c.classList.toggle("off");draw()});
 function draw(){
- const set=DATA.sets[setSel.value]||[],byId=Object.fromEntries(set.map(e=>[e.id,e]));
+ const set=EDIT?workingSet():(DATA.sets[setSel.value]||[]),byId=Object.fromEntries(set.map(e=>[e.id,e]));
  const svg=$("#g");svg.innerHTML="";
  const pos={},cpos={};let y=TOP;
  let lei=null;DATA.dispositivos.forEach(d=>{if(d.lei!==lei){lei=d.lei;y+=ROW;pos["#"+lei]=y;y+=ROW}pos[d.id]=y;y+=ROW});
  const cats=[...new Set(DATA.concepts.map(c=>c.category))];let cy=TOP;
  const catY={};cats.forEach(k=>{catY[k]=cy;cy+=ROW;DATA.concepts.filter(c=>c.category===k).forEach(c=>{cpos[c.id]=cy;cy+=ROW});cy+=6});
  const H=Math.max(y,cy)+20;svg.setAttribute("width",RX+260);svg.setAttribute("height",H);
- const edges=[];set.forEach(e=>(e.edges||[]).forEach(x=>edges.push({...x,from:e.id})));
+ const edges=[];set.forEach(e=>(e.edges||[]).forEach(x=>edges.push({...x,from:e.id,pend:!!e.pending})));
  const deg={};edges.forEach(x=>{if(x.target in cpos)deg[x.target]=(deg[x.target]||0)+1});
  const gE=el("g",{},svg),gN=el("g",{},svg);
  edges.filter(x=>!off.has(x.type)).forEach(x=>{
@@ -44,7 +51,7 @@ function draw(){
   if(concept){y2=cpos[x.target];d=`M${LX+6},${y1} C${LX+170},${y1} ${RX-170},${y2} ${RX-6},${y2}`}
   else if(x.type==="REFERENCES"&&pos[x.target]!=null){y2=pos[x.target];const bx=LX-Math.min(200,30+Math.abs(y1-y2)/3);d=`M${LX-6},${y1} C${bx},${y1} ${bx},${y2} ${LX-6},${y2}`}
   else return;
-  const p=el("path",{d,class:"edge",stroke:COLORS[x.type]},gE);
+  const p=el("path",{d,class:"edge"+(x.pend?" pend":""),stroke:COLORS[x.type]},gE);
   if(x.review==="added")p.setAttribute("stroke-dasharray","5 3");
   if(x.review==="corrected")p.setAttribute("stroke-dasharray","1 3");
   x._p=p;x._ids=[x.from,x.target];
@@ -54,16 +61,16 @@ function draw(){
   if(d.lei!==lei2){lei2=d.lei;el("text",{x:LX,y:pos["#"+lei2],"text-anchor":"end",class:"cat"},gN).textContent=lei2}
   const g=el("g",{class:"node"},gN),e=byId[d.id],n=e?e.edges.length:null;
   const t=el("text",{x:LX-12,y:pos[d.id]+4,"text-anchor":"end"},g);
-  t.textContent=d.path+(e==null?"  ·  not in set":n===0?"  ·  negative":"");
-  if(e==null||n===0)t.setAttribute("class","mute");if(sel===d.id)t.style.fontWeight="700";
-  el("circle",{cx:LX,cy:pos[d.id],r:4,fill:n?"var(--fg)":"var(--mute)"},g);g.onclick=()=>{sel=d.id;draw();showD(d,e)}});
+  t.textContent=d.path+(e==null?"  ·  not in set":EDIT?(e.pending?"":n===0?"  ·  negative ✓":"  ✓"):n===0?"  ·  negative":"");
+  if(e==null||(EDIT?e.pending:n===0))t.setAttribute("class","mute");if(sel===d.id)t.style.fontWeight="700";
+  el("circle",{cx:LX,cy:pos[d.id],r:4,fill:EDIT?(e&&!e.pending?"#1a8f5a":"none"):n?"var(--fg)":"var(--mute)",stroke:"var(--mute)"},g);g.onclick=()=>{sel=d.id;draw();EDIT?editD(d):showD(d,e)}});
  cats.forEach(k=>el("text",{x:RX,y:catY[k]+4,class:"cat"},gN).textContent=k);
  DATA.concepts.forEach(c=>{const g=el("g",{class:"node"},gN);
   el("circle",{cx:RX,cy:cpos[c.id],r:4,fill:deg[c.id]?"var(--fg)":"none",stroke:"var(--mute)"},g);
   const t=el("text",{x:RX+12,y:cpos[c.id]+4},g);t.textContent=`${c.id} (${deg[c.id]||0})`;
   if(!deg[c.id])t.setAttribute("class","mute");if(sel===c.id)t.style.fontWeight="700";g.onclick=()=>{sel=c.id;draw();showC(c,edges)}});
  const unused=DATA.concepts.filter(c=>!deg[c.id]).length;
- $("#stats").textContent=`${set.length} dispositivos · ${edges.length} edges · ${DATA.concepts.length-unused}/${DATA.concepts.length} concepts used`;
+ $("#stats").textContent=EDIT?`reviewed ${set.filter(e=>!e.pending).length}/${set.length} · ${edges.length} edges · ${DATA.concepts.length-unused}/${DATA.concepts.length} concepts used`:`${set.length} dispositivos · ${edges.length} edges · ${DATA.concepts.length-unused}/${DATA.concepts.length} concepts used`;
 }
 const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 const tag=t=>`<span class="t" style="background:${COLORS[t]}"></span>${t}`;
@@ -74,5 +81,66 @@ function showD(d,e){
 function showC(c,edges){
  const into=edges.filter(x=>x.target===c.id);
  $("#side").innerHTML=`<b>${esc(c.label)}</b> <span class="rev">${c.category}</span><p>${esc(c.hint)}</p><h3>${into.length} edges in</h3><ul>${into.map(x=>`<li>${tag(x.type)} ← <code>${esc(x.from.split("#")[1])}</code></li>`).join("")}</ul>`}
+const TYPES=Object.keys(COLORS),CONCEPT_TYPES=TYPES.filter(t=>!["REFERENCES","REVOKES"].includes(t));
+const conceptIds=new Set(DATA.concepts.map(c=>c.id)),dispIds=new Set(DATA.dispositivos.map(d=>d.id));
+const proposal=Object.fromEntries((DATA.proposal||[]).map(e=>[e.id,e]));
+const done=Object.fromEntries((DATA.progress||[]).map(e=>[e.id,e]));
+const draft={};let msg="";
+const key=e=>[e.type,e.source||"",e.target||""].join("|");
+const strip=e=>{const o={type:e.type};if(e.source)o.source=e.source;if(e.target)o.target=e.target;return o};
+function workingSet(){return DATA.dispositivos.filter(d=>proposal[d.id]).map(d=>done[d.id]?{...done[d.id]}:{id:d.id,edges:proposal[d.id].edges,pending:true})}
+function validEdge(e){if(!TYPES.includes(e.type))return"unknown type";
+ if(e.type==="REVOKES")return e.source?"":"REVOKES needs the revoking act";
+ if(!e.target)return"a target is needed";
+ if(e.type==="REFERENCES")return dispIds.has(e.target)||e.target.includes("#")?"":"REFERENCES targets a dispositivo id";
+ return conceptIds.has(e.target)?"":"not a concept of the curated vocabulary"}
+function state(id){return draft[id]||(draft[id]={dec:{},added:[],form:{type:"DEFINES",target:""}})}
+function finalOf(id){const p=proposal[id],st=state(id),kept=[],rejected=[];
+ p.edges.forEach((e,i)=>{const d=st.dec[i];if(d==="r")rejected.push(strip(e));
+  else if(d==="a")kept.push({...strip(e),review:"accepted"});
+  else if(d&&d.c)kept.push(key(d.c)===key(e)?{...strip(e),review:"accepted"}:{...strip(d.c),review:"corrected",was:strip(e)})});
+ st.added.forEach(a=>{if(!kept.some(k=>key(k)===key(a)))kept.push({...strip(a),review:"added"})});
+ const out={id,edges:kept};if(rejected.length)out.rejected=rejected;return out}
+async function post(url,body){const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});return r.json()}
+async function persist(){const order=DATA.dispositivos.map(d=>d.id);
+ return post("/api/progress",order.filter(i=>done[i]).map(i=>done[i]))}
+function editD(d){const id=d.id,p=proposal[id];if(!p){showD(d,null);return}
+ const side=$("#side");
+ if(done[id]){const e=done[id];
+  side.innerHTML=`<b>${esc(d.lei)} · ${esc(d.path)}</b> <span class="ok">reviewed ✓</span><p>${esc(d.text)}</p>
+  <ul>${e.edges.map(x=>`<li>${tag(x.type)} → <code>${esc(x.target||x.source)}</code> <span class="rev">${x.review}${x.was?` (was ${esc(x.was.type)} ${esc(x.was.target||"")})`:""}</span></li>`).join("")||"<li class=rev>negative: nothing</li>"}</ul>
+  ${e.rejected?`<h3>Rejected</h3><ul>${e.rejected.map(x=>`<li class=rev>${esc(x.type)} → ${esc(x.target||x.source)}</li>`).join("")}</ul>`:""}
+  <button id="reopen">Reopen</button>`;
+  $("#reopen").onclick=()=>{const st=state(id);st.dec={};st.added=e.edges.filter(x=>x.review==="added").map(strip);delete done[id];persist().then(()=>{draw();editD(d)})};return}
+ const st=state(id),f=st.form;
+ const undecided=p.edges.filter((e,i)=>!st.dec[i]).length;
+ const propRows=p.edges.map((e,i)=>{const d1=st.dec[i],c=d1&&d1.c;
+  return`<div class="row"><span class="grow">${tag(e.type)} → <code>${esc(e.target||e.source)}</code></span>
+   <button data-a="a" data-i="${i}" class="${d1==="a"?"on":""}">accept</button><button data-a="c" data-i="${i}" class="${c?"on":""}">correct</button><button data-a="r" data-i="${i}" class="${d1==="r"?"on":""}">reject</button></div>
+   ${c?`<div class="row"><select data-ct="${i}">${TYPES.map(t=>`<option ${t===c.type?"selected":""}>${t}</option>`).join("")}</select><input class="grow" data-cv="${i}" list="targets" value="${esc(c.target||c.source||"")}"></div>`:""}`}).join("");
+ side.innerHTML=`<b>${esc(d.lei)} · ${esc(d.path)}</b> <span class="rev">pending</span><p>${esc(d.text)}</p>
+  ${p.note?`<p class="rev">note: ${esc(p.note)}</p>`:""}
+  <h3>Inferred by Claude Code (${p.edges.length})</h3>${propRows||"<p class=rev>nothing proposed: confirming makes it a negative.</p>"}
+  <h3>Added by you</h3>${st.added.map((a,i)=>`<div class="row"><span class="grow">${tag(a.type)} → <code>${esc(a.target||a.source)}</code></span><button data-rm="${i}">×</button></div>`).join("")||"<p class=rev>none</p>"}
+  <div class="row"><select id="ft">${TYPES.map(t=>`<option ${t===f.type?"selected":""}>${t}</option>`).join("")}</select>
+  <input id="fv" class="grow" list="targets" placeholder="concept id / dispositivo id / revoking act" value="${esc(f.target)}"><button id="add">add</button></div>
+  <datalist id="targets">${[...conceptIds,...dispIds].map(v=>`<option>${esc(v)}</option>`).join("")}</datalist>
+  <p class="err" id="err">${esc(msg)}</p>
+  <button class="go" id="confirm" ${undecided?"disabled":""}>Confirm this dispositivo${undecided?` (${undecided} undecided)`:""}</button>`;
+ side.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{const i=+b.dataset.i,a=b.dataset.a;st.dec[i]=a==="c"?{c:strip(p.edges[i])}:a;msg="";editD(d)});
+ side.querySelectorAll("[data-ct]").forEach(s=>s.onchange=()=>{const i=+s.dataset.ct,c=st.dec[i].c;c.type=s.value;if(s.value==="REVOKES"){c.source=c.target||c.source;delete c.target}else{c.target=c.target||c.source;delete c.source}});
+ side.querySelectorAll("[data-cv]").forEach(s=>s.onchange=()=>{const i=+s.dataset.cv,c=st.dec[i].c;c.type==="REVOKES"?c.source=s.value.trim():c.target=s.value.trim()});
+ side.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{st.added.splice(+b.dataset.rm,1);editD(d)});
+ $("#ft").onchange=e=>f.type=e.target.value;$("#fv").oninput=e=>f.target=e.target.value;
+ $("#add").onclick=()=>{const e=f.type==="REVOKES"?{type:f.type,source:f.target.trim()}:{type:f.type,target:f.target.trim()};const bad=validEdge(e);
+  if(bad){msg=bad;editD(d);return}if(st.added.some(a=>key(a)===key(e))){msg="already added";editD(d);return}st.added.push(e);f.target="";msg="";editD(d)};
+ $("#confirm").onclick=async()=>{for(const [i,d1] of Object.entries(st.dec)){if(d1.c){const bad=validEdge(d1.c);if(bad){msg=`correction ${+i+1}: ${bad}`;editD(d);return}}}
+  done[id]=finalOf(id);const r=await persist();if(r.error){delete done[id];msg=r.error;editD(d);return}msg="";draw();nextPending(id)}}
+function nextPending(id){const order=DATA.dispositivos.filter(d=>proposal[d.id]),i=order.findIndex(d=>d.id===id);
+ const nxt=[...order.slice(i+1),...order.slice(0,i)].find(d=>!done[d.id]);
+ if(nxt){sel=nxt.id;draw();editD(nxt);const y=document.querySelector("#g").getBoundingClientRect();return}
+ const total=order.length;$("#side").innerHTML=`<b class="ok">All ${total} dispositivos reviewed.</b><p>Write the gold set (it is checked against the vocabulary hash).</p><button class="go" id="fin">Write evaluation/enrichment_gold.yml</button><p id="fm"></p>`;
+ $("#fin").onclick=async()=>{const r=await post("/api/finish",{});$("#fm").innerHTML=r.error?`<span class=err>${esc(r.error)}</span>`:`<span class=ok>wrote ${esc(r.path)} (${r.count} dispositivos)</span>`}}
+if(EDIT){const first=DATA.dispositivos.find(d=>proposal[d.id]&&!done[d.id]);if(first){sel=first.id;setTimeout(()=>editD(first))}else setTimeout(()=>nextPending(DATA.dispositivos.filter(d=>proposal[d.id]).pop().id))}
 draw();
 </script></html>

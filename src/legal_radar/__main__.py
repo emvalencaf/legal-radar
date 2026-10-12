@@ -1,6 +1,7 @@
 """CLI: `legal-radar run [fixture]` runs the skeleton pipeline with a fake provider;
 `legal-radar ingest <assunto>` ingests the assunto's anchor leis from LexML/Planalto;
 `legal-radar ingest-jurisprudencia` ingests the seed precedents and top STF/STJ hits;
+`legal-radar draft-concepts <assunto>` has an LLM draft concept candidates from the graph's corpus;
 `legal-radar export-seed [path]` / `legal-radar seed [path]` write / rebuild the versioned seed."""
 
 import argparse
@@ -11,6 +12,7 @@ from pathlib import Path
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.anchors import ANCHORS
+from legal_radar.concepts import VOCABULARY_PATHS
 from legal_radar.ingest import ingest
 from legal_radar.pipeline import run
 
@@ -26,6 +28,8 @@ def main(argv: list[str] | None = None) -> None:
     ingest_cmd = commands.add_parser("ingest")
     ingest_cmd.add_argument("assunto", choices=sorted(ANCHORS))
     commands.add_parser("ingest-jurisprudencia")
+    draft_cmd = commands.add_parser("draft-concepts")
+    draft_cmd.add_argument("assunto", choices=sorted(VOCABULARY_PATHS))
     for name in ("export-seed", "seed"):
         commands.add_parser(name).add_argument("path", nargs="?", type=Path, default=DEFAULT_SEED)
     args = parser.parse_args(argv)
@@ -47,6 +51,26 @@ def main(argv: list[str] | None = None) -> None:
                 args.path.write_text(export_seed(store.driver), encoding="utf-8")
             else:
                 load_seed(store.driver, args.path.read_text(encoding="utf-8"))
+            return
+        if args.command == "draft-concepts":
+            from legal_radar.concepts import (
+                corpus_ids,
+                draft_candidates,
+                graph_corpus,
+                with_assunto,
+            )
+            from legal_radar.router_config import build_router, load_config
+
+            router = build_router(load_config("router.yaml"))
+            corpus = graph_corpus(store.driver)
+            drafted = draft_candidates(args.assunto, corpus, router)
+            draft, error = with_assunto(args.assunto, drafted, corpus_ids(corpus))
+            target = VOCABULARY_PATHS[args.assunto].with_suffix(".draft.yml")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(draft, encoding="utf-8")
+            if error:
+                print(f"warning: the draft does not load yet: {error}")
+            print(f"wrote {target}; curate it into {VOCABULARY_PATHS[args.assunto]}")
             return
         if args.command == "ingest":
             from legal_radar.adapters.pages import BrowserPageSource

@@ -217,3 +217,38 @@ def test_build_router_wires_default_embedding_models():
         "gemini": "gemini-embedding-001",
         "lmstudio": "text-embedding-bge-m3",
     }
+
+
+SCHEMA = {"type": "object", "properties": {"a": {"type": "string"}}}
+
+
+def test_openai_compatible_adapters_request_a_strict_json_schema():
+    from legal_radar.llm import CompletionParams
+
+    for make in (ADAPTERS["groq"][0], ADAPTERS["lmstudio"][0]):
+        transport = ScriptedTransport(openai_ok())
+        make(transport).complete("p", CompletionParams(response_schema=SCHEMA))
+        body = transport.requests[0][2]
+        assert body["response_format"] == {
+            "type": "json_schema",
+            "json_schema": {"name": "response", "strict": True, "schema": SCHEMA},
+        }
+
+
+def test_gemini_requests_json_output_with_the_schema():
+    from legal_radar.llm import CompletionParams
+
+    transport = ScriptedTransport(gemini_ok())
+    ADAPTERS["gemini"][0](transport).complete("p", CompletionParams(response_schema=SCHEMA))
+
+    config = transport.requests[0][2]["generationConfig"]
+    assert config["responseMimeType"] == "application/json"
+    assert config["responseJsonSchema"] == SCHEMA
+
+
+def test_no_schema_means_no_structured_output_fields():
+    for make in (ADAPTERS["groq"][0], ADAPTERS["gemini"][0]):
+        transport = ScriptedTransport(openai_ok() if make is ADAPTERS["groq"][0] else gemini_ok())
+        make(transport).complete("p")
+        body = transport.requests[0][2]
+        assert "response_format" not in body and "generationConfig" not in body

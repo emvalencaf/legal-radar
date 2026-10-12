@@ -9,6 +9,18 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Concept vocabulary (#41): `legal_radar.concepts` loads and validates one flat YAML vocabulary per
+  assunto (snake_case ASCII ids, Portuguese label/aliases/instructions, one of seven categories,
+  no duplicate ids or shared terms) and exposes `Vocabulary.hash`, independent of order and
+  formatting, for the enrichment idempotency key. `legal-radar draft-concepts <assunto>` has an LLM
+  draft candidates from the graph's dispositivos and jurisprudência into a `.draft.yml`, in two structured-output steps (count the concepts, then extract exactly that many). A first
+  draft of `concepts/desconsideracao_personalidade.yml` (33 concepts) is committed and still needs
+  human curation. Provenance lives in the file, outside the hash: per-concept `origin` (with the `model` when `llm`)
+  (`llm`/`human`) and `reviewed_by` + `reviewed_on`, and a file `status` (`draft` by default,
+  `curated` only when every concept is reviewed), plus per-concept `created_at` and `updated_at` dates. Lineage: per-concept `sources` lists the dispositivo
+  and jurisprudência ids it came from; the draft asks the LLM to cite them and flags any not in the
+  corpus. `load_registered` only warns on a draft and checks
+  the file's `assunto` against `VOCABULARY_PATHS`. See ADR-0003 and ADR-0006.
 - Embeddings and assunto resolution (#40): `embed()` on the provider port, routed like `complete()`
   (fallback, retry, daily limits, an `embed_call` wide event) with Gemini `gemini-embedding-001`
   first and LM Studio `text-embedding-bge-m3` as fallback (Groq has none), configured under

@@ -84,6 +84,18 @@ def test_gold_rejects_malformed_entries(text):
         load_gold(text)
 
 
+def test_gold_pins_the_vocabulary_it_was_annotated_against():
+    pinned = f"vocabulary_hash: {VOCABULARY.hash}\n{GOLD}"
+
+    assert load_gold(pinned, VOCABULARY) == load_gold(GOLD)
+
+
+@pytest.mark.parametrize("header", ["", "vocabulary_hash: stale\n"])
+def test_gold_rejects_a_missing_or_stale_vocabulary_hash(header):
+    with pytest.raises(GoldError, match="vocabulary"):
+        load_gold(header + GOLD, VOCABULARY)
+
+
 def test_scores_per_edge_split_by_origin_and_type():
     gold = load_gold(GOLD)
     outcomes = [

@@ -45,15 +45,23 @@ class GoldEdge:
 Gold = dict[str, frozenset[GoldEdge]]
 
 
-def load_gold(text: str) -> Gold:
+def load_gold(text: str, vocabulary: Vocabulary | None = None) -> Gold:
     """Parse the gold set YAML: `dispositivos: [{id, edges: [{type, source?, target?}]}]`.
 
-    The dispositivo is the default source of an edge, and the default target of a `REVOKES`.
+    The dispositivo is the default source of an edge, and the default target of a `REVOKES`. With a
+    `vocabulary`, the file must pin its `vocabulary_hash`: concept edges only mean something
+    against the vocabulary they were annotated with.
     """
     try:
-        entries = (yaml.safe_load(text) or {}).get("dispositivos")
+        document = yaml.safe_load(text) or {}
+        entries = document.get("dispositivos")
     except (yaml.YAMLError, AttributeError) as error:
         raise GoldError(f"unreadable gold set: {error}") from error
+    if vocabulary is not None and document.get("vocabulary_hash") != vocabulary.hash:
+        raise GoldError(
+            f"the gold set was annotated against another vocabulary "
+            f"(file {document.get('vocabulary_hash')!r}, current {vocabulary.hash!r})"
+        )
     if not isinstance(entries, list):
         raise GoldError("the gold set needs a `dispositivos` list")
     gold: Gold = {}

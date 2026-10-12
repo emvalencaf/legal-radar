@@ -28,3 +28,4 @@ logs/
 
 # LLM-drafted concept candidates, curated into the committed vocabulary
 concepts/*.draft.yml
+evaluation/*.progress.yml

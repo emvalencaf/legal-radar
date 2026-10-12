@@ -46,9 +46,9 @@ def main(args: argparse.Namespace) -> int:
     config = load_config(ROOT / "router.yaml")
     config["providers"] = [args.provider]
     router = build_router(config)
-    vocabulary = load_vocabulary(ROOT / "concepts" / "desconsideracao_personalidade.draft.yml")
+    vocabulary = load_vocabulary(ROOT / "concepts" / "desconsideracao_personalidade.yml")
     lock = refresh({ENRICHMENT_PROMPT: "local"}, lambda name, commit: (ENRICHMENT_TEMPLATE, None))
-    gold = load_gold(args.gold.read_text(encoding="utf-8"))
+    gold = load_gold(args.gold.read_text(encoding="utf-8"), vocabulary)
 
     dispositivos = [
         d

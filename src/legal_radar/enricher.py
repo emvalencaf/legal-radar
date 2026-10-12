@@ -186,7 +186,7 @@ def _prompt(d, ancestors, vocabulary, citations, candidates, lock) -> str:
 def _schema(
     vocabulary: Vocabulary, citations: Sequence[Relation], candidates: Sequence[str]
 ) -> dict:
-    schema = copy.deepcopy(_SCHEMA)
+    schema = copy.deepcopy(ENRICHMENT_SCHEMA)
     concept = schema["properties"]["conceitos"]["items"]["properties"]
     concept["conceito_id"]["enum"] = sorted(c.id for c in vocabulary.conceitos)
     concept["relacao"]["enum"] = [t.value for t in CONCEPT_RELATIONS]
@@ -196,7 +196,7 @@ def _schema(
     return schema
 
 
-_SCHEMA = {
+ENRICHMENT_SCHEMA = {
     "title": "dispositivo_enrichment",
     "type": "object",
     "properties": {

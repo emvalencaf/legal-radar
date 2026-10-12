@@ -92,7 +92,7 @@ def test_prompt_hash_moves_only_with_its_own_prompt():
     assert one.prompt_hash("b") != two.prompt_hash("b")
 
 
-def test_pipeline_and_drafting_stamp_each_call_with_its_prompt_hash(tmp_path):
+def test_pipeline_stamps_each_call_with_a_hash_of_its_prompt_and_schema(tag_lock, store):
     from legal_radar.adapters.fake_provider import FakeProvider
     from legal_radar.pipeline import run
 
@@ -101,13 +101,11 @@ def test_pipeline_and_drafting_stamp_each_call_with_its_prompt_hash(tmp_path):
     complete = provider.complete
     provider.complete = lambda prompt, params=None: seen.append(params) or complete(prompt, params)
 
-    class Store:
-        def write(self, batch):
-            pass
-
     run(
         (Path(__file__).parent / "fixtures" / "mini_lei.txt").read_text(encoding="utf-8"),
         provider,
-        Store(),
+        store,
+        tag_lock,
     )
-    assert {p.prompt_snapshot for p in seen} == {default_lock().prompt_hash("dispositivo-concept")}
+    assert len({p.prompt_snapshot for p in seen}) == 1
+    assert seen[0].prompt_snapshot != tag_lock.prompt_hash("dispositivo-concept")

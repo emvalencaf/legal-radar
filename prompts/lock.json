@@ -96,10 +96,27 @@
       "template": "Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto\n\"{assunto}\". Os textos abaixo (artigos de lei e ementas/teses de decisões) contêm {quantidade}\nconceitos jurídicos distintos e recorrentes. Extraia exatamente esses {quantidade} conceitos.\n\nNão proponha hierarquia entre conceitos: cada um tem uma única categoria.\n\nTextos:\n{corpus}\n"
     },
     "dispositivo-concept": {
-      "commit": "9e5ffc96e04e0d59b6dcc6428d4f8622f9cee3302c076c10bad93e990453bfc1",
-      "schema": null,
+      "commit": "7d8c97158da926a173967c90cccfdb0365dcf4710a1f21b983d64d626154e198",
+      "schema": {
+        "additionalProperties": false,
+        "description": "O conceito jurídico de que o dispositivo trata.",
+        "properties": {
+          "conceito_id": {
+            "description": "Id (snake_case) de um conceito do vocabulário do assunto.",
+            "enum": [
+              "placeholder"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "conceito_id"
+        ],
+        "title": "dispositivo_concept",
+        "type": "object"
+      },
       "template": "Return the conceito id (snake_case) that this dispositivo is about:\n{text}"
     }
   },
-  "snapshot_hash": "sha256:c886acb065fa44f314d5f9ea9919278d4f5d5fc4f974a23ad580fb2e75300e6b"
+  "snapshot_hash": "sha256:aeb133f910c76e087d2911d9172df5e4cbba565c1fc093249e3df2294baf4d33"
 }

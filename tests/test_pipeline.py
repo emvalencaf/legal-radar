@@ -39,13 +39,13 @@ def snapshot(driver):
     )
 
 
-def test_pipeline_writes_graph_and_is_idempotent(driver):
+def test_pipeline_writes_graph_and_is_idempotent(driver, tag_lock):
     store = Neo4jGraphStore(driver)
     raw = FIXTURE.read_text(encoding="utf-8")
 
-    run(raw, FakeProvider(), store)
+    run(raw, FakeProvider(), store, tag_lock)
     first = snapshot(driver)
-    run(raw, FakeProvider(), store)
+    run(raw, FakeProvider(), store, tag_lock)
 
     assert snapshot(driver) == first
     nodes, edges = first

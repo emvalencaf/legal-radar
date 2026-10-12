@@ -1,0 +1,124 @@
+{
+  "lc": 1,
+  "type": "constructor",
+  "id": [
+    "langchain_core",
+    "prompts",
+    "structured",
+    "StructuredPrompt"
+  ],
+  "kwargs": {
+    "input_variables": [
+      "assunto",
+      "corpus",
+      "quantidade"
+    ],
+    "messages": [
+      {
+        "lc": 1,
+        "type": "constructor",
+        "id": [
+          "langchain",
+          "prompts",
+          "chat",
+          "HumanMessagePromptTemplate"
+        ],
+        "kwargs": {
+          "prompt": {
+            "lc": 1,
+            "type": "constructor",
+            "id": [
+              "langchain",
+              "prompts",
+              "prompt",
+              "PromptTemplate"
+            ],
+            "kwargs": {
+              "input_variables": [
+                "assunto",
+                "corpus",
+                "quantidade"
+              ],
+              "template": "Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto\n\"{assunto}\". Os textos abaixo (artigos de lei e ementas/teses de decisões) contêm {quantidade}\nconceitos jurídicos distintos e recorrentes. Extraia exatamente esses {quantidade} conceitos.\n\nNão proponha hierarquia entre conceitos: cada um tem uma única categoria.\n\nTextos:\n{corpus}\n",
+              "template_format": "f-string"
+            },
+            "name": "PromptTemplate"
+          }
+        }
+      }
+    ],
+    "schema_": {
+      "title": "concepts_extract",
+      "type": "object",
+      "description": "Os conceitos jurídicos extraídos dos textos.",
+      "properties": {
+        "conceitos": {
+          "type": "array",
+          "description": "Um item por conceito jurídico distinto.",
+          "items": {
+            "type": "object",
+            "description": "Um conceito jurídico candidato ao vocabulário controlado do assunto.",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Identificador em minúsculas, ASCII e snake_case, ex.: abuso_da_personalidade."
+              },
+              "label": {
+                "type": "string",
+                "description": "Nome do conceito, em português."
+              },
+              "aliases": {
+                "type": "array",
+                "description": "Outros termos que os textos usam para o mesmo conceito.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "instructions": {
+                "type": "string",
+                "description": "Uma frase, em português, começando por 'Quando o texto...', que diz quando um trecho trata do conceito."
+              },
+              "category": {
+                "type": "string",
+                "description": "O que o conceito é: DIREITO, ATOR, PROCESSO, REQUISITO, PRINCIPIO, TEORIA, EFEITO.",
+                "enum": [
+                  "DIREITO",
+                  "ATOR",
+                  "PROCESSO",
+                  "REQUISITO",
+                  "PRINCIPIO",
+                  "TEORIA",
+                  "EFEITO"
+                ]
+              },
+              "sources": {
+                "type": "array",
+                "description": "Ids, entre colchetes nos textos, dos trechos onde ele aparece.",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "placeholder"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "aliases",
+              "instructions",
+              "category",
+              "sources"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "conceitos"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "name": "StructuredPrompt"
+}

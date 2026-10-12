@@ -1,0 +1,65 @@
+{
+  "lc": 1,
+  "type": "constructor",
+  "id": [
+    "langchain_core",
+    "prompts",
+    "structured",
+    "StructuredPrompt"
+  ],
+  "kwargs": {
+    "input_variables": [
+      "assunto",
+      "corpus"
+    ],
+    "messages": [
+      {
+        "lc": 1,
+        "type": "constructor",
+        "id": [
+          "langchain",
+          "prompts",
+          "chat",
+          "HumanMessagePromptTemplate"
+        ],
+        "kwargs": {
+          "prompt": {
+            "lc": 1,
+            "type": "constructor",
+            "id": [
+              "langchain",
+              "prompts",
+              "prompt",
+              "PromptTemplate"
+            ],
+            "kwargs": {
+              "input_variables": [
+                "assunto",
+                "corpus"
+              ],
+              "template": "Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto\n\"{assunto}\". Leia os textos abaixo (artigos de lei e ementas/teses de decisões) e conte quantos\nconceitos jurídicos distintos e recorrentes eles contêm (institutos, atores, requisitos, teorias,\nprincípios, efeitos, procedimentos e direitos). Sinônimos contam como um único conceito.\n\nTextos:\n{corpus}\n",
+              "template_format": "f-string"
+            },
+            "name": "PromptTemplate"
+          }
+        }
+      }
+    ],
+    "schema_": {
+      "title": "concepts_count",
+      "type": "object",
+      "description": "Contagem dos conceitos jurídicos distintos presentes nos textos.",
+      "properties": {
+        "quantidade": {
+          "type": "integer",
+          "description": "Número de conceitos jurídicos distintos e recorrentes nos textos, contando sinônimos como um só."
+        }
+      },
+      "required": [
+        "quantidade"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "name": "StructuredPrompt"
+}

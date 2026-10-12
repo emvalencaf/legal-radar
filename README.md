@@ -112,6 +112,15 @@ make export-seed
 make seed
 ```
 
+Prompts (and their structured-output schemas) are pinned to LangSmith Hub commits in
+`prompts/pins.yml` and read offline from `prompts/lock.json`; the pipeline and tests need no
+LangSmith account or network, only a source checkout. To follow new Hub commits, set
+`LANGSMITH_API_KEY`, edit the pins and refresh the lockfile (needs the `prompts` extra):
+
+```bash
+make refresh-prompts
+```
+
 Opt-in live smoke test against the real courts (not run by default): `uv run pytest -m live`.
 
 Tests (need Docker for the Neo4j test container): `uv run pytest`.

@@ -11,6 +11,7 @@ dependencies = [
 
 [project.optional-dependencies]
 browser = ["playwright>=1.40"]
+prompts = ["langsmith>=0.4"]
 
 [project.scripts]
 legal-radar = "legal_radar.__main__:main"

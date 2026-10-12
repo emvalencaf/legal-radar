@@ -4,6 +4,7 @@
 enrichment idempotency key. `draft_candidates` has an LLM propose candidates for a human to curate.
 """
 
+import copy
 import json
 import logging
 import re
@@ -16,6 +17,7 @@ from neo4j import Driver
 
 from legal_radar.llm import CompletionParams, content_hash
 from legal_radar.ports import Provider
+from legal_radar.prompts import PromptLock, default_lock
 
 CATEGORIES = ("DIREITO", "ATOR", "PROCESSO", "REQUISITO", "PRINCIPIO", "TEORIA", "EFEITO")
 ORIGINS = ("llm", "human")
@@ -230,96 +232,13 @@ def _check_unique(concepts: tuple[Concept, ...]) -> None:
                 )
 
 
-COUNT_PROMPT = """\
-Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto
-"{assunto}". Leia os textos abaixo (artigos de lei e ementas/teses de decisões) e conte quantos
-conceitos jurídicos distintos e recorrentes eles contêm (institutos, atores, requisitos, teorias,
-princípios, efeitos, procedimentos e direitos). Sinônimos contam como um único conceito.
-
-Textos:
-{corpus}
-"""
-
-EXTRACT_PROMPT = """\
-Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto
-"{assunto}". Os textos abaixo (artigos de lei e ementas/teses de decisões) contêm {quantidade}
-conceitos jurídicos distintos e recorrentes. Extraia exatamente esses {quantidade} conceitos.
-
-Não proponha hierarquia entre conceitos: cada um tem uma única categoria.
-
-Textos:
-{corpus}
-"""
-
-
-def count_schema() -> dict:
-    """The JSON Schema of step 1: how many legal concepts the corpus holds."""
-    return {
-        "type": "object",
-        "description": "Contagem dos conceitos jurídicos distintos presentes nos textos.",
-        "properties": {
-            "quantidade": {
-                "type": "integer",
-                "description": (
-                    "Número de conceitos jurídicos distintos e recorrentes nos textos, "
-                    "contando sinônimos como um só."
-                ),
-            }
-        },
-        "required": ["quantidade"],
-        "additionalProperties": False,
-    }
-
-
-def extract_schema(source_ids: list[str]) -> dict:
-    """The JSON Schema of step 2; `sources` may only cite corpus ids."""
-    concept = {
-        "type": "object",
-        "description": "Um conceito jurídico candidato ao vocabulário controlado do assunto.",
-        "properties": {
-            "id": {
-                "type": "string",
-                "description": "Identificador em minúsculas, ASCII e snake_case, "
-                "ex.: abuso_da_personalidade.",
-            },
-            "label": {"type": "string", "description": "Nome do conceito, em português."},
-            "aliases": {
-                "type": "array",
-                "description": "Outros termos que os textos usam para o mesmo conceito.",
-                "items": {"type": "string"},
-            },
-            "instructions": {
-                "type": "string",
-                "description": "Uma frase, em português, começando por 'Quando o texto...', "
-                "que diz quando um trecho trata do conceito.",
-            },
-            "category": {
-                "type": "string",
-                "description": "O que o conceito é: " + ", ".join(CATEGORIES) + ".",
-                "enum": list(CATEGORIES),
-            },
-            "sources": {
-                "type": "array",
-                "description": "Ids, entre colchetes nos textos, dos trechos onde ele aparece.",
-                "items": {"type": "string", "enum": sorted(source_ids)},
-            },
-        },
-        "required": ["id", "label", "aliases", "instructions", "category", "sources"],
-        "additionalProperties": False,
-    }
-    return {
-        "type": "object",
-        "description": "Os conceitos jurídicos extraídos dos textos.",
-        "properties": {
-            "conceitos": {
-                "type": "array",
-                "description": "Um item por conceito jurídico distinto.",
-                "items": concept,
-            }
-        },
-        "required": ["conceitos"],
-        "additionalProperties": False,
-    }
+def extract_schema(lock: PromptLock, source_ids: list[str]) -> dict:
+    """The pinned step-2 schema; the Hub stores it static, so `sources` may only cite corpus ids
+    by filling its enum here."""
+    schema = copy.deepcopy(lock.schema("concepts-extract"))
+    concept = schema["properties"]["conceitos"]["items"]
+    concept["properties"]["sources"]["items"]["enum"] = sorted(source_ids)
+    return schema
 
 
 @dataclass(frozen=True)
@@ -329,9 +248,12 @@ class Draft:
     expected: int | None = None  # how many concepts the counting step found
 
 
-def _answer(provider: Provider, prompt: str, step: str, schema: dict, key: str):
+def _answer(
+    provider: Provider, prompt: str, step: str, schema: dict, key: str, snapshot: str | None
+):
     completion = provider.complete(
-        prompt, CompletionParams(pipeline_step=step, response_schema=schema)
+        prompt,
+        CompletionParams(pipeline_step=step, response_schema=schema, prompt_snapshot=snapshot),
     )
     try:
         return json.loads(completion.text)[key], completion
@@ -339,25 +261,30 @@ def _answer(provider: Provider, prompt: str, step: str, schema: dict, key: str):
         raise VocabularyError(f"the LLM did not answer the {step} schema: {error}") from error
 
 
-def draft_candidates(assunto: str, corpus: list[str], provider: Provider) -> Draft:
+def draft_candidates(
+    assunto: str, corpus: list[str], provider: Provider, lock: PromptLock | None = None
+) -> Draft:
     """LLM-drafted candidates in two structured steps (count, then extract that many); a human
     curates them into the vocabulary."""
+    lock = lock or default_lock()
     text = "\n\n---\n\n".join(corpus)
     quantidade, _ = _answer(
         provider,
-        COUNT_PROMPT.format(assunto=assunto, corpus=text),
+        lock.render("concepts-count", assunto=assunto, corpus=text),
         COUNT_STEP,
-        count_schema(),
+        lock.schema("concepts-count"),
         "quantidade",
+        lock.prompt_hash("concepts-count"),
     )
     if isinstance(quantidade, bool) or not isinstance(quantidade, int) or quantidade < 1:
         raise VocabularyError(f"the LLM counted {quantidade!r} concepts")
     conceitos, completion = _answer(
         provider,
-        EXTRACT_PROMPT.format(assunto=assunto, quantidade=quantidade, corpus=text),
+        lock.render("concepts-extract", assunto=assunto, quantidade=quantidade, corpus=text),
         PIPELINE_STEP,
-        extract_schema(sorted(corpus_ids(corpus))),
+        extract_schema(lock, sorted(corpus_ids(corpus))),
         "conceitos",
+        lock.prompt_hash("concepts-extract"),
     )
     if not isinstance(conceitos, list):
         raise VocabularyError("the LLM did not answer the extract schema: not a list")

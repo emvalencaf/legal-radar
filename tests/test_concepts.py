@@ -117,16 +117,59 @@ def test_load_vocabulary_reads_a_file(tmp_path):
     assert load_vocabulary(path) == parse_vocabulary(valid_yaml())
 
 
-def test_draft_candidates_prompts_with_the_corpus_and_strips_fences():
-    provider = FakeProvider(script=[Completion("```yaml\nconceitos: []\n```")])
+def concept_json(**overrides) -> str:
+    import json
 
-    draft = draft_candidates("desconsideração", ["CC art. 50 abuso", "Tema 1210"], provider)
+    entry = {
+        "id": "x",
+        "label": "L",
+        "aliases": [],
+        "instructions": "i",
+        "category": "ATOR",
+        "sources": [],
+        **overrides,
+    }
+    return json.dumps({"conceitos": [entry]})
 
-    assert draft.text == "conceitos: []\n"
-    assert draft.model == "fake/fake-model"
-    prompt = provider.calls[0]
-    assert "CC art. 50 abuso" in prompt and "Tema 1210" in prompt
-    assert "DIREITO" in prompt and "snake_case" in prompt
+
+def test_draft_candidates_asks_for_structured_output_over_the_corpus():
+    provider = FakeProvider(script=[Completion(concept_json(), provider="g", model="m")])
+    corpus = ["[CC#art50]\nabuso", "[STJ:1]\nTema 1210"]
+
+    draft = draft_candidates("desconsideração", corpus, provider)
+
+    assert [c["id"] for c in draft.conceitos] == ["x"]
+    assert draft.model == "g/m"
+    assert "abuso" in provider.calls[0] and "Tema 1210" in provider.calls[0]
+    assert "YAML" not in provider.calls[0]
+
+
+def test_draft_schema_limits_categories_and_sources():
+    from legal_radar.concepts import draft_schema
+
+    concept = draft_schema(["b", "a"])["properties"]["conceitos"]["items"]
+
+    assert concept["properties"]["category"]["enum"] == list(CATEGORIES)
+    assert concept["properties"]["sources"]["items"]["enum"] == ["a", "b"]
+    assert concept["additionalProperties"] is False
+    assert set(concept["required"]) == set(concept["properties"])
+
+
+@pytest.mark.parametrize("text", ["not json", "{}", '{"conceitos": 3}', "[]"])
+def test_draft_candidates_rejects_an_answer_off_the_schema(text):
+    with pytest.raises(VocabularyError, match="draft schema"):
+        draft_candidates("a", ["[x]\nt"], FakeProvider(script=[Completion(text)]))
+
+
+def test_draft_candidates_sends_the_schema_to_the_provider():
+    seen = []
+    provider = FakeProvider(script=[Completion(concept_json())])
+    complete = provider.complete
+    provider.complete = lambda prompt, params=None: seen.append(params) or complete(prompt, params)
+
+    draft_candidates("a", ["[x]\nt"], provider)
+
+    assert seen[0].response_schema["required"] == ["conceitos"]
 
 
 def test_every_anchor_assunto_has_a_valid_registered_vocabulary():
@@ -175,15 +218,28 @@ def test_graph_corpus_reads_the_seed_dispositivos_and_all_jurisprudencia(driver)
     assert "ementa\ntese" in corpus[1]
 
 
-def test_with_assunto_prefixes_and_reports_whether_the_draft_loads():
-    from legal_radar.concepts import with_assunto
+def draft_of(**overrides):
+    from legal_radar.concepts import Draft
 
-    draft = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR}\n"
+    entry = {
+        "id": "x",
+        "label": "L",
+        "aliases": [],
+        "instructions": "i",
+        "category": "ATOR",
+        "sources": [],
+        **overrides,
+    }
+    return Draft([entry], "fake/m")
 
-    text, error = with_assunto("a b", draft, model="fake/m")
+
+def test_with_assunto_builds_a_loadable_draft_and_reports_when_it_does_not():
+    from legal_radar.concepts import Draft, with_assunto
+
+    text, error = with_assunto("a b", draft_of())
     assert text.startswith("assunto: a b\n") and error is None
 
-    _, error = with_assunto("a b", "conceitos: []\n")
+    _, error = with_assunto("a b", Draft([], "fake/m"))
     assert "non-empty list" in error
 
 
@@ -248,16 +304,18 @@ def test_a_draft_vocabulary_only_warns_when_loaded(caplog):
 
 
 def test_with_assunto_marks_the_draft_as_llm_origin():
+    from datetime import date
+
     from legal_radar.concepts import with_assunto
 
-    draft = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR}\n"
-
-    text, error = with_assunto("a", draft, model="fake/m")
+    text, error = with_assunto("a", draft_of())
 
     assert error is None
     vocabulary = parse_vocabulary(text)
-    assert vocabulary.status == "draft" and vocabulary.conceitos[0].origin == "llm"
-    assert vocabulary.conceitos[0].model == "fake/m"
+    concept = vocabulary.conceitos[0]
+    assert vocabulary.status == "draft" and concept.origin == "llm"
+    assert concept.model == "fake/m"
+    assert concept.created_at == date.today().isoformat()
 
 
 def test_sources_are_loaded_but_never_change_the_hash():
@@ -274,13 +332,11 @@ def test_sources_are_loaded_but_never_change_the_hash():
 def test_with_assunto_reports_sources_missing_from_the_corpus():
     from legal_radar.concepts import corpus_ids, with_assunto
 
-    corpus = ["[STJ:1]\nementa", "[lei#art50]\ntexto"]
-    ids = corpus_ids(corpus)
+    ids = corpus_ids(["[STJ:1]\nementa", "[lei#art50]\ntexto"])
     assert ids == {"STJ:1", "lei#art50"}
-    entry = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR, sources: [%s]}\n"
 
-    assert with_assunto("a", entry % "STJ:1", ids, "fake/m")[1] is None
-    assert "STF:9" in with_assunto("a", entry % "STJ:1, STF:9", ids, "fake/m")[1]
+    assert with_assunto("a", draft_of(sources=["STJ:1"]), ids)[1] is None
+    assert "STF:9" in with_assunto("a", draft_of(sources=["STJ:1", "STF:9"]), ids)[1]
 
 
 def test_timestamps_are_loaded_validated_and_outside_the_hash():
@@ -299,18 +355,6 @@ def test_timestamps_are_loaded_validated_and_outside_the_hash():
     ):
         with pytest.raises(VocabularyError):
             parse_vocabulary(provenance_yaml(**bad))
-
-
-def test_with_assunto_stamps_created_at_on_a_new_draft():
-    from datetime import date
-
-    from legal_radar.concepts import with_assunto
-
-    draft = "conceitos:\n  - {id: x, label: L, instructions: i, category: ATOR}\n"
-
-    text, _ = with_assunto("a", draft, model="fake/m")
-
-    assert parse_vocabulary(text).conceitos[0].created_at == date.today().isoformat()
 
 
 @pytest.mark.parametrize(

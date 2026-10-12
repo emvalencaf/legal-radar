@@ -107,6 +107,15 @@ class OpenAICompatibleProvider(HttpProvider):
             body["max_tokens"] = params.max_tokens
         if params.temperature is not None:
             body["temperature"] = params.temperature
+        if params.response_schema is not None:
+            body["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "response",
+                    "strict": True,
+                    "schema": params.response_schema,
+                },
+            }
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         return f"{self.base_url}/chat/completions", headers, body
 
@@ -205,6 +214,9 @@ class GeminiProvider(HttpProvider):
             config["maxOutputTokens"] = params.max_tokens
         if params.temperature is not None:
             config["temperature"] = params.temperature
+        if params.response_schema is not None:
+            config["responseMimeType"] = "application/json"
+            config["responseJsonSchema"] = params.response_schema
         body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
         if config:
             body["generationConfig"] = config

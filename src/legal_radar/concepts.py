@@ -4,6 +4,7 @@
 enrichment idempotency key. `draft_candidates` has an LLM propose candidates for a human to curate.
 """
 
+import json
 import logging
 import re
 from dataclasses import asdict, dataclass
@@ -42,7 +43,6 @@ RETURN j.id AS id, j.ementa + coalesce("\\n" + j.tese, "") AS text
 """
 logger = logging.getLogger(__name__)
 PIPELINE_STEP = "concept_vocabulary_draft"
-FENCE = re.compile(r"^```\w*\n(.*?)\n?```\s*$", re.DOTALL)
 
 
 class VocabularyError(ValueError):
@@ -234,41 +234,60 @@ Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileir
 "{assunto}". Leia os textos abaixo (artigos de lei e ementas/teses de decisões) e proponha de 25 a
 40 conceitos candidatos que aparecem neles de forma recorrente.
 
-Responda somente com YAML, neste formato:
-
-conceitos:
-  - id: abuso_da_personalidade   # minúsculas, ASCII, snake_case
-    label: Abuso da personalidade
-    aliases: [desvio de finalidade]   # termos que o texto usa para o mesmo conceito
-    instructions: Quando o texto trata de ... (uma frase, em português)
-    category: REQUISITO   # exatamente uma de: {categories}
-    sources: [urn:...#art50, STJ:202001090402]   # ids entre colchetes dos textos onde aparece
-
-Cada conceito tem uma única categoria. Não proponha hierarquia entre conceitos.
+Para cada conceito: `id` em minúsculas, ASCII e snake_case; `label` e `instructions` (uma frase
+começando por "Quando o texto...") em português; `aliases` com os termos que os textos usam para o
+mesmo conceito; uma única `category`; e `sources` com os ids, entre colchetes, dos textos onde ele
+aparece. Não proponha hierarquia entre conceitos.
 
 Textos:
 {corpus}
 """
 
 
+def draft_schema(source_ids: list[str]) -> dict:
+    """The JSON Schema the drafting LLM must answer with; `sources` may only cite corpus ids."""
+    concept = {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "label": {"type": "string"},
+            "aliases": {"type": "array", "items": {"type": "string"}},
+            "instructions": {"type": "string"},
+            "category": {"type": "string", "enum": list(CATEGORIES)},
+            "sources": {"type": "array", "items": {"type": "string", "enum": sorted(source_ids)}},
+        },
+        "required": ["id", "label", "aliases", "instructions", "category", "sources"],
+        "additionalProperties": False,
+    }
+    return {
+        "type": "object",
+        "properties": {"conceitos": {"type": "array", "items": concept}},
+        "required": ["conceitos"],
+        "additionalProperties": False,
+    }
+
+
 @dataclass(frozen=True)
 class Draft:
-    text: str
+    conceitos: list[dict]
     model: str  # `provider/model` that answered, after any fallback
 
 
 def draft_candidates(assunto: str, corpus: list[str], provider: Provider) -> Draft:
-    """LLM-drafted candidate YAML; a human curates it into the committed vocabulary."""
-    prompt = DRAFT_PROMPT.format(
-        assunto=assunto,
-        categories=", ".join(CATEGORIES),
-        corpus="\n\n---\n\n".join(corpus),
+    """LLM-drafted candidates, as structured output; a human curates them into the vocabulary."""
+    prompt = DRAFT_PROMPT.format(assunto=assunto, corpus="\n\n---\n\n".join(corpus))
+    params = CompletionParams(
+        pipeline_step=PIPELINE_STEP, response_schema=draft_schema(sorted(corpus_ids(corpus)))
     )
-    completion = provider.complete(prompt, CompletionParams(pipeline_step=PIPELINE_STEP))
-    text = completion.text.strip()
-    fenced = FENCE.match(text)
+    completion = provider.complete(prompt, params)
+    try:
+        conceitos = json.loads(completion.text)["conceitos"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise VocabularyError(f"the LLM did not answer the draft schema: {error}") from error
+    if not isinstance(conceitos, list):
+        raise VocabularyError("the LLM did not answer the draft schema: `conceitos` is not a list")
     model = f"{completion.provider or provider.name}/{completion.model or provider.model}"
-    return Draft((fenced.group(1) if fenced else text) + "\n", model)
+    return Draft(conceitos, model)
 
 
 def graph_corpus(driver: Driver) -> list[str]:
@@ -278,30 +297,22 @@ def graph_corpus(driver: Driver) -> list[str]:
 
 
 def with_assunto(
-    assunto: str, draft: str, corpus_ids: set[str] | None = None, model: str | None = None
+    assunto: str, draft: Draft, corpus_ids: set[str] | None = None
 ) -> tuple[str, str | None]:
-    """Prefix the draft with its `assunto`, mark it a draft of LLM origin, and check it loads.
-
-    Returns the text and any error; an unparseable draft is returned unmarked with the error. With
-    `corpus_ids`, sources the LLM cited that are not in the corpus are reported too. `model` is
-    recorded on every concept as the LLM that drafted it.
+    """The draft as vocabulary YAML: a draft of its `assunto`, every concept marked as created now
+    by the LLM that drafted it. Returns the text and any error from loading it; with `corpus_ids`,
+    sources that are not in the corpus are reported too.
     """
-    try:
-        document = yaml.safe_load(draft)
-    except yaml.YAMLError:
-        document = None
-    if isinstance(document, dict) and isinstance(document.get("conceitos"), list):
-        for entry in document["conceitos"]:
-            if isinstance(entry, dict):
-                entry.setdefault("origin", "llm")
-                if model:
-                    entry.setdefault("model", model)
-                entry.setdefault("created_at", date.today().isoformat())
-        body = yaml.safe_dump(
-            {"assunto": assunto, "status": "draft", **document}, allow_unicode=True, sort_keys=False
-        )
-    else:
-        body = yaml.safe_dump({"assunto": assunto}, allow_unicode=True) + draft
+    today = date.today().isoformat()
+    conceitos = [
+        {**entry, "origin": "llm", "model": draft.model, "created_at": today}
+        for entry in draft.conceitos
+    ]
+    body = yaml.safe_dump(
+        {"assunto": assunto, "status": "draft", "conceitos": conceitos},
+        allow_unicode=True,
+        sort_keys=False,
+    )
     try:
         vocabulary = parse_vocabulary(body)
     except VocabularyError as error:

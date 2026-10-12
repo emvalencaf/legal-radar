@@ -11,6 +11,7 @@ class CompletionParams:
     max_tokens: int | None = None
     temperature: float | None = None
     tools: tuple[dict, ...] = ()
+    response_schema: dict | None = None  # JSON Schema the reply must conform to (structured output)
 
 
 @dataclass(frozen=True)

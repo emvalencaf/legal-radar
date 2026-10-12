@@ -64,9 +64,7 @@ def main(argv: list[str] | None = None) -> None:
             router = build_router(load_config("router.yaml"))
             corpus = graph_corpus(store.driver)
             drafted = draft_candidates(args.assunto, corpus, router)
-            draft, error = with_assunto(
-                args.assunto, drafted.text, corpus_ids(corpus), drafted.model
-            )
+            draft, error = with_assunto(args.assunto, drafted, corpus_ids(corpus))
             target = VOCABULARY_PATHS[args.assunto].with_suffix(".draft.yml")
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(draft, encoding="utf-8")

@@ -61,6 +61,9 @@ class Router:
             "pipeline_step": params.pipeline_step,
             "prompt_id": content_hash(prompt),
             "tool_schema_ids": [content_hash(tool) for tool in params.tools],
+            "response_schema_id": (
+                content_hash(params.response_schema) if params.response_schema else None
+            ),
             "prompt_text": prompt if self.events.log_full_content else None,
             "output_text": None,
             "tokens_in": 0,

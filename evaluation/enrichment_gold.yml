@@ -1,0 +1,341 @@
+vocabulary_hash: sha256:5d6978343eba549351b81d7678aa1dbd9d0c881beae93f983c9efbedba9612fb
+dispositivos:
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art40
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art41
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art41_incI
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art41_incII
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art41_incIII
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art41_incIV
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art41_incV
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art41_parUnico
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art42
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art43
+  edges:
+  - type: APPLIES_TO
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_incI
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_incII
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_incIII
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_incIV
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_incV
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_incVI
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_incVII
+  edges:
+  - type: DEFINES
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_par1
+  edges:
+  - type: APPLIES_TO
+    target: pessoa_juridica
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_par2
+  edges:
+  - type: APPLIES_TO
+    target: pessoa_juridica
+    review: added
+  - type: APPLIES_TO
+    target: autonomia_patrimonial
+    review: added
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art44_par3
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art45
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art45_parUnico
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art46
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art46_incI
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art46_incII
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art46_incIII
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art46_incIV
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art46_incV
+  edges:
+  - type: RELATES_TO
+    target: limitacao_de_responsabilidade
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art46_incVI
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art47
+  edges:
+  - type: RELATES_TO
+    target: administrador
+    review: accepted
+  - type: RELATES_TO
+    target: pessoa_juridica
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art48
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art48_parUnico
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art48A
+  edges:
+  - type: REFERENCES
+    target: urn:lex:br:federal:lei:2002-01-10;10406#art59
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art49
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art49A
+  edges:
+  - type: DEFINES
+    target: autonomia_patrimonial
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art49A_parUnico
+  edges:
+  - type: DEFINES
+    target: autonomia_patrimonial
+    review: accepted
+  - type: RELATES_TO
+    target: limitacao_de_responsabilidade
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art50
+  edges:
+  - type: DEFINES
+    target: abuso_da_personalidade
+    review: accepted
+  - type: APPLIES_TO
+    target: desvio_de_finalidade
+    review: accepted
+  - type: APPLIES_TO
+    target: confusao_patrimonial
+    review: accepted
+  - type: APPLIES_TO
+    target: legitimidade_para_requerer
+    review: accepted
+  - type: APPLIES_TO
+    target: ministerio_publico
+    review: accepted
+  - type: APPLIES_TO
+    target: extensao_da_responsabilidade
+    review: accepted
+  - type: APPLIES_TO
+    target: beneficio_direto_ou_indireto
+    review: accepted
+  - type: APPLIES_TO
+    target: socio
+    review: accepted
+  - type: APPLIES_TO
+    target: administrador
+    review: accepted
+  - type: RELATES_TO
+    target: teoria_maior
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art50_par1
+  edges:
+  - type: REFERENCES
+    target: urn:lex:br:federal:lei:2002-01-10;10406#art50
+    review: accepted
+  - type: DEFINES
+    target: desvio_de_finalidade
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art50_par2
+  edges:
+  - type: DEFINES
+    target: confusao_patrimonial
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incI
+  edges:
+  - type: APPLIES_TO
+    target: confusao_patrimonial
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incII
+  edges:
+  - type: APPLIES_TO
+    target: confusao_patrimonial
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incIII
+  edges:
+  - type: APPLIES_TO
+    target: confusao_patrimonial
+    review: accepted
+  - type: APPLIES_TO
+    target: autonomia_patrimonial
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art50_par3
+  edges:
+  - type: REFERENCES
+    target: urn:lex:br:federal:lei:2002-01-10;10406#art50
+    review: accepted
+  - type: REFERENCES
+    target: urn:lex:br:federal:lei:2002-01-10;10406#art50_par1
+    review: accepted
+  - type: REFERENCES
+    target: urn:lex:br:federal:lei:2002-01-10;10406#art50_par2
+    review: accepted
+  - type: DEFINES
+    target: desconsideracao_inversa
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art50_par4
+  edges:
+  - type: REFERENCES
+    target: urn:lex:br:federal:lei:2002-01-10;10406#art50
+    review: accepted
+  - type: EXCEPTS
+    target: grupo_economico
+    review: accepted
+  - type: RELATES_TO
+    target: teoria_maior
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art50_par5
+  edges:
+  - type: EXCEPTS
+    target: desvio_de_finalidade
+    review: accepted
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art51
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art51_par1
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art51_par2
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art51_par3
+  edges: []
+- id: urn:lex:br:federal:lei:2002-01-10;10406#art52
+  edges:
+  - type: APPLIES_TO
+    target: personalidade_juridica
+    review: accepted
+- id: urn:lex:br:federal:lei:1990-09-11;8078#art1
+  edges:
+  - type: APPLIES_TO
+    target: direito_do_consumidor
+    review: accepted
+- id: urn:lex:br:federal:lei:1990-09-11;8078#art2
+  edges:
+  - type: DEFINES
+    target: consumidor
+    review: accepted
+- id: urn:lex:br:federal:lei:1990-09-11;8078#art28
+  edges:
+  - type: APPLIES_TO
+    target: direito_do_consumidor
+    review: accepted
+  - type: APPLIES_TO
+    target: consumidor
+    review: accepted
+  - type: APPLIES_TO
+    target: abuso_da_personalidade
+    review: accepted
+  - type: APPLIES_TO
+    target: insolvencia
+    review: accepted
+  - type: APPLIES_TO
+    target: excesso_de_poder_ou_infracao
+    review: accepted
+  - type: RELATES_TO
+    target: teoria_menor
+    review: accepted
+- id: urn:lex:br:federal:lei:1990-09-11;8078#art28_par1
+  edges: []
+- id: urn:lex:br:federal:lei:1990-09-11;8078#art28_par2
+  edges:
+  - type: APPLIES_TO
+    target: grupo_economico
+    review: accepted
+  - type: APPLIES_TO
+    target: sociedade_controlada
+    review: accepted
+  - type: APPLIES_TO
+    target: responsabilidade_subsidiaria
+    review: accepted
+- id: urn:lex:br:federal:lei:1990-09-11;8078#art28_par3
+  edges:
+  - type: APPLIES_TO
+    target: sociedade_consorciada
+    review: accepted
+  - type: APPLIES_TO
+    target: responsabilidade_solidaria
+    review: accepted
+- id: urn:lex:br:federal:lei:1990-09-11;8078#art28_par4
+  edges:
+  - type: APPLIES_TO
+    target: sociedade_coligada
+    review: accepted
+  - type: APPLIES_TO
+    target: culpa_ou_dolo
+    review: accepted
+- id: urn:lex:br:federal:lei:1990-09-11;8078#art28_par5
+  edges:
+  - type: DEFINES
+    target: teoria_menor
+    review: accepted
+  - type: APPLIES_TO
+    target: prejuizo_ao_credor
+    review: accepted
+  - type: APPLIES_TO
+    target: consumidor
+    review: accepted
+- id: urn:lex:br:federal:lei:1990-09-11;8078#art29
+  edges:
+  - type: APPLIES_TO
+    target: consumidor
+    review: accepted

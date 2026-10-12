@@ -41,6 +41,7 @@ _KINDS = {
     "Decreto-Lei": "decreto.lei",
     "Decreto": "decreto",
     "Emenda Constitucional": "emenda.constitucional",
+    "Medida Provisória": "medida.provisoria",
 }
 
 _ROMAN = r"\b[IVXLCDM]+\b"
@@ -68,7 +69,7 @@ _UNKNOWN_LAW = re.compile(r"\s*,?\s*d[oa]s?\s+[A-ZÀ-Ú]")
 _THIS_ARTIGO = re.compile(rf"(?:{_INC}\s*(?:d[oa]\s+)?)?(?:{_PAR}\s*)?(?:deste|neste)\s+artigo\b")
 _PREVIOUS_ARTIGO = re.compile(r"\b[Aa]rt(?:\.|igo)\s+anterior\b")
 _ACT_MENTION = re.compile(_ACT)
-_REVOKED = re.compile(rf"\(Revogad[oa]s?\s+(?:pel[ao]s?\s+)?{_ACT}[^)]*\)")
+_REVOKED = re.compile(rf"\((?i:Revogad[oa]s?\s+(?:pel[ao]s?\s+)?){_ACT}[^)]*\)")
 _AMENDMENT = re.compile(
     r"\((?:Redação|Inclu[ií]d|Vide|Regulamento|Vig[eê]ncia|Renumerad|Revogad|Produ[cç][aã]o)[^)]*\)"
 )
@@ -185,7 +186,7 @@ class _Scan:
         relations: list[Relation] = []
         dropped = 0
         for r in self.out:
-            if r.evidence not in self.text:
+            if not any(r.evidence in source for source in (self.text, *self.d.revocations)):
                 dropped += 1
                 logger.warning("dropped %s edge of %s: evidence is not literal", r.type, self.d.id)
                 continue
@@ -197,10 +198,11 @@ class _Scan:
 
 
 def _revocations(s: _Scan) -> None:
-    """`(Revogado pela Lei nº …)`: the revoking act revokes this dispositivo."""
-    for m in _REVOKED.finditer(s.text):
-        urn, label = _act(m, s.resolver)
-        s.edge(RelationType.REVOKES, urn, s.d.id, m[0], label if urn is None else None)
+    """`(Revogado pela Lei nº …)`: the revoking act (a stub Lei if not ingested) revokes this."""
+    for mark in (s.text, *s.d.revocations):  # the parser moves the marks out of the text
+        for m in _REVOKED.finditer(mark):
+            urn, label = _act(m, s.resolver)
+            s.edge(RelationType.REVOKES, urn, s.d.id, m[0], label if urn is None else None)
 
 
 def _artigo_citations(s: _Scan) -> None:

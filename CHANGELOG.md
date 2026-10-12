@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Revocations in the parser and graph (#26): `Dispositivo` gains `revoked` and `revocations`; a
+  fully revoked dispositivo (struck text plus `(Revogado …)` marks) is kept instead of vanishing,
+  with the marks moved out of its text. `GraphBatch.relations` writes `REFERENCES` and `REVOKES`
+  edges (confidence, origin, evidence) to Neo4j, with stub `Lei` nodes for leis not ingested and
+  unresolved citations kept as node attributes. `ingest()` runs the extractor over every lei of the
+  run and reports relations, chunks for the LLM and dropped items.
 - Deterministic relation extractor (#26): `legal_radar.relations.extract_relations` turns a
   dispositivo into `REFERENCES` and `REVOKES` edges (`Relation`, `Confidence`, `Origin` in
   `legal_radar.domain`) with literal evidence, per ADR-0002. It covers explicit citations

@@ -1,6 +1,6 @@
 """Domain entities written to the knowledge graph."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 
@@ -21,6 +21,8 @@ class Dispositivo:
     text: str
     parent_id: str | None = None
     kind: str = "artigo"
+    revoked: bool = False  # carries a `(Revogado …)` mark; the text is kept, no longer live law
+    revocations: tuple[str, ...] = ()  # the literal marks, moved out of `text`
 
 
 @dataclass(frozen=True)
@@ -52,6 +54,7 @@ class GraphBatch:
     dispositivos: list[Dispositivo]
     conceitos: list[Conceito]
     links: list[ConceptLink]
+    relations: list["Relation"] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

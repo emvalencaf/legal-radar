@@ -2,7 +2,7 @@
 
 from neo4j import Driver, GraphDatabase
 
-from legal_radar.domain import GraphBatch, Jurisprudencia
+from legal_radar.domain import GraphBatch, Jurisprudencia, Relation, RelationType
 
 CONSTRAINTS = [
     "CREATE CONSTRAINT lei_id IF NOT EXISTS FOR (n:Lei) REQUIRE n.id IS UNIQUE",
@@ -18,9 +18,42 @@ def ensure_constraints(session) -> None:
         session.run(statement)
 
 
-MERGE_LEI = "MERGE (l:Lei {id: $id}) SET l.title = $title, l.planalto_url = $planalto_url"
+MERGE_LEI = """
+MERGE (l:Lei {id: $id}) SET l.title = $title, l.planalto_url = $planalto_url
+REMOVE l.stub
+"""
 MERGE_DISPOSITIVO = """
-MERGE (d:Dispositivo {id: $id}) SET d.path = $path, d.text = $text, d.kind = $kind
+MERGE (d:Dispositivo {id: $id})
+SET d.path = $path, d.text = $text, d.kind = $kind, d.revoked = $revoked,
+    d.revocations = $revocations
+"""
+# A lei only cited (or only revoking) is a stub keyed by its URN until it is ingested.
+MERGE_STUB_LEI = "MERGE (l:Lei {id: $id}) ON CREATE SET l.stub = true"
+COUNT_DISPOSITIVO = "MATCH (d:Dispositivo {id: $id}) RETURN count(d) AS n"
+MERGE_REFERENCE = """
+MATCH (s:Dispositivo {id: $source}), (t:Dispositivo {id: $target})
+MERGE (s)-[r:REFERENCES]->(t)
+SET r.confidence = $confidence, r.origin = $origin, r.evidence = $evidence
+"""
+MERGE_REFERENCE_TO_STUB = """
+MATCH (s:Dispositivo {id: $source}), (t:Lei {id: $target})
+MERGE (s)-[r:REFERENCES {locator: $locator}]->(t)
+SET r.confidence = $confidence, r.origin = $origin, r.evidence = $evidence
+"""
+MERGE_REVOKES = """
+MATCH (s:Lei {id: $source}), (t:Dispositivo {id: $target})
+MERGE (s)-[r:REVOKES]->(t)
+SET r.confidence = $confidence, r.origin = $origin, r.evidence = $evidence
+"""
+KEEP_UNRESOLVED_REFERENCE = """
+MATCH (n:Dispositivo {id: $id})
+SET n.unresolved_references =
+    [x IN coalesce(n.unresolved_references, []) WHERE x <> $citation] + [$citation]
+"""
+KEEP_UNRESOLVED_REVOKER = """
+MATCH (n:Dispositivo {id: $id})
+SET n.unresolved_revokers =
+    [x IN coalesce(n.unresolved_revokers, []) WHERE x <> $citation] + [$citation]
 """
 MERGE_LEI_PARTS = """
 MATCH (l:Lei {id: $lei_id}), (d:Dispositivo {id: $id})
@@ -88,13 +121,45 @@ class Neo4jGraphStore:
             planalto_url=batch.lei.planalto_url,
         )
         for d in batch.dispositivos:
-            tx.run(MERGE_DISPOSITIVO, id=d.id, path=d.path, text=d.text, kind=d.kind)
+            tx.run(
+                MERGE_DISPOSITIVO,
+                id=d.id,
+                path=d.path,
+                text=d.text,
+                kind=d.kind,
+                revoked=d.revoked,
+                revocations=list(d.revocations),
+            )
         for d in batch.dispositivos:
             if d.parent_id:
                 tx.run(MERGE_PARTS, id=d.id, parent_id=d.parent_id)
             else:
                 tx.run(MERGE_LEI_PARTS, id=d.id, lei_id=d.lei_id)
+        for r in batch.relations:
+            Neo4jGraphStore._write_relation(tx, r)
         for c in batch.conceitos:
             tx.run(MERGE_CONCEITO, id=c.id)
         for link in batch.links:
             tx.run(MERGE_LINK, dispositivo_id=link.dispositivo_id, conceito_id=link.conceito_id)
+
+    @staticmethod
+    def _write_relation(tx, r: Relation) -> None:
+        edge = {
+            "confidence": r.confidence.value,
+            "origin": r.origin.value,
+            "evidence": r.evidence,
+        }
+        if r.type is RelationType.REVOKES:
+            if r.source_id is None:  # the revoking act did not resolve: keep the citation
+                tx.run(KEEP_UNRESOLVED_REVOKER, id=r.target_id, citation=r.unresolved)
+                return
+            tx.run(MERGE_STUB_LEI, id=r.source_id)
+            tx.run(MERGE_REVOKES, source=r.source_id, target=r.target_id, **edge)
+        elif r.target_id is None:
+            tx.run(KEEP_UNRESOLVED_REFERENCE, id=r.source_id, citation=r.unresolved)
+        elif tx.run(COUNT_DISPOSITIVO, id=r.target_id).single()["n"]:
+            tx.run(MERGE_REFERENCE, source=r.source_id, target=r.target_id, **edge)
+        else:  # a dispositivo of a lei the graph lacks: point at the stub lei, keep where in it
+            lei, _, locator = r.target_id.partition("#")
+            tx.run(MERGE_STUB_LEI, id=lei)
+            tx.run(MERGE_REFERENCE_TO_STUB, source=r.source_id, target=lei, locator=locator, **edge)

@@ -216,3 +216,40 @@ def test_roman_numerals_round_trip_and_reject_malformed():
 
     assert all(_roman(_to_roman(n)) == n for n in range(1, 400))
     assert _roman("IIII") == 0 and _roman("IC") == 0
+
+
+MPV = "urn:lex:br:federal:medida.provisoria:2021-12-27;1085"
+L14382 = "urn:lex:br:federal:lei:2022-06-22;14382"
+
+
+def cc_art44_vi():
+    html = decode_html(
+        (Path(__file__).parent / "fixtures/planalto/l10406_excerpt.htm").read_bytes()
+    )
+    return next(d for d in parse_planalto(html, CC) if d.path == "art44_incVI")
+
+
+def test_revoked_inciso_yields_one_revokes_edge_per_mark_with_literal_evidence():
+    urns = {("medida.provisoria", "1085", 2021): MPV, ("lei", "14382", 2022): L14382}
+    d = cc_art44_vi()
+
+    result = extract_relations(d, resolver=lambda *key: urns[key])
+
+    revokes = {r.source_id: r for r in result.relations if r.type is RelationType.REVOKES}
+    assert set(revokes) == {MPV, L14382}
+    assert all(r.target_id == d.id for r in revokes.values())
+    assert all(
+        r.confidence is Confidence.HIGH and r.origin is Origin.RULE for r in revokes.values()
+    )
+    assert revokes[MPV].evidence == "(Revogado Pela Medida Provisória nº 1.085, de 2021)"
+    assert revokes[MPV].evidence in d.revocations
+
+
+def test_revoking_act_that_does_not_resolve_is_low_and_kept():
+    result = extract_relations(cc_art44_vi())
+
+    assert {(r.source_id, r.confidence) for r in result.relations} == {(None, Confidence.LOW)}
+    assert {r.unresolved for r in result.relations} == {
+        "lei:14382/2022",
+        "medida.provisoria:1085/2021",
+    }

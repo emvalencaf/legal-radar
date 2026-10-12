@@ -87,3 +87,18 @@ def test_unresolvable_lei_is_reported_as_failed():
     )
 
     assert "lei 10406 2002 código civil" in report.failed
+
+
+def test_ingest_extracts_relations_and_reports_them():
+    store = MemoryStore()
+    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+
+    report = ingest(
+        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)], lexml_pages(), planalto, store
+    )
+
+    (batch,) = store.batches
+    assert batch.relations
+    assert report.relations == {CC: len(batch.relations)}
+    assert any(r.type == "REVOKES" and r.target_id == f"{CC}#art44_incVI" for r in batch.relations)
+    assert "relations" in report.render()

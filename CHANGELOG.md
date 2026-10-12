@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Vocabulary `desconsideracao_personalidade` grows from 33 to 40 concepts, found missing while
+  proposing the gold set (#67): `sociedade_controlada`, `sociedade_consorciada`,
+  `sociedade_coligada`, `culpa_ou_dolo`, `excesso_de_poder_ou_infracao`,
+  `responsabilidade_subsidiaria` and `responsabilidade_solidaria`. The vocabulary hash changes, so
+  LLM-processed chunks return to pending (ADR-0003).
 - Enrichment gold set tooling (#67, in progress): Claude Code's proposal for the 60 normative
   dispositivos of the anchor slice (`evaluation/`), `scripts/annotate_gold.py` for the maintainer's
   review (no skipping; records accepted/corrected/added), and a `vocabulary_hash` check in

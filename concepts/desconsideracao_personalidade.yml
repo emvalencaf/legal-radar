@@ -135,6 +135,36 @@ conceitos:
     created_at: 2026-10-11
     reviewed_by: Edson Mota Valença Filho
     reviewed_on: 2026-10-11
+  - id: sociedade_controlada
+    label: Sociedade controlada
+    aliases: [empresa controlada]
+    instructions: Use quando o texto se refere à sociedade controlada por outra, em regra no contexto do grupo societário.
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: sociedade_consorciada
+    label: Sociedade consorciada
+    aliases: [empresa consorciada]
+    instructions: Use quando o texto se refere às sociedades reunidas em consórcio e à sua responsabilidade.
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: sociedade_coligada
+    label: Sociedade coligada
+    aliases: [empresa coligada]
+    instructions: Use quando o texto se refere à sociedade coligada, distinta da controlada e da consorciada.
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
   # PROCESSO
   - id: incidente_de_desconsideracao
     label: Incidente de desconsideração da personalidade jurídica
@@ -267,6 +297,26 @@ conceitos:
     created_at: 2026-10-11
     reviewed_by: Edson Mota Valença Filho
     reviewed_on: 2026-10-11
+  - id: culpa_ou_dolo
+    label: Culpa ou dolo
+    aliases: [culpa, dolo, responsabilidade subjetiva]
+    instructions: Use quando o texto condiciona a responsabilidade à culpa ou ao dolo de quem responde.
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: excesso_de_poder_ou_infracao
+    label: Excesso de poder ou infração
+    aliases: [excesso de poder, infração da lei, violação dos estatutos]
+    instructions: Use quando o texto trata de excesso de poder, infração da lei ou violação dos estatutos ou do contrato social como pressuposto da medida.
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
   # PRINCIPIO
   - id: devido_processo_legal
     label: Devido processo legal
@@ -340,3 +390,23 @@ conceitos:
     created_at: 2026-10-11
     reviewed_by: Edson Mota Valença Filho
     reviewed_on: 2026-10-11
+  - id: responsabilidade_subsidiaria
+    label: Responsabilidade subsidiária
+    aliases: [responder subsidiariamente]
+    instructions: Use quando o texto atribui responsabilidade subsidiária, que só alcança o responsável se o devedor principal não pagar.
+    category: EFEITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: responsabilidade_solidaria
+    label: Responsabilidade solidária
+    aliases: [responder solidariamente]
+    instructions: Use quando o texto atribui responsabilidade solidária, em que cada responsável responde pela dívida toda.
+    category: EFEITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12

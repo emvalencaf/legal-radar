@@ -1,5 +1,5 @@
 # Proposed by Claude Code; not the gold set until the maintainer reviews it (scripts/annotate_gold.py).
-vocabulary_hash: sha256:8edb765fc76ace7d2d31fd1b9546fa22f142292b27c2965155dff3828cb24d57
+vocabulary_hash: sha256:5d6978343eba549351b81d7678aa1dbd9d0c881beae93f983c9efbedba9612fb
 dispositivos:
 - id: urn:lex:br:federal:lei:2002-01-10;10406#art40
   edges: []
@@ -199,8 +199,11 @@ dispositivos:
     target: abuso_da_personalidade
   - type: APPLIES_TO
     target: insolvencia
+  - type: APPLIES_TO
+    target: excesso_de_poder_ou_infracao
   - type: RELATES_TO
     target: teoria_menor
+  note: the caput grounds (abuso de direito, excesso de poder, infração) are close to excesso_de_poder_ou_infracao
 - id: urn:lex:br:federal:lei:1990-09-11;8078#art28_par1
   edges: []
   note: (Vetado)
@@ -209,15 +212,21 @@ dispositivos:
   - type: APPLIES_TO
     target: grupo_economico
   - type: APPLIES_TO
-    target: extensao_da_responsabilidade
+    target: sociedade_controlada
+  - type: APPLIES_TO
+    target: responsabilidade_subsidiaria
 - id: urn:lex:br:federal:lei:1990-09-11;8078#art28_par3
   edges:
   - type: APPLIES_TO
-    target: extensao_da_responsabilidade
+    target: sociedade_consorciada
+  - type: APPLIES_TO
+    target: responsabilidade_solidaria
 - id: urn:lex:br:federal:lei:1990-09-11;8078#art28_par4
   edges:
   - type: APPLIES_TO
-    target: grupo_economico
+    target: sociedade_coligada
+  - type: APPLIES_TO
+    target: culpa_ou_dolo
 - id: urn:lex:br:federal:lei:1990-09-11;8078#art28_par5
   edges:
   - type: DEFINES

@@ -71,3 +71,34 @@ def test_incisos_and_alineas_nest_under_the_closest_parent():
     assert ds["art1_incI_aliA".replace("A", "a")].parent_id == "u#art1_incI"
     assert ds["art1_incII"].parent_id == "u#art1"
     assert ds["art1_incI_alib"].text == "beta."
+
+
+def test_fully_revoked_inciso_is_kept_with_its_marks_moved_out_of_the_text():
+    ds = parse("l10406_excerpt.htm")
+
+    inciso = ds[f"{URN}#art44_incVI"]
+    assert inciso.revoked
+    assert inciso.text.startswith("as empresas individuais de responsabilidade limitada.")
+    assert "Revogado" not in inciso.text
+    assert inciso.revocations == (
+        "(Revogado pela Lei nº 14.382, de 2022)",
+        "(Revogado Pela Medida Provisória nº 1.085, de 2021)",
+    )
+
+
+def test_marks_belong_to_the_dispositivo_that_carries_them_and_others_stay_live():
+    ds = parse("l10406_excerpt.htm")
+
+    assert ds[f"{URN}#art44_incV"].revocations == () and not ds[f"{URN}#art44_incV"].revoked
+    assert not ds[f"{URN}#art44_incVII"].revoked
+    assert ds[f"{URN}#art44_incVII"].text.startswith("os empreendimentos")
+
+
+def test_unstruck_revogado_mark_marks_the_dispositivo():
+    html = "<p>Art. 5º Texto antigo.</p><p>Art. 6º (Revogado pela Lei nº 1.234, de 2010)</p>"
+
+    ds = {d.path: d for d in parse_planalto(html, URN)}
+
+    assert ds["art6"].revoked and ds["art6"].text == ""
+    assert ds["art6"].revocations == ("(Revogado pela Lei nº 1.234, de 2010)",)
+    assert not ds["art5"].revoked

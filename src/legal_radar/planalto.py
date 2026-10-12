@@ -5,7 +5,7 @@ amended provisions, so structure is recognised from the text of each block, not 
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 
@@ -33,6 +33,8 @@ _ALINEA = re.compile(r"^([a-z])\)\s*(.*)$")
 _END = re.compile(r"^(Brasília,|Este texto não substitui)")
 _BLOCK_TAGS = ["p", "div", "br", "tr", "table", "li", "h1", "h2", "h3", "h4", "h5", "h6"]
 _STRUCK_STYLE = re.compile(r"line-through")
+_REVOCATION = re.compile(r"\(Revogad[oa]s?\b[^)]*\)", re.IGNORECASE)
+_STRUCK_OPEN, _STRUCK_CLOSE = "\ue000", "\ue001"  # bracket struck-through text through get_text
 
 
 def decode_html(raw: bytes) -> str:
@@ -48,6 +50,7 @@ class _Node:
     dispositivo: Dispositivo
     rank: int
     text: list[str]
+    revocations: list[str] = field(default_factory=list)
 
 
 def parse_planalto(html: str, lei_id: str) -> list[Dispositivo]:
@@ -70,16 +73,21 @@ def parse_planalto(html: str, lei_id: str) -> list[Dispositivo]:
         nodes.append(node)
         return node
 
-    for line in _lines(html):
-        if _END.match(line) and artigo is not None:
+    for live, struck in _lines(html):
+        line, marks = _split_revocations(live, struck)
+        touched: _Node | None = None  # the dispositivo this line belongs to
+        if not line:
+            touched = current  # a bare mark continues the dispositivo above it
+        elif _END.match(line) and artigo is not None:
             break
-        if heading := _match_heading(line):
+        elif heading := _match_heading(line):
             kind, rank, code, rest = heading
             while org and org[-1].rank >= rank:
                 org.pop()
             path = "_".join(([org[-1].dispositivo.path] if org else []) + [f"{kind}{code}"])
             node = add(kind, rank, path, org[-1] if org else None, rest)
             current = node if node and not rest else None
+            touched = node
             if node:
                 org.append(node)
             artigo = paragrafo = inciso = None
@@ -87,30 +95,64 @@ def parse_planalto(html: str, lei_id: str) -> list[Dispositivo]:
             code = m[1].replace(".", "") + (m[2] or "")
             node = add("artigo", 10, f"art{code}", org[-1] if org else None, m[3])
             artigo, paragrafo, inciso, current = node, None, None, node
+            touched = node
         elif artigo and (m := _PARAGRAFO.match(line)):
             code = "Unico" if m[3] else (m[1].replace(".", "") + (m[2] or ""))
             node = add("paragrafo", 11, f"{artigo.dispositivo.path}_par{code}", artigo, m[4])
             paragrafo, inciso, current = node, None, node
+            touched = node
         elif artigo and (m := _INCISO.match(line)):
             parent = paragrafo or artigo
             code = m[1] + (m[2] or "")
             node = add("inciso", 12, f"{parent.dispositivo.path}_inc{code}", parent, m[3])
             inciso, current = node, node
+            touched = node
         elif artigo and (m := _ALINEA.match(line)):
             parent = inciso or paragrafo or artigo
             node = add("alinea", 13, f"{parent.dispositivo.path}_ali{m[1]}", parent, m[2])
-            current = node
+            current = touched = node
         elif current is not None:
             current.text.append(line)
+            touched = current
             if current.rank < 10:
                 current = None  # a heading's name is one line; anything after it is stray
+        if touched:
+            touched.revocations.extend(marks)
 
-    return [_with_text(n.dispositivo, " ".join(n.text)) for n in nodes]
+    return [_finish(n) for n in nodes]
 
 
-def _with_text(d: Dispositivo, text: str) -> Dispositivo:
-    return Dispositivo(
-        d.id, d.lei_id, d.path, re.sub(r"\s+", " ", text).strip(), d.parent_id, d.kind
+def _finish(n: _Node) -> Dispositivo:
+    marks = tuple(dict.fromkeys(n.revocations))
+    text = re.sub(r"\s+", " ", " ".join(n.text)).strip()
+    return replace(n.dispositivo, text=text, revoked=bool(marks), revocations=marks)
+
+
+def _split_revocations(live: str, struck: str) -> tuple[str, list[str]]:
+    """The line to parse and the `(Revogado …)` marks on it, struck or not.
+
+    A line whose only live content is marks, over struck text that opens a dispositivo, is a fully
+    revoked one: its struck text is kept. Any other struck text is a superseded version, dropped.
+    """
+    marks = [re.sub(r"\s+", " ", m[0]) for m in _REVOCATION.finditer(f"{live} {struck}")]
+    live = _clean(_REVOCATION.sub("", live))
+    struck = _clean(_REVOCATION.sub("", struck))
+    if not live and marks and _opens_dispositivo(struck):
+        return struck, marks
+    return live, marks
+
+
+def _clean(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _opens_dispositivo(line: str) -> bool:
+    return bool(
+        _match_heading(line)
+        or _ARTIGO.match(line)
+        or _PARAGRAFO.match(line)
+        or _INCISO.match(line)
+        or _ALINEA.match(line)
     )
 
 
@@ -135,12 +177,15 @@ def _match_heading(line: str) -> tuple[str, int, str, str] | None:
     return None
 
 
-def _lines(html: str) -> list[str]:
+def _lines(html: str) -> list[tuple[str, str]]:
+    """Each block of the page as `(live text, struck-through text)`, blanks skipped."""
     soup = BeautifulSoup(html, "html.parser")
-    for tag in soup.find_all(["strike", "s", "del", "script", "style"]):
+    for tag in soup.find_all(["script", "style"]):
         tag.decompose()
-    for tag in soup.find_all(style=_STRUCK_STYLE):
-        tag.decompose()
+    struck_tags = soup.find_all(["strike", "s", "del"]) + soup.find_all(style=_STRUCK_STYLE)
+    for tag in struck_tags:
+        tag.insert_before(_STRUCK_OPEN)
+        tag.insert_after(_STRUCK_CLOSE)
     for text in soup.find_all(string=True):
         if isinstance(text, NavigableString):
             text.replace_with(re.sub(r"\s+", " ", str(text).replace("\xa0", " ")))
@@ -149,5 +194,18 @@ def _lines(html: str) -> list[str]:
             tag.insert_before("\n")
             if tag.name != "br":
                 tag.insert_after("\n")
-    text = soup.get_text("")
-    return [line for raw in text.split("\n") if (line := re.sub(r"\s+", " ", raw).strip())]
+    depth = 0
+    lines: list[tuple[str, str]] = []
+    for raw in soup.get_text("").split("\n"):
+        live: list[str] = []
+        struck: list[str] = []
+        for char in raw:
+            if char == _STRUCK_OPEN:
+                depth += 1
+            elif char == _STRUCK_CLOSE:
+                depth = max(0, depth - 1)
+            else:
+                (struck if depth else live).append(char)
+        if (pair := (_clean("".join(live)), _clean("".join(struck)))) != ("", ""):
+            lines.append(pair)
+    return lines

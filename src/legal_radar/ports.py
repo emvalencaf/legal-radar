@@ -23,7 +23,10 @@ class Provider(Protocol):
 
 class GraphStore(Protocol):
     def write(self, batch: GraphBatch) -> None:
-        """Idempotently upsert the batch's nodes and edges."""
+        """Idempotently upsert the batch's nodes and edges.
+
+        A relation whose lei the graph lacks becomes an edge to a stub Lei node keyed by its URN;
+        one whose endpoint is unresolved is kept as an attribute of the node it starts from."""
 
     def write_jurisprudencia(self, items: list[Jurisprudencia]) -> None:
         """Idempotently upsert the jurisprudência nodes."""

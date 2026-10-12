@@ -1,6 +1,7 @@
 """Domain entities written to the knowledge graph."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import StrEnum
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,8 @@ class Dispositivo:
     text: str
     parent_id: str | None = None
     kind: str = "artigo"
+    revoked: bool = False  # carries a `(Revogado …)` mark; the text is kept, no longer live law
+    revocations: tuple[str, ...] = ()  # the literal marks, moved out of `text`
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,7 @@ class GraphBatch:
     dispositivos: list[Dispositivo]
     conceitos: list[Conceito]
     links: list[ConceptLink]
+    relations: list["Relation"] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -69,3 +73,38 @@ class Context:
     dispositivos: list[Dispositivo]
     jurisprudencias: list[Jurisprudencia]
     paths: dict[str, list[Hop]]
+
+
+class RelationType(StrEnum):
+    REFERENCES = "REFERENCES"
+    REVOKES = "REVOKES"
+
+
+class Confidence(StrEnum):
+    """Reliability of a relation, derived from how it was extracted (ADR-0002)."""
+
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class Origin(StrEnum):
+    RULE = "rule"
+    LLM = "llm"
+
+
+@dataclass(frozen=True)
+class Relation:
+    """An edge `source -[type]-> target` extracted from the text of one dispositivo.
+
+    An endpoint that could not be resolved to an id is `None`, and `unresolved` keeps the
+    citation as written so it is not lost. `evidence` is a literal substring of the chunk.
+    """
+
+    type: RelationType
+    source_id: str | None
+    target_id: str | None
+    confidence: Confidence
+    origin: Origin
+    evidence: str
+    unresolved: str | None = None

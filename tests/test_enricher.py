@@ -190,3 +190,14 @@ def test_a_target_over_the_ceiling_is_skipped_as_too_long():
     result, provider = run(ancestors=[], max_input_tokens=10)
 
     assert (result.skipped, provider.calls) == ("too_long", [])
+
+
+def test_a_reference_with_non_literal_evidence_is_dropped_once():
+    citation = Relation(
+        RelationType.REFERENCES, INCISO.id, None, Confidence.LOW, Origin.RULE, "art. 3", "art. 3"
+    )
+    item = {"citacao": "art. 3", "alvo": f"{LEI}#art3", "evidence": "inexistente"}
+
+    result, _ = run(answer=reply(referencias=[item]), unresolved=[citation])
+
+    assert result.dropped == 1

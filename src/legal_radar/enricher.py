@@ -264,7 +264,9 @@ class _Result:
 
     def reference(self, item) -> None:
         evidence = self._evidence(item, "citacao", "alvo")
-        citation = self.citations.get(item.get("citacao")) if evidence is not None else None
+        if evidence is None:
+            return
+        citation = self.citations.get(item["citacao"])
         if citation is None or item["alvo"] not in self.candidates or citation in self.resolved:
             return self._drop(item)
         self.resolved.append(citation)

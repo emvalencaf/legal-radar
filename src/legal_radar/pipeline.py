@@ -3,13 +3,29 @@
 import copy
 import json
 
+import jsonschema
+
 from legal_radar.domain import Conceito, ConceptLink, GraphBatch
-from legal_radar.llm import CompletionParams
+from legal_radar.llm import CompletionParams, content_hash
 from legal_radar.parser import parse_lei
 from legal_radar.ports import GraphStore, Provider
 from legal_radar.prompts import PromptError, PromptLock, default_lock
 
 TAG_PROMPT = "dispositivo-concept"
+TAG_SCHEMA = {  # published to the Hub as `dispositivo-concept`'s structured output
+    "title": "dispositivo_concept",
+    "type": "object",
+    "description": "O conceito jurídico de que o dispositivo trata.",
+    "properties": {
+        "conceito_id": {
+            "type": "string",
+            "description": "Id (snake_case) de um conceito do vocabulário do assunto.",
+            "enum": ["placeholder"],  # the real ids are filled in at run time
+        }
+    },
+    "required": ["conceito_id"],
+    "additionalProperties": False,
+}
 
 
 class TaggingError(ValueError):
@@ -17,29 +33,35 @@ class TaggingError(ValueError):
 
 
 def tag_schema(lock: PromptLock, conceito_ids: list[str] | None) -> dict:
-    """The pinned schema; the Hub stores it static, so the vocabulary's ids fill its enum here."""
+    """The pinned schema; the Hub stores it static, so the vocabulary's ids fill its enum here.
+    Without `conceito_ids` the enum is dropped and any non-empty id is accepted."""
     schema = lock.schema(TAG_PROMPT)
     if schema is None:
         raise PromptError(f"prompt {TAG_PROMPT!r} has no pinned schema: run `refresh-prompts`")
     schema = copy.deepcopy(schema)
-    conceito = schema["properties"]["conceito_id"]
+    try:
+        conceito = schema["properties"]["conceito_id"]
+    except (KeyError, TypeError) as error:
+        raise PromptError(f"prompt {TAG_PROMPT!r}: its schema has no conceito_id") from error
     if conceito_ids is None:
         conceito.pop("enum", None)  # the pinned enum is a placeholder
+    elif not conceito_ids:
+        raise ValueError("conceito_ids is empty: no answer could pass the schema")
     else:
         conceito["enum"] = sorted(conceito_ids)
     return schema
 
 
 def parse_tag(text: str, schema: dict) -> str:
+    """The conceito id of a reply, which must validate against `schema`."""
     try:
-        conceito_id = json.loads(text)["conceito_id"]
-    except (ValueError, KeyError, TypeError) as error:
-        raise TaggingError(f"the LLM did not answer the tagging schema: {error!r}") from error
-    if not isinstance(conceito_id, str) or not conceito_id.strip():
-        raise TaggingError(f"the LLM answered conceito_id {conceito_id!r}")
-    allowed = schema["properties"]["conceito_id"].get("enum")
-    if allowed is not None and conceito_id not in allowed:
-        raise TaggingError(f"the LLM answered conceito_id {conceito_id!r}, not in the vocabulary")
+        reply = json.loads(text)
+        jsonschema.validate(reply, schema)
+    except (ValueError, jsonschema.ValidationError) as error:
+        raise TaggingError(f"the LLM did not answer the tagging schema: {error}") from error
+    conceito_id = reply["conceito_id"]
+    if not conceito_id.strip():
+        raise TaggingError("the LLM answered an empty conceito_id")
     return conceito_id
 
 
@@ -56,7 +78,9 @@ def run(
     params = CompletionParams(
         pipeline_step="tag",
         response_schema=schema,
-        prompt_snapshot=lock.prompt_hash(TAG_PROMPT),
+        prompt_snapshot=content_hash(  # the schema sent, with the vocabulary's enum, not the pinned
+            {"prompt": lock.prompt_hash(TAG_PROMPT), "schema": schema}
+        ),
     )
     lei, dispositivos = parse_lei(raw_lei)
     links = [

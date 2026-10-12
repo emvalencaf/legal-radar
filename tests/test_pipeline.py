@@ -8,12 +8,7 @@ from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.domain import Jurisprudencia
 from legal_radar.pipeline import run
-from legal_radar.prompts import refresh
 
-LOCK = refresh(
-    {"dispositivo-concept": "c1"},
-    lambda n, c: ("Tag:\n{text}", {"properties": {"conceito_id": {"type": "string"}}}),
-)
 FIXTURE = Path(__file__).parent / "fixtures" / "mini_lei.txt"
 
 
@@ -44,13 +39,13 @@ def snapshot(driver):
     )
 
 
-def test_pipeline_writes_graph_and_is_idempotent(driver):
+def test_pipeline_writes_graph_and_is_idempotent(driver, tag_lock):
     store = Neo4jGraphStore(driver)
     raw = FIXTURE.read_text(encoding="utf-8")
 
-    run(raw, FakeProvider(), store, LOCK)
+    run(raw, FakeProvider(), store, tag_lock)
     first = snapshot(driver)
-    run(raw, FakeProvider(), store, LOCK)
+    run(raw, FakeProvider(), store, tag_lock)
 
     assert snapshot(driver) == first
     nodes, edges = first

@@ -26,6 +26,11 @@ def main(argv: list[str] | None = None) -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     run_cmd = commands.add_parser("run")
     run_cmd.add_argument("fixture", nargs="?", type=Path, default=DEFAULT_FIXTURE)
+    run_cmd.add_argument(
+        "--assunto",
+        choices=sorted(VOCABULARY_PATHS),
+        help="only accept conceitos from this assunto's vocabulary",
+    )
     ingest_cmd = commands.add_parser("ingest")
     ingest_cmd.add_argument("assunto", choices=sorted(ANCHORS))
     commands.add_parser("ingest-jurisprudencia")
@@ -107,7 +112,14 @@ def main(argv: list[str] | None = None) -> None:
             finally:
                 browser.close()
             return
-        batch = run(args.fixture.read_text(encoding="utf-8"), FakeProvider(), store)
+        ids = None
+        if args.assunto:
+            from legal_radar.concepts import load_registered
+
+            ids = [c.id for c in load_registered(args.assunto).conceitos]
+        batch = run(
+            args.fixture.read_text(encoding="utf-8"), FakeProvider(), store, conceito_ids=ids
+        )
     finally:
         store.close()
     print(

@@ -51,3 +51,21 @@ class GraphBatch:
     dispositivos: list[Dispositivo]
     conceitos: list[Conceito]
     links: list[ConceptLink]
+
+
+@dataclass(frozen=True)
+class Hop:
+    """One edge walked from the anchor: `source -[type]-> target` (as stored in the graph)."""
+
+    type: str
+    source: str
+    target: str
+
+
+@dataclass(frozen=True)
+class Context:
+    """What a traversal retrieved: the nodes reached and, per node id, the hops that reached it."""
+
+    dispositivos: list[Dispositivo]
+    jurisprudencias: list[Jurisprudencia]
+    paths: dict[str, list[Hop]]

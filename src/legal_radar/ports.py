@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from legal_radar.domain import GraphBatch, Jurisprudencia
+from legal_radar.domain import Context, GraphBatch, Jurisprudencia
 from legal_radar.llm import Completion, CompletionParams, Embedding
 
 
@@ -27,6 +27,16 @@ class GraphStore(Protocol):
 
     def write_jurisprudencia(self, items: list[Jurisprudencia]) -> None:
         """Idempotently upsert the jurisprudência nodes."""
+
+
+class GraphReader(Protocol):
+    def lei_ids(self) -> list[str]:
+        """The ids (URNs) of every lei in the graph, sorted."""
+
+    def traverse(self, anchor_ids: list[str]) -> Context:
+        """Walk `PARTS` down from the anchors (leis or dispositivos), then 1 hop of `REFERENCES`
+        (a dispositivo's outgoing ones, a jurisprudência's citations of reached dispositivos),
+        with no scoring or cap. Deterministic: same anchors, same context, sorted by id."""
 
 
 class PageSource(Protocol):

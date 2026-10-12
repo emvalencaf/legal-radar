@@ -1,0 +1,78 @@
+{
+  "lc": 1,
+  "type": "constructor",
+  "id": [
+    "langchain_core",
+    "prompts",
+    "structured",
+    "StructuredPrompt"
+  ],
+  "kwargs": {
+    "input_variables": [
+      "context",
+      "query"
+    ],
+    "messages": [
+      {
+        "lc": 1,
+        "type": "constructor",
+        "id": [
+          "langchain",
+          "prompts",
+          "chat",
+          "HumanMessagePromptTemplate"
+        ],
+        "kwargs": {
+          "prompt": {
+            "lc": 1,
+            "type": "constructor",
+            "id": [
+              "langchain",
+              "prompts",
+              "prompt",
+              "PromptTemplate"
+            ],
+            "kwargs": {
+              "input_variables": [
+                "context",
+                "query"
+              ],
+              "template": "Responda à pergunta usando apenas as fontes abaixo, e cite em `citations` o id de cada fonte em que a resposta se apoia. Se as fontes não bastarem, diga isso.\n\nPergunta: {query}\n\nFontes:\n{context}",
+              "template_format": "f-string"
+            },
+            "name": "PromptTemplate"
+          }
+        }
+      }
+    ],
+    "schema_": {
+      "title": "cited_answer",
+      "type": "object",
+      "description": "A resposta à pergunta, com os ids das fontes em que se apoia.",
+      "properties": {
+        "answer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "citations": {
+          "type": "array",
+          "description": "Ids dos dispositivos e das jurisprudências do contexto citados.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "placeholder"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "answer",
+        "citations"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "name": "StructuredPrompt"
+}

@@ -121,6 +121,14 @@ LangSmith account or network, only a source checkout. To follow new Hub commits,
 make refresh-prompts
 ```
 
+Ask a question: resolve the assunto, traverse the graph (`PARTS`, then 1 hop of `REFERENCES`)
+and print an answer citing the dispositivos and jurisprudência it used, with their graph paths.
+The `cited-answer` prompt must be published to the Hub and pinned first.
+
+```bash
+uv run legal-radar ask "pedido de desconsideração da personalidade jurídica"
+```
+
 Opt-in live smoke test against the real courts (not run by default): `uv run pytest -m live`.
 
 Tests (need Docker for the Neo4j test container): `uv run pytest`.

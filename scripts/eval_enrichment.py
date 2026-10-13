@@ -8,7 +8,8 @@ Runs the rules and the LLM over the Planalto excerpts under `tests/fixtures/plan
 dispositivos listed in the gold set per edge (split by origin and relation type), prints the
 indirect metrics and exits non-zero when a gate fails. Every input and output is written to a JSONL
 run file under `--persist` (default `eval-runs/`) as each dispositivo finishes, so a rate limit or a
-crash loses nothing: `--resume RUNFILE` continues it (same provider, model and vocabulary). The gold set itself is annotated by a human (#67).
+crash loses nothing: `--resume RUNFILE` continues it (same provider, model and vocabulary). The
+gold set itself is annotated by a human (#67).
 """
 
 import argparse

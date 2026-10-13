@@ -9,6 +9,8 @@ heading when `development` is released to `master`.
 
 ### Fixed
 
+- OpenAI-compatible providers close every object of the response schema with
+  `additionalProperties: false`, which strict mode needs: Groq answered 400 to the enricher's schema.
 - HTTP providers send their own `User-Agent`: Groq (Cloudflare) answered 403 / error 1010 to the
   default `Python-urllib` one, so the Groq provider could never be used. A non-JSON error body is now
   kept in the provider error instead of being dropped.

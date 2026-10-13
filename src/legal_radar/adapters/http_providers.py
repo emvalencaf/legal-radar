@@ -27,6 +27,19 @@ USER_AGENT = "legal-radar/0.1"
 TIMEOUT_SECONDS = 60  # `LLM_TIMEOUT_SECONDS` overrides it: local models can take minutes
 
 
+def _closed(schema):
+    """The schema with `additionalProperties: false` on every object, which strict mode requires
+    (Groq rejects the request otherwise)."""
+    if isinstance(schema, dict):
+        closed = {key: _closed(value) for key, value in schema.items()}
+        if closed.get("type") == "object":
+            closed.setdefault("additionalProperties", False)
+        return closed
+    if isinstance(schema, list):
+        return [_closed(item) for item in schema]
+    return schema
+
+
 def urllib_transport(url: str, headers: dict[str, str], body: dict) -> Response:
     request = urllib.request.Request(
         url,
@@ -119,7 +132,7 @@ class OpenAICompatibleProvider(HttpProvider):
                 "json_schema": {
                     "name": "response",
                     "strict": True,
-                    "schema": params.response_schema,
+                    "schema": _closed(params.response_schema),
                 },
             }
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}

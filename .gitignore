@@ -30,3 +30,4 @@ logs/
 concepts/*.draft.yml
 evaluation/*.progress.yml
 evaluation/gold.html
+eval-runs/

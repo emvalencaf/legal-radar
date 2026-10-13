@@ -29,6 +29,9 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `eval_enrichment.py` writes each dispositivo to its run file as it finishes and `--resume RUNFILE`
+  continues an interrupted run (refused when provider, model or vocabulary changed); on a provider
+  failure it stops and prints the resume command. The default provider is now `groq` (#67).
 - `evaluation/TRIAGE.md`: the baseline's 42 false positives classified (overlapping concepts, type
   disagreement, gold gaps, model errors) with the decisions that followed (#67).
 - `evaluation/BASELINE.md`: the baseline of the first real enrichment run against the gold set (Groq,

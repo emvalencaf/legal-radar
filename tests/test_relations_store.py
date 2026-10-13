@@ -122,3 +122,30 @@ def test_unresolved_citations_are_kept_as_attributes(driver):
         {"id": f"{A}#art1", "r": ["lei:9/2000 art3"], "v": None},
         {"id": f"{A}#art2", "r": None, "v": ["lei:8/2000"]},
     ]
+
+
+def llm(type_, source, target, evidence="e"):
+    return Relation(type_, source, target, Confidence.MEDIUM, Origin.LLM, evidence)
+
+
+def test_replacing_llm_relations_swaps_them_and_keeps_rule_edges(driver):
+    store = Neo4jGraphStore(driver)
+    rule = rel(RelationType.REFERENCES, f"{A}#art1", f"{A}#art2", "art. 2")
+    store.write(batch(rule))
+    store.replace_llm_relations(
+        f"{A}#art1",
+        [
+            llm(RelationType.DEFINES, f"{A}#art1", "abuso"),
+            llm(RelationType.REFERENCES, f"{A}#art1", f"{OUTSIDE}#art9"),
+        ],
+    )
+    store.replace_llm_relations(f"{A}#art1", [llm(RelationType.OBLIGES, f"{A}#art1", "socio")])
+
+    assert rows(
+        driver,
+        "MATCH (:Dispositivo {id: $id})-[r]->(t) RETURN type(r) AS t, r.origin AS o, "
+        "coalesce(t.id, '') AS target ORDER BY t".replace("$id", f"'{A}#art1'"),
+    ) == [
+        {"t": "OBLIGES", "o": "llm", "target": "socio"},
+        {"t": "REFERENCES", "o": "rule", "target": f"{A}#art2"},
+    ]

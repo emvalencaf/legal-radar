@@ -20,6 +20,7 @@ from legal_radar.pipeline import run
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 DEFAULT_SEED = Path(__file__).resolve().parents[2] / "seed" / "graph.jsonl"
+DEFAULT_METADATA = Path(__file__).resolve().parents[2] / "data" / "ingestion.sqlite"
 DEFAULT_FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "mini_lei.txt"
 
 
@@ -31,6 +32,28 @@ def load_env(path: Path = ENV_PATH) -> None:
         key, sep, value = line.partition("=")
         if sep and not key.lstrip().startswith("#"):
             os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
+def enrich_config(assunto: str):
+    """The LLM phase of `ingest --enrich`; a missing vocabulary or provider is an error."""
+    from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore
+    from legal_radar.concepts import VocabularyError, load_registered
+    from legal_radar.ingest import EnrichConfig
+    from legal_radar.router_config import build_router, enrichment_max_input_tokens, load_config
+
+    try:
+        vocabulary = load_registered(assunto)
+        config = load_config("router.yaml")
+        router = build_router(config)
+        limit = enrichment_max_input_tokens(config)
+    except (VocabularyError, ValueError, OSError, KeyError) as error:
+        raise SystemExit(f"ingest --enrich needs a vocabulary and a provider: {error}") from error
+    return EnrichConfig(
+        vocabulary,
+        router,
+        SqliteMetadataStore(os.environ.get("METADATA_DB", DEFAULT_METADATA)),
+        max_input_tokens=limit,
+    )
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -45,6 +68,11 @@ def main(argv: list[str] | None = None) -> None:
     )
     ingest_cmd = commands.add_parser("ingest")
     ingest_cmd.add_argument("assunto", choices=sorted(ANCHORS))
+    ingest_cmd.add_argument(
+        "--enrich",
+        action="store_true",
+        help="also send the chunks the rules left to the LLM; re-running resumes the pending ones",
+    )
     commands.add_parser("ingest-jurisprudencia")
     draft_cmd = commands.add_parser("draft-concepts")
     draft_cmd.add_argument("assunto", choices=sorted(VOCABULARY_PATHS))
@@ -122,11 +150,15 @@ def main(argv: list[str] | None = None) -> None:
         if args.command == "ingest":
             from legal_radar.adapters.pages import BrowserPageSource
 
+            config = enrich_config(args.assunto) if args.enrich else None
             browser = BrowserPageSource()
             try:
-                print(ingest(ANCHORS[args.assunto], browser, browser, store).render())
+                ingested = ingest(ANCHORS[args.assunto], browser, browser, store, enrichment=config)
+                print(ingested.render())
             finally:
                 browser.close()
+                if config:
+                    config.metadata.close()
             return
         if args.command == "ingest-jurisprudencia":
             from legal_radar.adapters.pages import BrowserPageSource

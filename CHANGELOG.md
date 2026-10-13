@@ -7,8 +7,19 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Added
+
+- `ingest <assunto> --enrich` sends the chunks the rules left to the LLM enricher and records each
+  one (key, `ok`/`pending`, dropped count) in a SQLite metadata store apart from the graph (#29).
+  Re-running resumes only `pending` chunks; a changed text, vocabulary, enrichment prompt or
+  extractor version returns just those to `pending`. A chunk's `llm` edges are replaced atomically
+  (`GraphStore.replace_llm_relations`); `rule` edges are never touched. The Neo4j store now writes
+  dispositivo → conceito edges.
+
 ### Fixed
 
+- `enrichment_key` mixes the hash of `dispositivo-enrichment`, the prompt `enrich()` runs, instead
+  of `dispositivo-concept`.
 - `AllProvidersFailedError` now says why each provider gave up (quota, rate limit, rejected
   request), instead of a bare "exhausted or failed" that hid the cause.
 - OpenAI-compatible providers close every object of the response schema with

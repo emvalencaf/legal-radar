@@ -40,6 +40,14 @@ _Avoid_: Assuming this comes from LexML's own XML schema.
 The ingestion step that turns bare structural `LegalChunk`s into `EnrichedLegalChunk`s carrying relations (`REFERENCES`, `REVOKES`, dispositivo→conceito) with evidence and `Confidence`. Hybrid: deterministic rules for explicit references and revocations, an LLM for ambiguous cases and concepts. Runs after parsing and before graph load. See ADR-0002.
 _Avoid_: Conflating with parsing — parsing (`PlanaltoHtmlParser`) is structural and rule-only; enrichment is semantic.
 
+**Registro de enriquecimento**:
+The persisted state of a dispositivo that went through the LLM: its idempotency key, status (`ok` or `pending`) and count of dropped items. Kept outside the knowledge graph, which only receives validated edges. See ADR-0002 and ADR-0003.
+_Avoid_: "Cache" (it does not hold the result), "log".
+
+**Pending**:
+A dispositivo whose `registro de enriquecimento` is missing, failed, or carries a key that no longer matches the current text, vocabulary, prompt or extractor. Only pending dispositivos are sent to the LLM again; their rule-derived edges are kept.
+_Avoid_: "Stale" or "dirty" as synonyms; "pending" is the one status name.
+
 **Confidence**:
 The reliability level of an extracted relation, derived from how it was extracted, never self-declared by the LLM: HIGH = a rule matched an explicit pattern in the text; MEDIUM = the LLM inferred it from context; LOW = unresolved target or stub. The origin (`rule` / `llm`) is stored on the edge too. See ADR-0002.
 _Avoid_: Treating an LLM's verbalized confidence as this value.

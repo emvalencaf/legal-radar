@@ -2,7 +2,13 @@
 
 from typing import Protocol
 
-from legal_radar.domain import Context, GraphBatch, Jurisprudencia
+from legal_radar.domain import (
+    Context,
+    EnrichmentRecord,
+    GraphBatch,
+    Jurisprudencia,
+    Relation,
+)
 from legal_radar.llm import Completion, CompletionParams, Embedding
 
 
@@ -30,6 +36,24 @@ class GraphStore(Protocol):
 
     def write_jurisprudencia(self, items: list[Jurisprudencia]) -> None:
         """Idempotently upsert the jurisprudência nodes."""
+
+    def replace_llm_relations(self, chunk_id: str, relations: list[Relation]) -> None:
+        """Atomically swap the `llm`-origin edges starting at one dispositivo for `relations`.
+        `rule`-origin edges are never touched."""
+
+
+class MetadataStore(Protocol):
+    """Ingestion metadata kept apart from the graph (ADR-0002): one record per chunk the LLM saw."""
+
+    def record(self, record: EnrichmentRecord) -> None:
+        """Upsert the chunk's record, stamping the update time."""
+
+    def records(self, lei_id: str) -> dict[str, EnrichmentRecord]:
+        """The records of one lei, by chunk id."""
+
+    def pending(self, lei_id: str, current_keys: dict[str, str]) -> list[str]:
+        """The chunks of `current_keys` (chunk id -> current key) that are pending: no record, a
+        `pending` record, or a stored key that differs. Keeps the order of `current_keys`."""
 
 
 class GraphReader(Protocol):

@@ -3,6 +3,7 @@
 from neo4j import Driver, GraphDatabase
 
 from legal_radar.domain import GraphBatch, Jurisprudencia, Relation, RelationType
+from legal_radar.enricher import CONCEPT_RELATIONS
 
 CONSTRAINTS = [
     "CREATE CONSTRAINT lei_id IF NOT EXISTS FOR (n:Lei) REQUIRE n.id IS UNIQUE",
@@ -54,6 +55,16 @@ KEEP_UNRESOLVED_REVOKER = """
 MATCH (n:Dispositivo {id: $id})
 SET n.unresolved_revokers =
     [x IN coalesce(n.unresolved_revokers, []) WHERE x <> $citation] + [$citation]
+"""
+DELETE_LLM_RELATIONS = """
+MATCH (:Dispositivo {id: $id})-[r]->() WHERE r.origin = 'llm' DELETE r
+"""
+# Relationship types cannot be parameters; `type` is always a member of `RelationType`.
+MERGE_CONCEPT_EDGE = """
+MATCH (s:Dispositivo {{id: $source}})
+MERGE (c:Conceito {{id: $target}})
+MERGE (s)-[r:{type}]->(c)
+SET r.confidence = $confidence, r.origin = $origin, r.evidence = $evidence
 """
 MERGE_LEI_PARTS = """
 MATCH (l:Lei {id: $lei_id}), (d:Dispositivo {id: $id})
@@ -108,6 +119,16 @@ class Neo4jGraphStore:
                     decisao=j.decisao,
                 )
 
+    def replace_llm_relations(self, chunk_id: str, relations: list[Relation]) -> None:
+        with self._driver.session() as session:
+            session.execute_write(self._replace_llm_relations, chunk_id, relations)
+
+    @staticmethod
+    def _replace_llm_relations(tx, chunk_id: str, relations: list[Relation]) -> None:
+        tx.run(DELETE_LLM_RELATIONS, id=chunk_id)
+        for r in relations:
+            Neo4jGraphStore._write_relation(tx, r)
+
     @staticmethod
     def _ensure_constraints(session) -> None:
         ensure_constraints(session)
@@ -149,7 +170,14 @@ class Neo4jGraphStore:
             "origin": r.origin.value,
             "evidence": r.evidence,
         }
-        if r.type is RelationType.REVOKES:
+        if r.type in CONCEPT_RELATIONS:
+            tx.run(
+                MERGE_CONCEPT_EDGE.format(type=r.type.value),
+                source=r.source_id,
+                target=r.target_id,
+                **edge,
+            )
+        elif r.type is RelationType.REVOKES:
             if r.source_id is None:  # the revoking act did not resolve: keep the citation
                 tx.run(KEEP_UNRESOLVED_REVOKER, id=r.target_id, citation=r.unresolved)
                 return

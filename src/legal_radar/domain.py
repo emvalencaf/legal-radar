@@ -115,3 +115,21 @@ class Relation:
     origin: Origin
     evidence: str
     unresolved: str | None = None
+
+
+class EnrichmentStatus(StrEnum):
+    OK = "ok"
+    PENDING = "pending"
+
+
+@dataclass(frozen=True)
+class EnrichmentRecord:
+    """The persisted state of a chunk that went through the LLM (CONTEXT.md: registro de
+    enriquecimento). Kept outside the graph; `key` is the whole idempotency key."""
+
+    chunk_id: str
+    lei_id: str
+    key: str
+    status: EnrichmentStatus
+    dropped: int = 0
+    skipped: str | None = None  # why no call was made (`too_long`), or None

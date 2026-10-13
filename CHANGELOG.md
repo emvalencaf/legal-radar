@@ -9,6 +9,9 @@ heading when `development` is released to `master`.
 
 ### Fixed
 
+- HTTP providers send their own `User-Agent`: Groq (Cloudflare) answered 403 / error 1010 to the
+  default `Python-urllib` one, so the Groq provider could never be used. A non-JSON error body is now
+  kept in the provider error instead of being dropped.
 - The enricher's structured-output schema no longer sends an empty `enum` for `referencias` when a
   dispositivo has no unresolved citation: LM Studio rejected it (`enum must be a non-empty array`),
   so no dispositivo could be enriched locally. `LLM_TIMEOUT_SECONDS` raises the per-call timeout

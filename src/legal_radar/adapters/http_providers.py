@@ -22,6 +22,8 @@ Transport = Callable[[str, dict[str, str], dict], Response]
 
 DAILY_MARKERS = ("per day", "perday", "(rpd)", "(tpd)")
 DEFAULT_RETRY_AFTER = 2.0
+# Cloudflare-fronted APIs (Groq) refuse the default `Python-urllib` agent with a 403 / error 1010.
+USER_AGENT = "legal-radar/0.1"
 TIMEOUT_SECONDS = 60  # `LLM_TIMEOUT_SECONDS` overrides it: local models can take minutes
 
 
@@ -29,7 +31,7 @@ def urllib_transport(url: str, headers: dict[str, str], body: dict) -> Response:
     request = urllib.request.Request(
         url,
         data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json", **headers},
+        headers={"Content-Type": "application/json", "User-Agent": USER_AGENT, **headers},
         method="POST",
     )
     try:
@@ -38,10 +40,11 @@ def urllib_transport(url: str, headers: dict[str, str], body: dict) -> Response:
         ) as response:
             return response.status, dict(response.headers), json.load(response)
     except urllib.error.HTTPError as error:
+        raw = error.read()
         try:
-            payload = json.load(error)
+            payload = json.loads(raw)
         except ValueError:
-            payload = {}
+            payload = {"error": raw.decode("utf-8", "replace").strip()[:200]}
         return error.code, dict(error.headers), payload
 
 

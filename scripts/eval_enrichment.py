@@ -144,8 +144,8 @@ def main(args: argparse.Namespace) -> int:
             on_progress=progress_printer(started, len(done), len(gold), path),
         )
     except (AllProvidersFailedError, KeyboardInterrupt) as error:
-        reason = type(error).__name__
-        print(f"\nstopped ({reason}); what was done is saved. Resume with:", file=sys.stderr)
+        reason = str(error) or type(error).__name__
+        print(f"\nstopped: {reason}\nwhat was done is saved. Resume with:", file=sys.stderr)
         print(
             f"  {sys.argv[0]} {args.gold} --provider {args.provider} --model {model} "
             f"--resume {path}",

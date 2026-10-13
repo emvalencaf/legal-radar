@@ -1,6 +1,6 @@
 """Lei ingestion: LexML URN -> Planalto page -> legal-document AST -> graph."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from legal_radar.anchors import AnchorLei
 from legal_radar.concepts import Vocabulary
@@ -12,7 +12,7 @@ from legal_radar.domain import (
     Lei,
     Relation,
 )
-from legal_radar.enricher import ancestors_of, candidate_targets, enrich
+from legal_radar.enricher import Enrichment, ancestors_of, candidate_targets, enrich, triage
 from legal_radar.enrichment import enrichment_key
 from legal_radar.lexml import LexmlError, resolve_urn, search_urn
 from legal_radar.llm import ProviderError
@@ -20,8 +20,6 @@ from legal_radar.planalto import parse_planalto
 from legal_radar.ports import GraphStore, MetadataStore, PageSource, Provider
 from legal_radar.prompts import PromptLock
 from legal_radar.relations import Extraction, UrnResolver, extract_relations
-
-TRIAGE_SKIPS = ("revoked", "structural", "empty")  # no call was made, so nothing is recorded
 
 
 @dataclass(frozen=True)
@@ -129,65 +127,82 @@ def _enrich(
 ) -> None:
     """Send each pending LLM-bound chunk to `enrich`, record the outcome and replace its `llm`
     edges. A reply that cannot be read leaves that chunk pending; an exhausted provider stops the
-    calls and leaves the rest pending."""
-    limits = (
-        {} if config.max_input_tokens is None else {"max_input_tokens": config.max_input_tokens}
-    )
+    calls and leaves the rest pending. `returned` counts the chunks that were `ok` under an older
+    key and are `ok` again under the current one, so it is a subset of `processed`."""
     exhausted = False
     for lei, dispositivos in parsed:
         counts = report.enrichment[lei.id] = EnrichmentCounts()
         by_id = {d.id: d for d in dispositivos}
         candidates = candidate_targets(dispositivos)
-        chunks = [d for d in dispositivos if extractions[d.id].needs_enrichment]
+        chunks = [
+            d for d in dispositivos if extractions[d.id].needs_enrichment and triage(d) is None
+        ]
         keys = {d.id: enrichment_key(d.text, config.vocabulary, config.lock) for d in chunks}
         stored = config.metadata.records(lei.id)
         pending = set(config.metadata.pending(lei.id, keys))
         counts.kept = len(chunks) - len(pending)
-        counts.returned = sum(
-            1 for i in pending if i in stored and stored[i].status is EnrichmentStatus.OK
-        )
         for d in chunks:
             if d.id not in pending:
                 continue
             if exhausted:
                 counts.left_pending += 1
                 continue
-            extraction = extractions[d.id]
-            try:
-                result = enrich(
-                    d,
-                    config.vocabulary,
-                    config.provider,
-                    config.lock,
-                    ancestors=ancestors_of(d, by_id),
-                    unresolved=[r for r in extraction.relations if r.unresolved],
-                    candidates=candidates,
-                    **limits,
-                )
-            except ProviderError:
+            outcome = _enrich_chunk(d, lei, extractions[d.id], by_id, candidates, config)
+            if outcome is None:  # the provider is exhausted: this chunk and the rest stay pending
                 exhausted = True
                 counts.left_pending += 1
                 config.metadata.record(
                     EnrichmentRecord(d.id, lei.id, keys[d.id], EnrichmentStatus.PENDING)
                 )
-                continue
-            if result.skipped in TRIAGE_SKIPS:
-                continue
-            if result.failed:
+            elif outcome.failed:
                 counts.left_pending += 1
                 config.metadata.record(
                     EnrichmentRecord(d.id, lei.id, keys[d.id], EnrichmentStatus.PENDING)
                 )
-                continue
-            rule_edges = {(r.type, r.source_id, r.target_id) for r in extraction.relations}
-            new = [
-                r for r in result.relations if (r.type, r.source_id, r.target_id) not in rule_edges
-            ]
-            store.replace_llm_relations(d.id, new)
-            config.metadata.record(
-                EnrichmentRecord(
-                    d.id, lei.id, keys[d.id], EnrichmentStatus.OK, result.dropped, result.skipped
+            else:
+                store.replace_llm_relations(d.id, outcome.relations)
+                config.metadata.record(
+                    EnrichmentRecord(
+                        d.id,
+                        lei.id,
+                        keys[d.id],
+                        EnrichmentStatus.OK,
+                        outcome.dropped,
+                        outcome.skipped,
+                    )
                 )
-            )
-            counts.processed += 1
-            report.dropped[lei.id] = report.dropped.get(lei.id, 0) + result.dropped
+                counts.processed += 1
+                if (before := stored.get(d.id)) and before.status is EnrichmentStatus.OK:
+                    counts.returned += 1
+                report.dropped[lei.id] = report.dropped.get(lei.id, 0) + outcome.dropped
+
+
+def _enrich_chunk(
+    d: Dispositivo,
+    lei: Lei,
+    extraction: Extraction,
+    by_id: dict[str, Dispositivo],
+    candidates: list[str],
+    config: EnrichConfig,
+) -> Enrichment | None:
+    """The enrichment of one chunk with the edges the rules already hold left out, or None when
+    the provider is exhausted."""
+    limits = (
+        {} if config.max_input_tokens is None else {"max_input_tokens": config.max_input_tokens}
+    )
+    try:
+        result = enrich(
+            d,
+            config.vocabulary,
+            config.provider,
+            config.lock,
+            ancestors=ancestors_of(d, by_id),
+            unresolved=[r for r in extraction.relations if r.unresolved],
+            candidates=candidates,
+            **limits,
+        )
+    except ProviderError:
+        return None
+    held = {(r.type, r.source_id, r.target_id) for r in extraction.relations}
+    fresh = [r for r in result.relations if (r.type, r.source_id, r.target_id) not in held]
+    return replace(result, relations=fresh)

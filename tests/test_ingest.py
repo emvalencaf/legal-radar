@@ -252,3 +252,18 @@ def test_concept_edges_of_the_reply_are_handed_to_the_store():
     _, store = run_enrich(SqliteMetadataStore(), Duplicating())
 
     assert any(r.target_id == "abuso" for _, rels in store.replaced for r in rels)
+
+
+def test_chunks_the_enricher_never_sends_are_not_counted_or_recorded():
+    metadata, provider = SqliteMetadataStore(), EndlessProvider()
+    revoked = replace(chunks(TEXTS[0])[0], id=f"{CC}#art9", path="art9", revoked=True)
+    store, planalto = MemoryStore(), FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+    config = EnrichConfig(VOCAB, provider, metadata, lock())
+
+    with patch.object(ingest_module, "parse_planalto", lambda h, u: [*chunks(*TEXTS), revoked]):
+        report = ingest(ANCHOR, lexml_pages(), planalto, store, enrichment=config)
+
+    counts = report.enrichment[CC]
+    assert len(provider.calls) == counts.processed == len(TEXTS)
+    assert f"{CC}#art9" not in metadata.records(CC)
+    assert counts.left_pending == 0

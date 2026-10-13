@@ -100,7 +100,7 @@ def enrich(
 ) -> Enrichment:
     """Concept edges of `d`, and a target for each of its `unresolved` citations when the LLM can
     ground one in `candidates`. `ancestors` run from the farthest to the nearest."""
-    if reason := _triage(d):
+    if reason := triage(d):
         return Enrichment(skipped=reason)
     lock = lock or default_lock()
     citations = [u for u in unresolved if u.unresolved]
@@ -157,7 +157,8 @@ def candidate_targets(lei_dispositivos: Sequence[Dispositivo]) -> list[str]:
     return [*(d.id for d in lei_dispositivos), *CURATED_CODES]
 
 
-def _triage(d: Dispositivo) -> str | None:
+def triage(d: Dispositivo) -> str | None:
+    """Why `d` is never sent to the LLM (revoked, structural or empty), or None."""
     if d.revoked:
         return "revoked"
     if d.kind in STRUCTURAL_KINDS:

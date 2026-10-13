@@ -31,6 +31,7 @@ class SqliteMetadataStore:
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(path)
+        self._db.row_factory = sqlite3.Row
         self._db.execute(SCHEMA)
 
     def close(self) -> None:
@@ -52,14 +53,15 @@ class SqliteMetadataStore:
             )
 
     def records(self, lei_id: str) -> dict[str, EnrichmentRecord]:
-        rows = self._db.execute(
-            "SELECT chunk_id, lei_id, key, status, dropped, skipped "
-            "FROM enrichment_record WHERE lei_id = ?",
-            (lei_id,),
-        )
+        rows = self._db.execute("SELECT * FROM enrichment_record WHERE lei_id = ?", (lei_id,))
         return {
-            row[0]: EnrichmentRecord(
-                row[0], row[1], row[2], EnrichmentStatus(row[3]), row[4], row[5]
+            row["chunk_id"]: EnrichmentRecord(
+                row["chunk_id"],
+                row["lei_id"],
+                row["key"],
+                EnrichmentStatus(row["status"]),
+                row["dropped"],
+                row["skipped"],
             )
             for row in rows
         }

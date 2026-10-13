@@ -38,16 +38,21 @@ def enrich_config(assunto: str):
     """The LLM phase of `ingest --enrich`; a missing vocabulary or provider is an error."""
     from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore
     from legal_radar.concepts import VocabularyError, load_registered
+    from legal_radar.enrichment import ENRICHMENT_PROMPT
     from legal_radar.ingest import EnrichConfig
+    from legal_radar.prompts import PromptError, default_lock
     from legal_radar.router_config import build_router, enrichment_max_input_tokens, load_config
 
     try:
+        default_lock().prompt_hash(ENRICHMENT_PROMPT)
         vocabulary = load_registered(assunto)
         config = load_config("router.yaml")
         router = build_router(config)
         limit = enrichment_max_input_tokens(config)
-    except (VocabularyError, ValueError, OSError, KeyError) as error:
-        raise SystemExit(f"ingest --enrich needs a vocabulary and a provider: {error}") from error
+    except (VocabularyError, PromptError, ValueError, OSError, KeyError) as error:
+        raise SystemExit(
+            f"ingest --enrich needs a vocabulary, the enrichment prompt and a provider: {error}"
+        ) from error
     return EnrichConfig(
         vocabulary,
         router,

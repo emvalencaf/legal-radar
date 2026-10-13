@@ -31,3 +31,6 @@ concepts/*.draft.yml
 evaluation/*.progress.yml
 evaluation/gold.html
 eval-runs/
+
+# Ingestion metadata (enrichment records, ADR-0002)
+data/

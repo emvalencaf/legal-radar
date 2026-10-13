@@ -15,7 +15,7 @@ VOCABULARY = Vocabulary("direito_civil", (CONCEPT,))
 
 
 def lock(commit="c1", template="t"):
-    return refresh({"dispositivo-concept": commit}, lambda n, c: (template, None))
+    return refresh({"dispositivo-enrichment": commit}, lambda n, c: (template, None))
 
 
 def key(text="art. 50", vocabulary=VOCABULARY, prompts=None, version="1"):

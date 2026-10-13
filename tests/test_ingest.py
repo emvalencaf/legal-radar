@@ -1,10 +1,14 @@
+import json
 import logging
+from unittest.mock import patch
 
 import pytest
 from ingest_helpers import CC, CC_AGENT, FakePages, MemoryStore, lexml_pages, read
 
+from legal_radar import ingest as ingest_module
 from legal_radar import lexml
 from legal_radar.anchors import AnchorLei
+from legal_radar.domain import Dispositivo
 from legal_radar.ingest import ingest
 from legal_radar.lexml import LexmlError, resolve_urn, search_urn
 
@@ -102,3 +106,214 @@ def test_ingest_extracts_relations_and_reports_them():
     assert report.relations == {CC: len(batch.relations)}
     assert any(r.type == "REVOKES" and r.target_id == f"{CC}#art44_incVI" for r in batch.relations)
     assert "relations" in report.render()
+
+
+# --- ingest --enrich (#29) ---
+
+from dataclasses import replace  # noqa: E402
+
+from legal_radar.adapters.fake_provider import FakeProvider  # noqa: E402
+from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore  # noqa: E402
+from legal_radar.concepts import Concept, Vocabulary  # noqa: E402
+from legal_radar.domain import EnrichmentStatus  # noqa: E402
+from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE  # noqa: E402
+from legal_radar.ingest import EnrichConfig  # noqa: E402
+from legal_radar.llm import AllProvidersFailedError, Completion  # noqa: E402
+from legal_radar.prompts import refresh  # noqa: E402
+
+ANCHOR = [AnchorLei("lei 10406 2002 código civil", "10406", 2002)]
+VOCAB = Vocabulary(
+    "direito_civil", (Concept("abuso", "Abuso", (), "Quando há abuso.", "REQUISITO"),)
+)
+EMPTY = Completion('{"conceitos": [], "referencias": []}')
+
+
+def lock(template=ENRICHMENT_TEMPLATE):
+    return refresh({ENRICHMENT_PROMPT: "c1"}, lambda name, commit: (template, None))
+
+
+class EndlessProvider(FakeProvider):
+    """Answers every call with `EMPTY` unless the script says otherwise."""
+
+    def complete(self, prompt, params=None):
+        if not self.script:
+            self.script.append(EMPTY)
+        return super().complete(prompt, params)
+
+
+def chunks(*texts):
+    return [Dispositivo(f"{CC}#art{i}", CC, f"art{i}", t) for i, t in enumerate(texts, 1)]
+
+
+TEXTS = [  # each one has a citation the rules cannot ground
+    "Há abuso, vide art. 5º, § 1º e § 2º.",
+    "Sem abuso, art. 5º, § 3º e § 4º.",
+    "Ver art. 6º, § 1º e § 2º.",
+]
+
+
+def run_enrich(metadata, provider, vocabulary=VOCAB, prompts=None, store=None):
+    store = store or MemoryStore()
+    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+    config = EnrichConfig(vocabulary, provider, metadata, prompts or lock())
+    with patch.object(ingest_module, "parse_planalto", lambda html, urn: chunks(*TEXTS)):
+        report = ingest(ANCHOR, lexml_pages(), planalto, store, enrichment=config)
+    return report, store
+
+
+def test_ingest_without_enrich_calls_no_provider_and_writes_no_report_line():
+    report = ingest(
+        ANCHOR,
+        lexml_pages(),
+        FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")}),
+        MemoryStore(),
+    )
+
+    assert report.enrichment == {} and "enriched" not in report.render()
+
+
+def test_enrich_sends_each_llm_bound_chunk_once_and_records_it():
+    metadata, provider = SqliteMetadataStore(), EndlessProvider()
+
+    report, store = run_enrich(metadata, provider)
+
+    counts = report.enrichment[CC]
+    assert counts.processed == len(provider.calls) > 0
+    assert (counts.kept, counts.returned, counts.left_pending) == (0, 0, 0)
+    records = metadata.records(CC)
+    assert len(records) == counts.processed
+    assert {r.status for r in records.values()} == {EnrichmentStatus.OK}
+    assert len(store.replaced) == counts.processed
+    assert "returned to pending" in report.render()
+
+
+def test_rerun_with_nothing_changed_sends_nothing():
+    metadata = SqliteMetadataStore()
+    first, _ = run_enrich(metadata, EndlessProvider())
+    provider = EndlessProvider()
+
+    report, _ = run_enrich(metadata, provider)
+
+    assert provider.calls == []
+    assert report.enrichment[CC].kept == first.enrichment[CC].processed
+    assert report.enrichment[CC].processed == 0
+
+
+def test_changed_vocabulary_or_prompt_returns_the_chunks_to_pending():
+    metadata = SqliteMetadataStore()
+    first, _ = run_enrich(metadata, EndlessProvider())
+    n = first.enrichment[CC].processed
+    other_vocab = Vocabulary("direito_civil", (replace(VOCAB.conceitos[0], label="Outro"),))
+    for vocabulary, prompts in ((other_vocab, None), (VOCAB, lock(ENRICHMENT_TEMPLATE + " "))):
+        provider = EndlessProvider()
+
+        report, _ = run_enrich(metadata, provider, vocabulary, prompts)
+
+        assert len(provider.calls) == n
+        assert report.enrichment[CC].returned == n
+
+
+def test_unreadable_reply_leaves_only_that_chunk_pending_and_continues():
+    metadata = SqliteMetadataStore()
+    provider = EndlessProvider(script=[Completion("not json")])
+
+    report, store = run_enrich(metadata, provider)
+
+    counts = report.enrichment[CC]
+    assert counts.left_pending == 1
+    assert counts.processed == len(provider.calls) - 1 > 0
+    statuses = [r.status for r in metadata.records(CC).values()]
+    assert statuses.count(EnrichmentStatus.PENDING) == 1
+    assert len(store.replaced) == counts.processed  # the failed chunk kept its old edges
+
+
+def test_exhausted_provider_stops_the_calls_but_the_lei_is_loaded():
+    metadata = SqliteMetadataStore()
+    provider = EndlessProvider(script=[AllProvidersFailedError("none left")])
+
+    report, store = run_enrich(metadata, provider)
+
+    (batch,) = store.batches
+    assert batch.relations  # rule-derived edges are in the graph
+    assert len(provider.calls) == 1  # no call after the first exhausted-provider error
+    counts = report.enrichment[CC]
+    assert counts.left_pending > 1 and counts.processed == 0
+    (called,) = metadata.records(CC).values()  # the chunk that hit the error is recorded pending
+    assert called.status is EnrichmentStatus.PENDING
+
+
+def test_concept_edges_of_the_reply_are_handed_to_the_store():
+    class Duplicating(EndlessProvider):
+        def complete(self, prompt, params=None):
+            return Completion(
+                '{"conceitos": [{"conceito_id": "abuso", "relacao": "DEFINES", '
+                '"evidence": "abuso"}], "referencias": []}'
+            )
+
+    _, store = run_enrich(SqliteMetadataStore(), Duplicating())
+
+    assert any(r.target_id == "abuso" for _, rels in store.replaced for r in rels)
+
+
+def test_chunks_the_enricher_never_sends_are_not_counted_or_recorded():
+    metadata, provider = SqliteMetadataStore(), EndlessProvider()
+    revoked = replace(chunks(TEXTS[0])[0], id=f"{CC}#art9", path="art9", revoked=True)
+    store, planalto = MemoryStore(), FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+    config = EnrichConfig(VOCAB, provider, metadata, lock())
+
+    with patch.object(ingest_module, "parse_planalto", lambda h, u: [*chunks(*TEXTS), revoked]):
+        report = ingest(ANCHOR, lexml_pages(), planalto, store, enrichment=config)
+
+    counts = report.enrichment[CC]
+    assert len(provider.calls) == counts.processed == len(TEXTS)
+    assert f"{CC}#art9" not in metadata.records(CC)
+    assert counts.left_pending == 0
+
+
+def test_grounded_citation_is_forgotten_and_stays_forgotten_on_rerun():
+    citation = "lei:9999/2000 art3"
+    reply = json.dumps(
+        {
+            "conceitos": [],
+            "referencias": [
+                {
+                    "citacao": citation,
+                    "alvo": f"{CC}#art2",
+                    "evidence": "art. 3º da Lei nº 9.999, de 2000",
+                }
+            ],
+        }
+    )
+    texts = ["Ver art. 3º da Lei nº 9.999, de 2000.", "Outro dispositivo."]
+    metadata = SqliteMetadataStore()
+    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+    config = EnrichConfig(VOCAB, FakeProvider(script=[Completion(reply)]), metadata, lock())
+
+    def run(store, config):
+        with patch.object(ingest_module, "parse_planalto", lambda h, u: chunks(*texts)):
+            ingest(ANCHOR, lexml_pages(), planalto, store, enrichment=config)
+
+    first = MemoryStore()
+    run(first, config)
+    assert first.resolved == [(f"{CC}#art1", [citation])]
+    assert [r.target_id for _, rels in first.replaced for r in rels] == [f"{CC}#art2"]
+
+    again = MemoryStore()
+    run(again, replace(config, provider=FakeProvider()))
+    assert again.replaced == []  # nothing was pending
+    assert again.resolved == [(f"{CC}#art1", [citation])]  # the rules wrote it again: forget it
+
+
+def test_too_long_chunk_is_recorded_ok_but_counted_apart():
+    metadata, provider = SqliteMetadataStore(), EndlessProvider()
+    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+    config = EnrichConfig(VOCAB, provider, metadata, lock(), max_input_tokens=1)
+
+    with patch.object(ingest_module, "parse_planalto", lambda h, u: chunks(*TEXTS)):
+        report = ingest(ANCHOR, lexml_pages(), planalto, MemoryStore(), enrichment=config)
+
+    counts = report.enrichment[CC]
+    assert (counts.too_long, counts.processed, counts.left_pending) == (len(TEXTS), 0, 0)
+    assert provider.calls == []
+    assert {r.skipped for r in metadata.records(CC).values()} == {"too_long"}
+    assert "too long" in report.render()

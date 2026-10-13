@@ -19,7 +19,7 @@ import yaml
 
 from legal_radar.concepts import Vocabulary
 from legal_radar.domain import Confidence, Dispositivo, Origin, Relation, RelationType
-from legal_radar.enricher import CONCEPT_RELATIONS, candidate_targets, enrich
+from legal_radar.enricher import CONCEPT_RELATIONS, ancestors_of, candidate_targets, enrich
 from legal_radar.ports import Provider
 from legal_radar.prompts import PromptLock
 from legal_radar.relations import extract_relations
@@ -136,16 +136,12 @@ def enrich_dispositivos(
         if on_start:
             on_start(position, len(wanted), d)
         extraction = extract_relations(d, resolver, ingested)
-        ancestors, parent = [], by_id.get(d.parent_id or "")
-        while parent:
-            ancestors.insert(0, parent)
-            parent = by_id.get(parent.parent_id or "")
         result = enrich(
             d,
             vocabulary,
             provider,
             lock,
-            ancestors=ancestors,
+            ancestors=ancestors_of(d, by_id),
             unresolved=[r for r in extraction.relations if r.unresolved],
             candidates=candidates[d.lei_id],
             **limits,

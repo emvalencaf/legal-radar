@@ -97,6 +97,11 @@ Ingest the anchor leis of an assunto from LexML/Planalto (needs `uv sync --extra
 uv run legal-radar ingest "desconsideração da personalidade jurídica"
 ```
 
+Add `--enrich` to also send the chunks the rules left to the LLM (needs the assunto's vocabulary
+and a provider in `router.yaml`). Each chunk it sends gets a record in `data/ingestion.sqlite`
+(`METADATA_DB` overrides the path); re-running resumes only the chunks that are still `pending`, or
+whose text, vocabulary, `dispositivo-enrichment` prompt or extractor version changed.
+
 Ingest the seed precedents (STJ Tema 1210, STF Tema 1232) and the top hits of each court. STJ's
 Cloudflare check rejects bundled Chromium, so this needs Google Chrome installed:
 

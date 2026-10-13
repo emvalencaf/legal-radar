@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from legal_radar.concepts import Vocabulary
 from legal_radar.domain import Confidence, Dispositivo, Origin, Relation, RelationType
+from legal_radar.enrichment import ENRICHMENT_PROMPT
 from legal_radar.llm import CompletionParams, content_hash
 from legal_radar.ports import Provider
 from legal_radar.prompts import PromptLock, default_lock
@@ -23,7 +24,6 @@ from legal_radar.relations import CURATED_CODES
 
 logger = logging.getLogger(__name__)
 
-ENRICHMENT_PROMPT = "dispositivo-enrichment"
 MAX_INPUT_TOKENS = 8000  # per call; the default of the configurable ceiling
 CHARS_PER_TOKEN = 4  # rough estimate; no tokenizer is shipped
 STRUCTURAL_KINDS = ("parte", "livro", "titulo", "subtitulo", "capitulo", "secao", "subsecao")
@@ -100,7 +100,7 @@ def enrich(
 ) -> Enrichment:
     """Concept edges of `d`, and a target for each of its `unresolved` citations when the LLM can
     ground one in `candidates`. `ancestors` run from the farthest to the nearest."""
-    if reason := _triage(d):
+    if reason := triage(d):
         return Enrichment(skipped=reason)
     lock = lock or default_lock()
     citations = [u for u in unresolved if u.unresolved]
@@ -143,12 +143,22 @@ def enrich(
     )
 
 
+def ancestors_of(d: Dispositivo, by_id: dict[str, Dispositivo]) -> list[Dispositivo]:
+    """The parents of `d` from the farthest to the nearest."""
+    ancestors, parent = [], by_id.get(d.parent_id or "")
+    while parent:
+        ancestors.insert(0, parent)
+        parent = by_id.get(parent.parent_id or "")
+    return ancestors
+
+
 def candidate_targets(lei_dispositivos: Sequence[Dispositivo]) -> list[str]:
     """The closed list of reference targets: dispositivos of the same lei and the curated codes."""
     return [*(d.id for d in lei_dispositivos), *CURATED_CODES]
 
 
-def _triage(d: Dispositivo) -> str | None:
+def triage(d: Dispositivo) -> str | None:
+    """Why `d` is never sent to the LLM (revoked, structural or empty), or None."""
     if d.revoked:
         return "revoked"
     if d.kind in STRUCTURAL_KINDS:

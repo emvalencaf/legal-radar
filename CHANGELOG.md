@@ -19,6 +19,14 @@ heading when `development` is released to `master`.
   so no dispositivo could be enriched locally. `LLM_TIMEOUT_SECONDS` raises the per-call timeout
   for slow local models; `eval_enrichment.py --timeout` sets it (default 600).
 
+### Changed
+
+- Vocabulary `desconsideracao_personalidade`: `personalidade_juridica` merged into `pessoa_juridica`
+  (39 concepts) and every `instructions` rewritten with when to use it, when not to and invented
+  example wordings, citing no dispositivo so the evaluation slice does not leak into the prompt.
+  The vocabulary hash changes (LLM-processed chunks return to pending, ADR-0003); the gold set was
+  remapped and re-pinned (#67).
+
 ### Added
 
 - `evaluation/TRIAGE.md`: the baseline's 42 false positives classified (overlapping concepts, type

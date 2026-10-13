@@ -21,6 +21,11 @@ uv run python scripts/eval_enrichment.py evaluation/enrichment_gold.yml \
   --provider groq --model openai/gpt-oss-120b --persist eval-runs
 ```
 
+> **Superseded vocabulary.** After this run, `personalidade_juridica` was merged into `pessoa_juridica`
+> and every instruction was rewritten with invented examples (see `TRIAGE.md`). The gold was
+> remapped and re-pinned. These numbers describe the vocabulary and gold named above, so a new run
+> is needed to measure the effect.
+
 ## Per-edge scores
 
 Scored per edge `(type, source, target)`, split by origin. `tp`/`fp`/`fn` are counts.

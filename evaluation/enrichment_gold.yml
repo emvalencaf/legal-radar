@@ -1,4 +1,4 @@
-vocabulary_hash: sha256:5d6978343eba549351b81d7678aa1dbd9d0c881beae93f983c9efbedba9612fb
+vocabulary_hash: sha256:54ba8bad9011cac3d60b39a8bfb43eda5a9f2347771805e1dd127c76b5fec357
 dispositivos:
 - id: urn:lex:br:federal:lei:2002-01-10;10406#art40
   edges:
@@ -262,7 +262,7 @@ dispositivos:
 - id: urn:lex:br:federal:lei:2002-01-10;10406#art52
   edges:
   - type: APPLIES_TO
-    target: personalidade_juridica
+    target: pessoa_juridica
     review: accepted
 - id: urn:lex:br:federal:lei:1990-09-11;8078#art1
   edges:

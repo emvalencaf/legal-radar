@@ -67,7 +67,8 @@ against `RELATES_TO`), not a case-by-case fix.
 ## Decisions taken
 
 - Merge `personalidade_juridica` into `pessoa_juridica` (the surviving id, category ATOR) and
-  rewrite every concept's `instructions` with when to use it, when not to, and an example from the
-  law. The gold was remapped and its `vocabulary_hash` re-pinned.
+  rewrite every concept's `instructions` with when to use it, when not to, and invented example
+  wordings. No dispositivo is cited or quoted there: examples drawn from the evaluation slice would
+  leak the answer into the prompt and bias the metrics. The gold was remapped and its `vocabulary_hash` re-pinned.
 - Open: which of C to add to the gold, and the `DEFINES` against `APPLIES_TO` rule for B.
 - A new run is needed to see the effect: the baseline predates the change.

@@ -59,6 +59,10 @@ SET n.unresolved_revokers =
 DELETE_LLM_RELATIONS = """
 MATCH (:Dispositivo {id: $id})-[r]->() WHERE r.origin = 'llm' DELETE r
 """
+RESOLVE_CITATIONS = """
+MATCH (n:Dispositivo {id: $id})
+SET n.unresolved_references = [x IN coalesce(n.unresolved_references, []) WHERE NOT x IN $citations]
+"""
 # Relationship types cannot be parameters; `type` is always a member of `RelationType`.
 MERGE_CONCEPT_EDGE = """
 MATCH (s:Dispositivo {{id: $source}})
@@ -122,6 +126,10 @@ class Neo4jGraphStore:
     def replace_llm_relations(self, chunk_id: str, relations: list[Relation]) -> None:
         with self._driver.session() as session:
             session.execute_write(self._replace_llm_relations, chunk_id, relations)
+
+    def resolve_citations(self, chunk_id: str, citations: list[str]) -> None:
+        with self._driver.session() as session:
+            session.run(RESOLVE_CITATIONS, id=chunk_id, citations=citations)
 
     @staticmethod
     def _replace_llm_relations(tx, chunk_id: str, relations: list[Relation]) -> None:

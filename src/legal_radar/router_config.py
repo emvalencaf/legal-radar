@@ -32,6 +32,16 @@ DEFAULT_DAILY_LIMITS = {"gemini": 500}
 DEFAULT_LOG_PATH = "logs/llm_calls.jsonl"
 
 
+API_KEYS = {"groq": "GROQ_API_KEY", "gemini": "GEMINI_API_KEY"}  # lmstudio needs none
+
+
+def providers_without_credentials(config: dict, env: Mapping[str, str] | None = None) -> list[str]:
+    """The configured providers whose API key is not set."""
+    env = os.environ if env is None else env
+    priority = config.get("providers") or DEFAULT_PRIORITY
+    return [n for n in priority if n in API_KEYS and not env.get(API_KEYS[n])]
+
+
 def load_config(path: Path | str | None) -> dict:
     if path is None or not Path(path).exists():
         return {}

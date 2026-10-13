@@ -1,5 +1,6 @@
 """SQLite adapter for the MetadataStore port: the enrichment records of ADR-0002."""
 
+import json
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,14 +15,17 @@ CREATE TABLE IF NOT EXISTS enrichment_record (
     status TEXT NOT NULL CHECK (status IN ('ok', 'pending')),
     dropped INTEGER NOT NULL,
     skipped TEXT,
+    resolved TEXT NOT NULL DEFAULT '[]',
     updated_at TEXT NOT NULL
 )
 """
 UPSERT = """
-INSERT INTO enrichment_record (chunk_id, lei_id, key, status, dropped, skipped, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO enrichment_record
+    (chunk_id, lei_id, key, status, dropped, skipped, resolved, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (chunk_id) DO UPDATE SET lei_id = excluded.lei_id, key = excluded.key,
     status = excluded.status, dropped = excluded.dropped, skipped = excluded.skipped,
+    resolved = excluded.resolved,
     updated_at = excluded.updated_at
 """
 
@@ -48,6 +52,7 @@ class SqliteMetadataStore:
                     record.status.value,
                     record.dropped,
                     record.skipped,
+                    json.dumps(record.resolved),
                     datetime.now(UTC).isoformat(),
                 ),
             )
@@ -62,6 +67,7 @@ class SqliteMetadataStore:
                 EnrichmentStatus(row["status"]),
                 row["dropped"],
                 row["skipped"],
+                tuple(json.loads(row["resolved"])),
             )
             for row in rows
         }

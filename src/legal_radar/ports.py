@@ -41,6 +41,10 @@ class GraphStore(Protocol):
         """Atomically swap the `llm`-origin edges starting at one dispositivo for `relations`.
         `rule`-origin edges are never touched."""
 
+    def resolve_citations(self, chunk_id: str, citations: list[str]) -> None:
+        """Forget the unresolved citations of one dispositivo that an `llm` edge now grounds.
+        Idempotent: the rules keep writing them on every ingestion."""
+
 
 class MetadataStore(Protocol):
     """Ingestion metadata kept apart from the graph (ADR-0002): one record per chunk the LLM saw."""

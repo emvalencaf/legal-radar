@@ -36,6 +36,7 @@ class EnrichConfig:
 @dataclass
 class EnrichmentCounts:
     processed: int = 0  # sent to the LLM and recorded `ok`
+    too_long: int = 0  # recorded `ok` without a call: the prompt exceeds the input ceiling
     kept: int = 0  # `ok` with an unchanged key: not sent
     returned: int = 0  # `ok` before, back to pending because the key changed
     left_pending: int = 0  # still pending after this run
@@ -58,7 +59,7 @@ class IngestionReport:
             for urn, n in self.ingested.items()
         ]
         lines += [
-            f"enriched {urn}: {c.processed} processed, {c.kept} kept, "
+            f"enriched {urn}: {c.processed} processed, {c.too_long} too long, {c.kept} kept, "
             f"{c.returned} returned to pending, {c.left_pending} left pending"
             for urn, c in self.enrichment.items()
         ]
@@ -128,7 +129,8 @@ def _enrich(
     """Send each pending LLM-bound chunk to `enrich`, record the outcome and replace its `llm`
     edges. A reply that cannot be read leaves that chunk pending; an exhausted provider stops the
     calls and leaves the rest pending. `returned` counts the chunks that were `ok` under an older
-    key and are `ok` again under the current one, so it is a subset of `processed`."""
+    key and are `ok` again under the current one, so it is a subset of `processed`. A `too_long`
+    chunk is recorded `ok`, so it is not retried forever, but it is counted apart."""
     exhausted = False
     for lei, dispositivos in parsed:
         counts = report.enrichment[lei.id] = EnrichmentCounts()
@@ -141,6 +143,10 @@ def _enrich(
         stored = config.metadata.records(lei.id)
         pending = set(config.metadata.pending(lei.id, keys))
         counts.kept = len(chunks) - len(pending)
+        for d in chunks:
+            # the rules write their unresolved citations on every run: forget the grounded ones
+            if d.id not in pending and stored[d.id].resolved:
+                store.resolve_citations(d.id, list(stored[d.id].resolved))
         for d in chunks:
             if d.id not in pending:
                 continue
@@ -160,7 +166,9 @@ def _enrich(
                     EnrichmentRecord(d.id, lei.id, keys[d.id], EnrichmentStatus.PENDING)
                 )
             else:
+                resolved = [r.unresolved for r in outcome.resolved if r.unresolved]
                 store.replace_llm_relations(d.id, outcome.relations)
+                store.resolve_citations(d.id, resolved)
                 config.metadata.record(
                     EnrichmentRecord(
                         d.id,
@@ -169,8 +177,12 @@ def _enrich(
                         EnrichmentStatus.OK,
                         outcome.dropped,
                         outcome.skipped,
+                        tuple(resolved),
                     )
                 )
+                if outcome.skipped == "too_long":
+                    counts.too_long += 1
+                    continue
                 counts.processed += 1
                 if (before := stored.get(d.id)) and before.status is EnrichmentStatus.OK:
                     counts.returned += 1

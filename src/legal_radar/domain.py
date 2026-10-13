@@ -133,3 +133,4 @@ class EnrichmentRecord:
     status: EnrichmentStatus
     dropped: int = 0
     skipped: str | None = None  # why no call was made (`too_long`), or None
+    resolved: tuple[str, ...] = ()  # the unresolved citations the LLM grounded

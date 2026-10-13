@@ -1,3 +1,4 @@
+import json
 import logging
 from unittest.mock import patch
 
@@ -267,3 +268,52 @@ def test_chunks_the_enricher_never_sends_are_not_counted_or_recorded():
     assert len(provider.calls) == counts.processed == len(TEXTS)
     assert f"{CC}#art9" not in metadata.records(CC)
     assert counts.left_pending == 0
+
+
+def test_grounded_citation_is_forgotten_and_stays_forgotten_on_rerun():
+    citation = "lei:9999/2000 art3"
+    reply = json.dumps(
+        {
+            "conceitos": [],
+            "referencias": [
+                {
+                    "citacao": citation,
+                    "alvo": f"{CC}#art2",
+                    "evidence": "art. 3º da Lei nº 9.999, de 2000",
+                }
+            ],
+        }
+    )
+    texts = ["Ver art. 3º da Lei nº 9.999, de 2000.", "Outro dispositivo."]
+    metadata = SqliteMetadataStore()
+    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+    config = EnrichConfig(VOCAB, FakeProvider(script=[Completion(reply)]), metadata, lock())
+
+    def run(store, config):
+        with patch.object(ingest_module, "parse_planalto", lambda h, u: chunks(*texts)):
+            ingest(ANCHOR, lexml_pages(), planalto, store, enrichment=config)
+
+    first = MemoryStore()
+    run(first, config)
+    assert first.resolved == [(f"{CC}#art1", [citation])]
+    assert [r.target_id for _, rels in first.replaced for r in rels] == [f"{CC}#art2"]
+
+    again = MemoryStore()
+    run(again, replace(config, provider=FakeProvider()))
+    assert again.replaced == []  # nothing was pending
+    assert again.resolved == [(f"{CC}#art1", [citation])]  # the rules wrote it again: forget it
+
+
+def test_too_long_chunk_is_recorded_ok_but_counted_apart():
+    metadata, provider = SqliteMetadataStore(), EndlessProvider()
+    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+    config = EnrichConfig(VOCAB, provider, metadata, lock(), max_input_tokens=1)
+
+    with patch.object(ingest_module, "parse_planalto", lambda h, u: chunks(*TEXTS)):
+        report = ingest(ANCHOR, lexml_pages(), planalto, MemoryStore(), enrichment=config)
+
+    counts = report.enrichment[CC]
+    assert (counts.too_long, counts.processed, counts.left_pending) == (len(TEXTS), 0, 0)
+    assert provider.calls == []
+    assert {r.skipped for r in metadata.records(CC).values()} == {"too_long"}
+    assert "too long" in report.render()

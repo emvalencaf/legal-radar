@@ -31,9 +31,16 @@ def test_changed_key_or_pending_status_returns_the_chunk_to_pending():
 def test_record_is_upserted_and_scoped_to_its_lei(tmp_path):
     path = tmp_path / "nested" / "meta.sqlite"
     store = SqliteMetadataStore(path)
-    store.record(rec("a", dropped=2, skipped="too_long"))
+    store.record(rec("a", dropped=2, skipped="too_long", resolved=("lei 9",)))
     store.record(rec("a", key="k2", dropped=1))
     store.record(rec("z", lei="other"))
     store.close()
 
     assert SqliteMetadataStore(path).records(LEI) == {"a": rec("a", key="k2", dropped=1)}
+
+
+def test_resolved_citations_round_trip():
+    store = SqliteMetadataStore()
+    store.record(rec("a", resolved=("art. 3º da Lei 9", "art. 4º")))
+
+    assert store.records(LEI)["a"].resolved == ("art. 3º da Lei 9", "art. 4º")

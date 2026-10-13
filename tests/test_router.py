@@ -229,3 +229,12 @@ def test_event_carries_the_prompt_snapshot(tmp_path):
     router = Router([FakeProvider()], log)
     router.complete("hi", CompletionParams(prompt_snapshot="sha256:abc"))
     assert events(log)[0]["prompt_snapshot"] == "sha256:abc"
+
+
+def test_providers_without_credentials_lists_the_keyless_ones():
+    from legal_radar.router_config import providers_without_credentials
+
+    config = {"providers": ["groq", "gemini", "lmstudio"]}
+
+    assert providers_without_credentials(config, {"GROQ_API_KEY": "k"}) == ["gemini"]
+    assert providers_without_credentials(config, {}) == ["groq", "gemini"]

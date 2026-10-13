@@ -23,6 +23,7 @@ class MemoryStore:
     def __init__(self):
         self.batches: list[GraphBatch] = []
         self.jurisprudencia: list[list[Jurisprudencia]] = []
+        self.resolved: list[tuple[str, list[str]]] = []
         self.replaced: list[tuple[str, list[Relation]]] = []
 
     def write(self, batch: GraphBatch) -> None:
@@ -30,6 +31,9 @@ class MemoryStore:
 
     def replace_llm_relations(self, chunk_id: str, relations: list[Relation]) -> None:
         self.replaced.append((chunk_id, relations))
+
+    def resolve_citations(self, chunk_id: str, citations: list[str]) -> None:
+        self.resolved.append((chunk_id, citations))
 
     def write_jurisprudencia(self, items: list[Jurisprudencia]) -> None:
         self.jurisprudencia.append(items)

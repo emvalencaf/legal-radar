@@ -14,7 +14,9 @@ heading when `development` is released to `master`.
   Re-running resumes only `pending` chunks; a changed text, vocabulary, enrichment prompt or
   extractor version returns just those to `pending`. A chunk's `llm` edges are replaced atomically
   (`GraphStore.replace_llm_relations`); `rule` edges are never touched. The Neo4j store now writes
-  dispositivo → conceito edges.
+  dispositivo → conceito edges. A citation the LLM grounds is dropped from the node's unresolved
+  list on every run, a `too_long` chunk is recorded `ok` but reported apart, and `--enrich` fails
+  at once when no configured provider has its API key.
 
 ### Fixed
 

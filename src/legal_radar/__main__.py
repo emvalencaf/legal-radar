@@ -41,12 +41,26 @@ def enrich_config(assunto: str):
     from legal_radar.enrichment import ENRICHMENT_PROMPT
     from legal_radar.ingest import EnrichConfig
     from legal_radar.prompts import PromptError, default_lock
-    from legal_radar.router_config import build_router, enrichment_max_input_tokens, load_config
+    from legal_radar.router_config import (
+        API_KEYS,
+        DEFAULT_PRIORITY,
+        build_router,
+        enrichment_max_input_tokens,
+        load_config,
+        providers_without_credentials,
+    )
 
     try:
         default_lock().prompt_hash(ENRICHMENT_PROMPT)
         vocabulary = load_registered(assunto)
         config = load_config("router.yaml")
+        missing = providers_without_credentials(config)
+        priority = config.get("providers") or DEFAULT_PRIORITY
+        if set(missing) >= set(priority):
+            raise ValueError(
+                f"no provider has credentials (set {', '.join(API_KEYS[n] for n in missing)})"
+            )
+        config = {**config, "providers": [n for n in priority if n not in missing]}
         router = build_router(config)
         limit = enrichment_max_input_tokens(config)
     except (VocabularyError, PromptError, ValueError, OSError, KeyError) as error:

@@ -21,6 +21,8 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `evaluation/TRIAGE.md`: the baseline's 42 false positives classified (overlapping concepts, type
+  disagreement, gold gaps, model errors) with the decisions that followed (#67).
 - `evaluation/BASELINE.md`: the baseline of the first real enrichment run against the gold set (Groq,
   `openai/gpt-oss-120b`), with the run's configuration and how to read it (#67).
 - `scripts/setup-groq.sh`: wizard that creates the Groq API key, stores `GROQ_API_KEY` in `.env`,

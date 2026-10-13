@@ -9,6 +9,8 @@ heading when `development` is released to `master`.
 
 ### Fixed
 
+- `AllProvidersFailedError` now says why each provider gave up (quota, rate limit, rejected
+  request), instead of a bare "exhausted or failed" that hid the cause.
 - OpenAI-compatible providers close every object of the response schema with
   `additionalProperties: false`, which strict mode needs: Groq answered 400 to the enricher's schema.
 - HTTP providers send their own `User-Agent`: Groq (Cloudflare) answered 403 / error 1010 to the

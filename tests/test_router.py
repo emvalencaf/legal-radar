@@ -8,6 +8,7 @@ from legal_radar.llm import (
     AllProvidersFailedError,
     Completion,
     CompletionParams,
+    ProviderError,
     QuotaExhaustedError,
     RateLimitedError,
     TransientError,
@@ -101,6 +102,18 @@ def test_raises_and_logs_failure_when_all_providers_fail(tmp_path):
 
     (event,) = events(log)
     assert event["outcome"] == "failed"
+
+
+def test_the_failure_names_why_each_provider_gave_up(tmp_path):
+    first = FakeProvider("groq", script=[QuotaExhaustedError("groq daily quota exhausted")])
+    second = FakeProvider("gemini", script=[ProviderError("gemini returned 400: bad schema")])
+    router, _, _ = make_router(tmp_path, [first, second])
+
+    with pytest.raises(AllProvidersFailedError) as caught:
+        router.complete("x")
+
+    assert "groq: groq daily quota exhausted" in str(caught.value)
+    assert "gemini: gemini returned 400: bad schema" in str(caught.value)
 
 
 def test_wide_event_has_hashes_and_breakdown_but_no_text_by_default(tmp_path):

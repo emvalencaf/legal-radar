@@ -112,13 +112,15 @@ def enrich_dispositivos(
     resolver=None,
     max_input_tokens: int | None = None,
     only: Collection[str] | None = None,
+    on_start: Callable[[int, int, Dispositivo], None] | None = None,
     on_progress: Callable[[int, int, Outcome], None] | None = None,
 ) -> list[Outcome]:
     """Run the rules and then the LLM over each dispositivo, as ingestion will (#29).
 
     A citation the LLM grounds replaces the unresolved LOW edge the rules left for it. With `only`,
     just those ids are enriched (the others still serve as ancestors and reference candidates, so
-    no LLM call is spent on them); `on_progress(done, total, outcome)` fires after each one.
+    no LLM call is spent on them); `on_start(position, total, dispositivo)` fires before each
+    one is sent and `on_progress(done, total, outcome)` after it returns.
     """
     by_id = {d.id: d for d in dispositivos}
     ingested: dict[str, set[str]] = {}
@@ -130,7 +132,9 @@ def enrich_dispositivos(
     limits = {} if max_input_tokens is None else {"max_input_tokens": max_input_tokens}
     outcomes = []
     wanted = [d for d in dispositivos if only is None or d.id in only]
-    for d in wanted:
+    for position, d in enumerate(wanted, 1):
+        if on_start:
+            on_start(position, len(wanted), d)
         extraction = extract_relations(d, resolver, ingested)
         ancestors, parent = [], by_id.get(d.parent_id or "")
         while parent:

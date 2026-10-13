@@ -47,6 +47,16 @@ def clock(seconds: float) -> str:
     return f"{int(seconds) // 60}:{int(seconds) % 60:02d}"
 
 
+def start_printer(position: int, total: int, d) -> None:
+    """Announce a dispositivo before it is sent: a slow local model shows nothing for minutes."""
+    width = len(str(total))
+    print(
+        f"[{position:>{width}}/{total}] {d.id.split('#')[1]:<20} sending...",
+        file=sys.stderr,
+        flush=True,
+    )
+
+
 def progress_printer(started: float):
     """One line per dispositivo: position, what it yielded, and the time left at this pace."""
 
@@ -97,6 +107,7 @@ def main(args: argparse.Namespace) -> int:
         lock,
         max_input_tokens=enrichment_max_input_tokens(config),
         only=set(gold),
+        on_start=start_printer,
         on_progress=progress_printer(started),
     )
     scored = [o for o in outcomes if o.dispositivo.id in gold]

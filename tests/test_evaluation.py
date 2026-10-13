@@ -249,11 +249,12 @@ def test_enrich_dispositivos_only_calls_the_wanted_ones_and_reports_progress():
         provider,
         LOCK,
         only={ART3.id},
+        on_start=lambda position, total, d: seen.append(("start", position, total, d.id)),
         on_progress=lambda done, total, outcome: seen.append((done, total, outcome.dispositivo.id)),
     )
 
     assert [o.dispositivo.id for o in outcomes] == [ART3.id]
-    assert seen == [(1, 1, ART3.id)]
+    assert seen == [("start", 1, 1, ART3.id), (1, 1, ART3.id)]  # announced before it is sent
 
 
 def test_a_grounded_citation_replaces_its_unresolved_rule_edge():

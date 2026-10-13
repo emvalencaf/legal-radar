@@ -21,6 +21,8 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `evaluation/BASELINE.md`: the baseline of the first real enrichment run against the gold set (Groq,
+  `openai/gpt-oss-120b`), with the run's configuration and how to read it (#67).
 - `scripts/setup-groq.sh`: wizard that creates the Groq API key, stores `GROQ_API_KEY` in `.env`,
   validates it against api.groq.com and checks the `router.yaml` model is available.
 - `eval_enrichment.py`: `--model` next to `--provider`, `lmstudio` as the default provider, only the

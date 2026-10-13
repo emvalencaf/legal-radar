@@ -10,7 +10,7 @@ is an error because an unannotated dispositivo is not a negative.
 """
 
 import json
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 from legal_radar.concepts import Vocabulary
-from legal_radar.domain import Dispositivo, Relation, RelationType
+from legal_radar.domain import Confidence, Dispositivo, Origin, Relation, RelationType
 from legal_radar.enricher import CONCEPT_RELATIONS, candidate_targets, enrich
 from legal_radar.ports import Provider
 from legal_radar.prompts import PromptLock
@@ -45,15 +45,23 @@ class GoldEdge:
 Gold = dict[str, frozenset[GoldEdge]]
 
 
-def load_gold(text: str) -> Gold:
+def load_gold(text: str, vocabulary: Vocabulary | None = None) -> Gold:
     """Parse the gold set YAML: `dispositivos: [{id, edges: [{type, source?, target?}]}]`.
 
-    The dispositivo is the default source of an edge, and the default target of a `REVOKES`.
+    The dispositivo is the default source of an edge, and the default target of a `REVOKES`. With a
+    `vocabulary`, the file must pin its `vocabulary_hash`: concept edges only mean something
+    against the vocabulary they were annotated with.
     """
     try:
-        entries = (yaml.safe_load(text) or {}).get("dispositivos")
+        document = yaml.safe_load(text) or {}
+        entries = document.get("dispositivos")
     except (yaml.YAMLError, AttributeError) as error:
         raise GoldError(f"unreadable gold set: {error}") from error
+    if vocabulary is not None and document.get("vocabulary_hash") != vocabulary.hash:
+        raise GoldError(
+            f"the gold set was annotated against another vocabulary "
+            f"(file {document.get('vocabulary_hash')!r}, current {vocabulary.hash!r})"
+        )
     if not isinstance(entries, list):
         raise GoldError("the gold set needs a `dispositivos` list")
     gold: Gold = {}
@@ -103,10 +111,16 @@ def enrich_dispositivos(
     *,
     resolver=None,
     max_input_tokens: int | None = None,
+    only: Collection[str] | None = None,
+    on_start: Callable[[int, int, Dispositivo], None] | None = None,
+    on_progress: Callable[[int, int, Outcome], None] | None = None,
 ) -> list[Outcome]:
     """Run the rules and then the LLM over each dispositivo, as ingestion will (#29).
 
-    A citation the LLM grounds replaces the unresolved LOW edge the rules left for it.
+    A citation the LLM grounds replaces the unresolved LOW edge the rules left for it. With `only`,
+    just those ids are enriched (the others still serve as ancestors and reference candidates, so
+    no LLM call is spent on them); `on_start(position, total, dispositivo)` fires before each
+    one is sent and `on_progress(done, total, outcome)` after it returns.
     """
     by_id = {d.id: d for d in dispositivos}
     ingested: dict[str, set[str]] = {}
@@ -117,7 +131,10 @@ def enrich_dispositivos(
     }
     limits = {} if max_input_tokens is None else {"max_input_tokens": max_input_tokens}
     outcomes = []
-    for d in dispositivos:
+    wanted = [d for d in dispositivos if only is None or d.id in only]
+    for position, d in enumerate(wanted, 1):
+        if on_start:
+            on_start(position, len(wanted), d)
         extraction = extract_relations(d, resolver, ingested)
         ancestors, parent = [], by_id.get(d.parent_id or "")
         while parent:
@@ -134,17 +151,18 @@ def enrich_dispositivos(
             **limits,
         )
         kept = [r for r in extraction.relations if r not in result.resolved]
-        outcomes.append(
-            Outcome(
-                d,
-                [*kept, *result.relations],
-                extraction.dropped + result.dropped,
-                result.skipped,
-                result.failed,
-                result.tokens_in,
-                result.tokens_out,
-            )
+        outcome = Outcome(
+            d,
+            [*kept, *result.relations],
+            extraction.dropped + result.dropped,
+            result.skipped,
+            result.failed,
+            result.tokens_in,
+            result.tokens_out,
         )
+        outcomes.append(outcome)
+        if on_progress:
+            on_progress(len(outcomes), len(wanted), outcome)
     return outcomes
 
 
@@ -292,36 +310,72 @@ def check_gates(scores: Mapping, indirect: Indirect, t: Thresholds) -> list[Gate
     return failures
 
 
+def start_run(directory: Path | str, run: dict, run_id: str | None = None) -> Path:
+    """Create the JSONL file of a run with its header line; outcomes are appended as they finish."""
+    run_id = run_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    path = Path(directory) / f"enrichment-{run_id}.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"run": {"id": run_id, **run}}, ensure_ascii=False) + "\n", "utf-8")
+    return path
+
+
+def append_outcome(path: Path, outcome: Outcome) -> None:
+    """Add one dispositivo's input and output to a run, so a crash loses nothing already done."""
+    d = outcome.dispositivo
+    line = {
+        "input": {"id": d.id, "lei_id": d.lei_id, "path": d.path, "kind": d.kind, "text": d.text},
+        "output": {
+            "relations": [asdict(r) for r in outcome.relations],
+            "dropped": outcome.dropped,
+            "skipped": outcome.skipped,
+            "failed": outcome.failed,
+            "tokens_in": outcome.tokens_in,
+            "tokens_out": outcome.tokens_out,
+        },
+    }
+    with path.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(line, ensure_ascii=False) + "\n")
+
+
+def read_run(
+    path: Path | str, dispositivos: Mapping[str, Dispositivo]
+) -> tuple[dict, list[Outcome]]:
+    """The header and the outcomes of a run file, to resume it or to rescore it offline."""
+    lines = [json.loads(line) for line in Path(path).read_text("utf-8").splitlines() if line]
+    outcomes = []
+    for line in lines[1:]:
+        out = line["output"]
+        relations = [
+            Relation(
+                RelationType(r["type"]),
+                r["source_id"],
+                r["target_id"],
+                Confidence(r["confidence"]),
+                Origin(r["origin"]),
+                r["evidence"],
+                r["unresolved"],
+            )
+            for r in out["relations"]
+        ]
+        outcomes.append(
+            Outcome(
+                dispositivos[line["input"]["id"]],
+                relations,
+                out["dropped"],
+                out["skipped"],
+                out["failed"],
+                out["tokens_in"],
+                out["tokens_out"],
+            )
+        )
+    return lines[0]["run"], outcomes
+
+
 def persist_run(
     directory: Path | str, outcomes: Sequence[Outcome], run: dict, run_id: str | None = None
 ) -> Path:
     """Write one JSONL file: a header line, then each dispositivo's input and output, for audit."""
-    run_id = run_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    path = Path(directory) / f"enrichment-{run_id}.jsonl"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    lines = [{"run": {"id": run_id, **run}}]
-    for o in outcomes:
-        d = o.dispositivo
-        lines.append(
-            {
-                "input": {
-                    "id": d.id,
-                    "lei_id": d.lei_id,
-                    "path": d.path,
-                    "kind": d.kind,
-                    "text": d.text,
-                },
-                "output": {
-                    "relations": [asdict(r) for r in o.relations],
-                    "dropped": o.dropped,
-                    "skipped": o.skipped,
-                    "failed": o.failed,
-                    "tokens_in": o.tokens_in,
-                    "tokens_out": o.tokens_out,
-                },
-            }
-        )
-    path.write_text(
-        "".join(json.dumps(line, ensure_ascii=False) + "\n" for line in lines), encoding="utf-8"
-    )
+    path = start_run(directory, run, run_id)
+    for outcome in outcomes:
+        append_outcome(path, outcome)
     return path

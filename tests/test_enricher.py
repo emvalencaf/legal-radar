@@ -164,6 +164,20 @@ def test_the_schema_sent_enumerates_concepts_relations_and_candidates():
     assert seen[0].pipeline_step == "enrich"
 
 
+def test_the_schema_never_carries_an_empty_enum_when_there_is_no_unresolved_citation():
+    # Constrained decoding (LM Studio) rejects `enum: []`; no citation means no reference at all.
+    seen = []
+    provider = FakeProvider(script=[reply()])
+    complete = provider.complete
+    provider.complete = lambda prompt, params=None: seen.append(params) or complete(prompt, params)
+
+    run(provider=provider)
+
+    references = seen[0].response_schema["properties"]["referencias"]
+    assert references["maxItems"] == 0
+    assert "enum" not in references["items"]["properties"]["citacao"]
+
+
 def test_triage_skips_without_calling_the_llm_and_names_the_reason():
     skipped = {
         "revoked": Dispositivo("x#art1", "x", "art1", "texto", revoked=True),

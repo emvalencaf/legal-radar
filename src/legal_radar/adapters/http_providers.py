@@ -1,6 +1,7 @@
 """Groq, Gemini and LM Studio adapters over plain HTTP (stdlib only)."""
 
 import json
+import os
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -21,24 +22,42 @@ Transport = Callable[[str, dict[str, str], dict], Response]
 
 DAILY_MARKERS = ("per day", "perday", "(rpd)", "(tpd)")
 DEFAULT_RETRY_AFTER = 2.0
-TIMEOUT_SECONDS = 60
+# Cloudflare-fronted APIs (Groq) refuse the default `Python-urllib` agent with a 403 / error 1010.
+USER_AGENT = "legal-radar/0.1"
+TIMEOUT_SECONDS = 60  # `LLM_TIMEOUT_SECONDS` overrides it: local models can take minutes
+
+
+def _closed(schema):
+    """The schema with `additionalProperties: false` on every object, which strict mode requires
+    (Groq rejects the request otherwise)."""
+    if isinstance(schema, dict):
+        closed = {key: _closed(value) for key, value in schema.items()}
+        if closed.get("type") == "object":
+            closed.setdefault("additionalProperties", False)
+        return closed
+    if isinstance(schema, list):
+        return [_closed(item) for item in schema]
+    return schema
 
 
 def urllib_transport(url: str, headers: dict[str, str], body: dict) -> Response:
     request = urllib.request.Request(
         url,
         data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json", **headers},
+        headers={"Content-Type": "application/json", "User-Agent": USER_AGENT, **headers},
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+        with urllib.request.urlopen(
+            request, timeout=float(os.environ.get("LLM_TIMEOUT_SECONDS", TIMEOUT_SECONDS))
+        ) as response:
             return response.status, dict(response.headers), json.load(response)
     except urllib.error.HTTPError as error:
+        raw = error.read()
         try:
-            payload = json.load(error)
+            payload = json.loads(raw)
         except ValueError:
-            payload = {}
+            payload = {"error": raw.decode("utf-8", "replace").strip()[:200]}
         return error.code, dict(error.headers), payload
 
 
@@ -113,7 +132,7 @@ class OpenAICompatibleProvider(HttpProvider):
                 "json_schema": {
                     "name": "response",
                     "strict": True,
-                    "schema": params.response_schema,
+                    "schema": _closed(params.response_schema),
                 },
             }
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}

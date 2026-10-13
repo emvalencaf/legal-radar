@@ -222,6 +222,21 @@ def test_build_router_wires_default_embedding_models():
 SCHEMA = {"type": "object", "properties": {"a": {"type": "string"}}}
 
 
+def test_strict_schemas_close_every_nested_object():
+    from legal_radar.adapters.http_providers import _closed
+
+    nested = {
+        "type": "object",
+        "properties": {"items": {"type": "array", "items": {"type": "object", "properties": {}}}},
+    }
+
+    closed = _closed(nested)
+
+    assert closed["additionalProperties"] is False
+    assert closed["properties"]["items"]["items"]["additionalProperties"] is False
+    assert "additionalProperties" not in nested  # the caller's schema is not mutated
+
+
 def test_openai_compatible_adapters_request_a_strict_json_schema():
     from legal_radar.llm import CompletionParams
 
@@ -231,7 +246,11 @@ def test_openai_compatible_adapters_request_a_strict_json_schema():
         body = transport.requests[0][2]
         assert body["response_format"] == {
             "type": "json_schema",
-            "json_schema": {"name": "response", "strict": True, "schema": SCHEMA},
+            "json_schema": {
+                "name": "response",
+                "strict": True,
+                "schema": {**SCHEMA, "additionalProperties": False},
+            },
         }
 
 

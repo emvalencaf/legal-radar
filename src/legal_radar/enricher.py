@@ -190,9 +190,14 @@ def _schema(
     concept = schema["properties"]["conceitos"]["items"]["properties"]
     concept["conceito_id"]["enum"] = sorted(c.id for c in vocabulary.conceitos)
     concept["relacao"]["enum"] = [t.value for t in CONCEPT_RELATIONS]
-    reference = schema["properties"]["referencias"]["items"]["properties"]
-    reference["citacao"]["enum"] = sorted({c.unresolved for c in citations})
-    reference["alvo"]["enum"] = list(candidates)
+    references = schema["properties"]["referencias"]
+    unresolved = sorted({c.unresolved for c in citations})
+    if unresolved and candidates:
+        reference = references["items"]["properties"]
+        reference["citacao"]["enum"] = unresolved
+        reference["alvo"]["enum"] = list(candidates)
+    else:  # no citation to resolve: constrained decoding rejects an empty `enum`, so allow none
+        references["maxItems"] = 0
     return schema
 
 

@@ -7,8 +7,56 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Fixed
+
+- `AllProvidersFailedError` now says why each provider gave up (quota, rate limit, rejected
+  request), instead of a bare "exhausted or failed" that hid the cause.
+- OpenAI-compatible providers close every object of the response schema with
+  `additionalProperties: false`, which strict mode needs: Groq answered 400 to the enricher's schema.
+- HTTP providers send their own `User-Agent`: Groq (Cloudflare) answered 403 / error 1010 to the
+  default `Python-urllib` one, so the Groq provider could never be used. A non-JSON error body is now
+  kept in the provider error instead of being dropped.
+- The enricher's structured-output schema no longer sends an empty `enum` for `referencias` when a
+  dispositivo has no unresolved citation: LM Studio rejected it (`enum must be a non-empty array`),
+  so no dispositivo could be enriched locally. `LLM_TIMEOUT_SECONDS` raises the per-call timeout
+  for slow local models; `eval_enrichment.py --timeout` sets it (default 600).
+
+### Changed
+
+- Vocabulary `desconsideracao_personalidade`: `personalidade_juridica` merged into `pessoa_juridica`
+  (39 concepts) and every `instructions` rewritten with when to use it, when not to and invented
+  example wordings, citing no dispositivo so the evaluation slice does not leak into the prompt.
+  The vocabulary hash changes (LLM-processed chunks return to pending, ADR-0003); the gold set was
+  remapped and re-pinned (#67).
+
 ### Added
 
+- `eval_enrichment.py` writes each dispositivo to its run file as it finishes and `--resume RUNFILE`
+  continues an interrupted run (refused when provider, model or vocabulary changed); on a provider
+  failure it stops and prints the resume command. The default provider is now `groq` (#67).
+- `evaluation/TRIAGE.md`: the baseline's 42 false positives classified (overlapping concepts, type
+  disagreement, gold gaps, model errors) with the decisions that followed (#67).
+- `evaluation/BASELINE.md`: the baseline of the first real enrichment run against the gold set (Groq,
+  `openai/gpt-oss-120b`), with the run's configuration and how to read it (#67).
+- `scripts/setup-groq.sh`: wizard that creates the Groq API key, stores `GROQ_API_KEY` in `.env`,
+  validates it against api.groq.com and checks the `router.yaml` model is available.
+- `eval_enrichment.py`: `--model` next to `--provider`, `lmstudio` as the default provider, only the
+  gold dispositivos are sent to the LLM, and a progress line per dispositivo (position, relations,
+  tokens, elapsed, ETA) (#67).
+- `scripts/gold_editor.py`: edit the enrichment gold set in the browser (graph plus review panel,
+  no skipping, accepted/corrected/added marks), sharing progress with the terminal wizard (#67).
+- `scripts/visualize_gold.py`: a read-only, self-contained HTML graph of the enrichment gold set
+  (proposal, review progress or gold) to see every edge and the unused concepts at once (#67).
+- Vocabulary `desconsideracao_personalidade` grows from 33 to 40 concepts, found missing while
+  proposing the gold set (#67): `sociedade_controlada`, `sociedade_consorciada`,
+  `sociedade_coligada`, `culpa_ou_dolo`, `excesso_de_poder_ou_infracao`,
+  `responsabilidade_subsidiaria` and `responsabilidade_solidaria`. The vocabulary hash changes, so
+  LLM-processed chunks return to pending (ADR-0003).
+- Enrichment gold set tooling (#67, in progress): Claude Code's proposal for the 60 normative
+  dispositivos of the anchor slice (`evaluation/`), `scripts/annotate_gold.py` for the maintainer's
+  review (no skipping; records accepted/corrected/added), and a `vocabulary_hash` check in
+  `load_gold`. `eval_enrichment.py` now scores against the curated vocabulary. The reviewed gold,
+  baseline and CI gate wait on the maintainer's annotation.
 - Enrichment evaluation harness (#28): `legal_radar.evaluation` scores enrichment edges against a
   gold set (per-edge precision/recall/F1 split by origin and relation type), computes the indirect
   metrics (target-resolved, valid-evidence and drop rates), applies a rules gate and an LLM gate

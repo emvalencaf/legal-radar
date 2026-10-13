@@ -10,13 +10,16 @@ from legal_radar.evaluation import (
     GoldError,
     Outcome,
     Thresholds,
+    append_outcome,
     check_gates,
     enrich_dispositivos,
     indirect_metrics,
     load_gold,
     load_thresholds,
     persist_run,
+    read_run,
     score_edges,
+    start_run,
 )
 from legal_radar.llm import Completion
 from legal_radar.prompts import refresh
@@ -82,6 +85,18 @@ def test_gold_revokes_defaults_the_target_to_the_dispositivo():
 def test_gold_rejects_malformed_entries(text):
     with pytest.raises(GoldError):
         load_gold(text)
+
+
+def test_gold_pins_the_vocabulary_it_was_annotated_against():
+    pinned = f"vocabulary_hash: {VOCABULARY.hash}\n{GOLD}"
+
+    assert load_gold(pinned, VOCABULARY) == load_gold(GOLD)
+
+
+@pytest.mark.parametrize("header", ["", "vocabulary_hash: stale\n"])
+def test_gold_rejects_a_missing_or_stale_vocabulary_hash(header):
+    with pytest.raises(GoldError, match="vocabulary"):
+        load_gold(header + GOLD, VOCABULARY)
 
 
 def test_scores_per_edge_split_by_origin_and_type():
@@ -227,6 +242,24 @@ def test_enrich_dispositivos_merges_rule_and_llm_edges_per_dispositivo():
     assert by_id[ART3.id].tokens_in > 0
 
 
+def test_enrich_dispositivos_only_calls_the_wanted_ones_and_reports_progress():
+    provider = FakeProvider(script=[concept_reply()])
+    seen = []
+
+    outcomes = enrich_dispositivos(
+        [ART50, ART3],
+        VOCABULARY,
+        provider,
+        LOCK,
+        only={ART3.id},
+        on_start=lambda position, total, d: seen.append(("start", position, total, d.id)),
+        on_progress=lambda done, total, outcome: seen.append((done, total, outcome.dispositivo.id)),
+    )
+
+    assert [o.dispositivo.id for o in outcomes] == [ART3.id]
+    assert seen == [("start", 1, 1, ART3.id), (1, 1, ART3.id)]  # announced before it is sent
+
+
 def test_a_grounded_citation_replaces_its_unresolved_rule_edge():
     d = Dispositivo(f"{LEI}#art5", LEI, "art5", "Aplica-se o art. 3º da Lei nº 9.999, de 2000.")
     grounded = {
@@ -255,3 +288,24 @@ def test_persist_run_keeps_inputs_and_outputs_as_jsonl(tmp_path):
     assert lines[1]["input"]["text"] == ART50.text
     assert lines[1]["output"]["relations"][0]["target_id"] == "abuso"
     assert lines[1]["output"]["relations"][0]["origin"] == "llm"
+
+
+def test_a_run_is_written_as_it_goes_and_read_back_to_resume(tmp_path):
+    first = outcome(ART50, edge(RelationType.APPLIES_TO, ART50.id, "abuso", Origin.LLM), dropped=1)
+    second = outcome(ART3)
+
+    path = start_run(tmp_path, {"model": "m1"}, run_id="r1")
+    append_outcome(path, first)
+    append_outcome(path, second)  # a crash after this loses nothing
+
+    run, outcomes = read_run(path, {d.id: d for d in (ART50, ART3)})
+    assert run == {"id": "r1", "model": "m1"}
+    assert outcomes == [first, second]
+
+
+def test_persist_run_still_writes_the_whole_run_at_once(tmp_path):
+    path = persist_run(tmp_path, [outcome(ART3)], {"model": "m1"}, run_id="r2")
+
+    run, outcomes = read_run(path, {ART3.id: ART3})
+
+    assert run["id"] == "r2" and [o.dispositivo for o in outcomes] == [ART3]

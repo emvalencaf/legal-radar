@@ -135,14 +135,17 @@ class Router:
         model_of: Callable[[Provider], str] = lambda provider: provider.model,
     ) -> T:
         fallback_from = None
+        reasons: list[str] = []
         for provider in self.providers:
             if self._over_daily_limit(provider, model_of(provider)):
                 fallback_from = provider.name
+                reasons.append(f"{provider.name}: over its daily limit")
                 continue
             try:
                 result, retries = self._attempt(call, provider)
-            except ProviderError:  # quota, throttling, transient, or a rejected request
+            except ProviderError as error:  # quota, throttling, transient, or a rejected request
                 fallback_from = provider.name
+                reasons.append(f"{provider.name}: {error}")
                 continue
             event["fallback_from"] = fallback_from
             event["retry_count"] = retries
@@ -153,7 +156,9 @@ class Router:
                 retry_count=retries,
                 fallback_from=fallback_from,
             )
-        raise AllProvidersFailedError("every provider was exhausted or failed")
+        raise AllProvidersFailedError(
+            "every provider was exhausted or failed (" + "; ".join(reasons) + ")"
+        )
 
     def _attempt(self, call: Callable[[Provider], T], provider: Provider) -> tuple[T, int]:
         waits = 0

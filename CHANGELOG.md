@@ -16,6 +16,8 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `scripts/setup-groq.sh`: wizard that creates the Groq API key, stores `GROQ_API_KEY` in `.env`,
+  validates it against api.groq.com and checks the `router.yaml` model is available.
 - `eval_enrichment.py`: `--model` next to `--provider`, `lmstudio` as the default provider, only the
   gold dispositivos are sent to the LLM, and a progress line per dispositivo (position, relations,
   tokens, elapsed, ETA) (#67).

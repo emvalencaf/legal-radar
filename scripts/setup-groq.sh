@@ -228,38 +228,5 @@ else
   note "The free tier has per-minute token limits; if it throttles, the router waits and retries."
 fi
 
-finish() {
-  _clear
-  printf '\n%s%s  ✓ Setup complete%s\n' "$BOLD" "$GREEN" "$RESET"
-  (( ${#WRITTEN_ENV[@]} ))    && note "wrote ${#WRITTEN_ENV[@]} value(s) to $ENV_FILE: ${WRITTEN_ENV[*]}"
-  (( ${#WRITTEN_SECRET[@]} )) && note "set ${#WRITTEN_SECRET[@]} GitHub secret(s): ${WRITTEN_SECRET[*]}"
-  if (( ${#SKIPPED[@]} )); then
-    printf '\n'; warn "still to do by hand:"
-    for s in "${SKIPPED[@]}"; do note "  - $s"; done
-  fi
-  printf '\n'
-}
-
-# ──────────────────────────────────────────────────────────────────────────
-# STAGES: author this section. One stage() per step the human takes.
-# Replace the example below. Set TOTAL_STAGES to match the stages you write.
-# ──────────────────────────────────────────────────────────────────────────
-
-TOTAL_STAGES=1
-
-banner "Stripe setup"
-
-# ── Example stage: replace with your real steps ───────────────────────────
-stage "Stripe: API keys"
-say "We'll grab your Stripe test keys and store them for local dev + CI."
-open_url "https://dashboard.stripe.com/test/apikeys"
-step "On the API keys page, copy the Publishable key (starts pk_test_)."
-ask STRIPE_PUBLISHABLE_KEY "Paste the publishable key:"
-step "Click 'Reveal test key' on the Secret key row, then copy it."
-ask_secret STRIPE_SECRET_KEY "Paste the secret key:"
-write_env STRIPE_PUBLISHABLE_KEY "$STRIPE_PUBLISHABLE_KEY"
-write_env STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"
-set_secret STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"   # CI needs this one
-# ──────────────────────────────────────────────────────────────────────────
 
 finish

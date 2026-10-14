@@ -70,7 +70,7 @@ heading when `development` is released to `master`.
   review (no skipping; records accepted/corrected/added), and a `vocabulary_hash` check in
   `load_gold`. `eval_enrichment.py` now scores against the curated vocabulary. The reviewed gold,
   baseline and CI gate wait on the maintainer's annotation.
-- Enrichment evaluation harness (#28): `legal_radar.answer_evaluation` scores enrichment edges against a
+- Enrichment evaluation harness (#28): `legal_radar.evaluation` scores enrichment edges against a
   gold set (per-edge precision/recall/F1 split by origin and relation type), computes the indirect
   metrics (target-resolved, valid-evidence and drop rates), applies a rules gate and an LLM gate
   from `evaluation.yml`, and can persist every input and output as JSONL. Run it with

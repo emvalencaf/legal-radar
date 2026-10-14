@@ -16,8 +16,8 @@ from pathlib import Path
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.anchors import ANCHORS
-from legal_radar.concepts import VOCABULARY_PATHS
 from legal_radar.answer_evaluation import QUESTION_PATHS
+from legal_radar.concepts import VOCABULARY_PATHS
 from legal_radar.ingest import ingest
 from legal_radar.pipeline import run
 
@@ -159,13 +159,17 @@ def main(argv: list[str] | None = None) -> None:
         if args.command == "eval":
             from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
             from legal_radar.answer import ask
+            from legal_radar.answer_evaluation import (
+                UsageMeter,
+                llm_flags_contradiction,
+                load_questions,
+            )
             from legal_radar.assayer_harness import (
                 Pricing,
                 ragas_llm_from_env,
                 run_evaluation,
             )
             from legal_radar.assunto import AssuntoResolver
-            from legal_radar.answer_evaluation import UsageMeter, llm_flags_contradiction, load_questions
             from legal_radar.prompts import default_lock
             from legal_radar.router_config import build_router, load_config
 

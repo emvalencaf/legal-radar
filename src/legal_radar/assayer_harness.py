@@ -1,7 +1,7 @@
 """Runs the evaluation under the `assayer` harness (`uv sync --extra eval`): it orchestrates the
-questions and counts tokens and cost per run; the custom metrics come from `legal_radar.answer_evaluation`
-and the flat grounding metric from RAGAS. Both libraries are imported lazily so the rest of the
-package runs without them."""
+questions and counts tokens and cost per run; the custom metrics come from
+`legal_radar.answer_evaluation` and the flat grounding metric from RAGAS. Both libraries are
+imported lazily so the rest of the package runs without them."""
 
 import json
 from collections.abc import Callable

@@ -215,6 +215,7 @@ if confirm "Push jurisprudencia-enrichment now?"; then
   uv run --extra prompts --with langchain-core python - <<'PY'
 from langchain_core.prompts.structured import StructuredPrompt
 from langsmith import Client
+from langsmith.utils import LangSmithConflictError
 
 from legal_radar.enricher import DECISION_SCHEMA, DECISION_TEMPLATE
 from legal_radar.enrichment import DECISION_PROMPT
@@ -222,7 +223,10 @@ from legal_radar.enrichment import DECISION_PROMPT
 prompt = StructuredPrompt.from_messages_and_schema(
     [("human", DECISION_TEMPLATE)], DECISION_SCHEMA
 )
-print(f"  pushed {DECISION_PROMPT}: {Client().push_prompt(DECISION_PROMPT, object=prompt)}")
+try:
+    print(f"  pushed {DECISION_PROMPT}: {Client().push_prompt(DECISION_PROMPT, object=prompt)}")
+except LangSmithConflictError:  # same content as the latest commit: nothing to publish
+    print(f"  {DECISION_PROMPT} is already published with this content; keeping its commit")
 PY
 else
   say "Skipped. Publish it by hand in the Playground, then continue."

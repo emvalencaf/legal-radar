@@ -1,6 +1,8 @@
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 from legal_radar.domain import Confidence, Dispositivo, Jurisprudencia, Origin, RelationType
 from legal_radar.enrichment import EXTRACTOR_VERSION
 from legal_radar.planalto import decode_html, parse_planalto
@@ -318,3 +320,37 @@ def test_a_decision_citation_of_a_dispositivo_the_graph_lacks_is_low():
     (r,) = extract_decision_relations(j, ingested={CC: {CC + "#art50"}}).relations
 
     assert r.confidence is Confidence.LOW
+
+
+def decision_targets(ementa):
+    result = extract_decision_relations(replace(DECISION, ementa=ementa))
+    return [r.target_id for r in result.relations]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Aplica-se o § 1º do art. 50 do Código Civil.", [CC + "#art50_par1"]),
+        ("O parágrafo único do art. 50 do CC.", [CC + "#art50_parUnico"]),
+        ("Os incisos I a II do art. 50 do CC.", [CC + "#art50_incI", CC + "#art50_incII"]),
+        ("O § 2º, inciso I, do art. 50 do CC.", [CC + "#art50_par2_incI"]),
+        ("Veja o do art. 50 do CC.", [CC + "#art50"]),  # `do` alone is no locator
+        ("Art. 50, § 1º, do CC.", [CC + "#art50_par1"]),  # a trailing locator wins
+    ],
+)
+def test_a_decision_reads_a_locator_before_the_artigo(text, expected):
+    assert decision_targets(text) == expected
+
+
+def test_a_dispositivo_keeps_ignoring_a_locator_before_the_artigo():
+    assert targets("o § 1º do art. 7º do Código Civil") == [CC + "#art7"]
+
+
+def test_a_leading_locator_is_covered_and_its_evidence_literal():
+    text = "Aplica-se o § 1º do art. 50 do Código Civil."
+
+    result = extract_decision_relations(replace(DECISION, ementa=text))
+
+    (r,) = result.relations
+    assert r.evidence == "§ 1º do art. 50 do Código Civil"
+    assert result.needs_llm == []

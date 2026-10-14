@@ -41,7 +41,7 @@ The ingestion step that turns bare structural `LegalChunk`s into `EnrichedLegalC
 _Avoid_: Conflating with parsing — parsing (`PlanaltoHtmlParser`) is structural and rule-only; enrichment is semantic.
 
 **Registro de enriquecimento**:
-The persisted state of a dispositivo that went through the LLM: its idempotency key, status (`ok` or `pending`) and count of dropped items. Kept outside the knowledge graph, which only receives validated edges. See ADR-0002 and ADR-0003.
+The persisted state of a dispositivo that went through the LLM: its source (a lei, or the court of a decision), idempotency key, status (`ok` or `pending`) and count of dropped items. Kept outside the knowledge graph, which only receives validated edges. See ADR-0002 and ADR-0003.
 _Avoid_: "Cache" (it does not hold the result), "log".
 
 **Pending**:

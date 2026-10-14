@@ -128,7 +128,7 @@ class EnrichmentRecord:
     enriquecimento). Kept outside the graph; `key` is the whole idempotency key."""
 
     chunk_id: str
-    lei_id: str
+    source_id: str  # the lei of a dispositivo, or the court of a decision: what groups records
     key: str
     status: EnrichmentStatus
     dropped: int = 0

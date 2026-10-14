@@ -52,10 +52,10 @@ class MetadataStore(Protocol):
     def record(self, record: EnrichmentRecord) -> None:
         """Upsert the chunk's record, stamping the update time."""
 
-    def records(self, lei_id: str) -> dict[str, EnrichmentRecord]:
-        """The records of one lei, by chunk id."""
+    def records(self, source_id: str) -> dict[str, EnrichmentRecord]:
+        """The records of one source (a lei or a court), by chunk id."""
 
-    def pending(self, lei_id: str, current_keys: dict[str, str]) -> list[str]:
+    def pending(self, source_id: str, current_keys: dict[str, str]) -> list[str]:
         """The chunks of `current_keys` (chunk id -> current key) that are pending: no record, a
         `pending` record, or a stored key that differs. Keeps the order of `current_keys`."""
 

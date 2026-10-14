@@ -48,6 +48,10 @@ _Avoid_: "Cache" (it does not hold the result), "log".
 A dispositivo whose `registro de enriquecimento` is missing, failed, or carries a key that no longer matches the current text, vocabulary, prompt or extractor. Only pending dispositivos are sent to the LLM again; their rule-derived edges are kept.
 _Avoid_: "Stale" or "dirty" as synonyms; "pending" is the one status name.
 
+**Enriquecimento de jurisprudência**:
+The enrichment of a `jurisprudência` decision: the LLM reads its ementa and tese (never the decisão) and links the decision to `conceito jurídico` entries of the `assunto`'s vocabulary. Only `APPLIES_TO`, `DEFINES` and `RELATES_TO` apply to a decision, always origin `llm` / MEDIUM; `evidence` is a literal slice of the ementa or of the tese. It does not resolve citations to dispositivos. See ADR-0003.
+_Avoid_: Treating a decision as a dispositivo: it has no lei, path or ancestors, and `OBLIGES`, `PROHIBITS` and `EXCEPTS` do not apply to it.
+
 **Confidence**:
 The reliability level of an extracted relation, derived from how it was extracted, never self-declared by the LLM: HIGH = a rule matched an explicit pattern in the text; MEDIUM = the LLM inferred it from context; LOW = unresolved target or stub. The origin (`rule` / `llm`) is stored on the edge too. See ADR-0002.
 _Avoid_: Treating an LLM's verbalized confidence as this value.

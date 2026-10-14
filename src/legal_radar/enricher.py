@@ -42,7 +42,7 @@ CONCEPT_RELATIONS = (
     RelationType.EXCEPTS,
     RelationType.RELATES_TO,
 )
-DECISION_RELATIONS = (RelationType.DEFINES, RelationType.APPLIES_TO, RelationType.RELATES_TO)
+DECISION_RELATIONS = CONCEPT_RELATIONS  # a thesis can require, forbid and carve out (ADR-0008)
 RELATION_DEFINITIONS = {
     RelationType.DEFINES: "o dispositivo define o conceito",
     RelationType.APPLIES_TO: "o dispositivo se aplica ao conceito (ator, situação, instituto)",
@@ -52,9 +52,12 @@ RELATION_DEFINITIONS = {
     RelationType.RELATES_TO: "relação que não se encaixa nas demais",
 }
 DECISION_DEFINITIONS = {
-    RelationType.DEFINES: "a decisão define o conceito",
-    RelationType.APPLIES_TO: "a decisão aplica o conceito (ator, situação, instituto)",
-    RelationType.RELATES_TO: "relação que não se encaixa nas demais",
+    RelationType.APPLIES_TO: "a corte aplica o conceito ao caso ou o toma por fundamento (padrão)",
+    RelationType.DEFINES: "a corte fixa o sentido do conceito; citar a lei não é definir",
+    RelationType.OBLIGES: "a posição da corte impõe dever, ônus ou requisito sobre o conceito",
+    RelationType.PROHIBITS: "a posição da corte veda ou não admite algo relativo ao conceito",
+    RelationType.EXCEPTS: "a posição da corte cria ressalva, limite ou afasta o conceito",
+    RelationType.RELATES_TO: "só se nenhuma outra couber e o conceito for central na decisão",
 }
 # Source of the Hub prompt `dispositivo-enrichment`. Everything before `## Dispositivo` is the
 # stable prefix shared by every call of an assunto, so providers can cache it.
@@ -89,10 +92,22 @@ Cada item de `referencias` tem `citacao`, `alvo` e `evidence`."""
 
 
 # Source of the Hub prompt `jurisprudencia-enrichment`; the stable prefix ends at `## Decisão`.
-DECISION_TEMPLATE = """Você relaciona decisões judiciais a conceitos do assunto "{assunto}".
+DECISION_TEMPLATE = """Você relaciona uma decisão judicial a conceitos do assunto "{assunto}".
+Seja conservador: uma lista vazia é a resposta esperada quando houver dúvida.
 
 ## Relações possíveis
 {relacoes}
+
+## Regras
+- Só conta a posição da própria corte. Ignore o que a parte alega ("o recorrente sustenta")
+  e o que a instância de origem decidiu ("o tribunal a quo entendeu").
+- Citar um dispositivo, transcrever doutrina ou apenas mencionar um conceito não é relação.
+- Uma negação muda a relação: se a corte afasta ou não admite o conceito, use EXCEPTS ou
+  PROHIBITS, nunca APPLIES_TO.
+- OBLIGES, PROHIBITS, EXCEPTS e DEFINES precisam de evidência da tese ou do que a corte
+  decide; na dúvida, use APPLIES_TO ou omita.
+- No máximo uma relação por conceito: a mais específica.
+- `evidence` é uma oração completa e literal, nunca um título ou cabeçalho em letras maiúsculas.
 
 ## Vocabulário de conceitos
 Use somente os ids abaixo. Se nenhum conceito se aplicar, devolva a lista vazia.
@@ -225,7 +240,7 @@ def enrich_decision(
     except (ValueError, KeyError, TypeError) as error:
         logger.warning("enrichment reply of %s is unusable: %s", j.id, error)
         return Enrichment(failed=str(error), **usage)
-    result = _Result(j.id, texts, vocabulary, DECISION_RELATIONS, [], set())
+    result = _Result(j.id, texts, vocabulary, DECISION_RELATIONS, [], set(), headings=False)
     for item in items:
         result.concept(item)
     return Enrichment(result.relations, [], result.dropped, result.out_of_vocabulary, **usage)
@@ -355,9 +370,12 @@ DECISION_SCHEMA = {
 class _Result:
     """Validates the reply item by item, keeping what passes and counting what does not."""
 
-    def __init__(self, source_id, texts, vocabulary, relations, citations, candidates):
+    def __init__(
+        self, source_id, texts, vocabulary, relations, citations, candidates, headings=True
+    ):
         self.source_id = source_id
         self.texts = texts
+        self.headings = headings  # whether evidence in capitals (a heading) is accepted
         self.allowed = {t.value for t in relations}
         self.ids = {c.id for c in vocabulary.conceitos}
         self.citations = {c.unresolved: c for c in citations}
@@ -420,6 +438,9 @@ class _Result:
             next(filter(None, (re.search(pattern, t) for t in self.texts)), None) if words else None
         )
         if match is None:
+            self._drop(item)
+            return None
+        if not self.headings and match[0].isupper():
             self._drop(item)
             return None
         return match[0]

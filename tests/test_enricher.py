@@ -11,6 +11,7 @@ from legal_radar.domain import (
     RelationType,
 )
 from legal_radar.enricher import (
+    CONCEPT_RELATIONS,
     DECISION_TEMPLATE,
     ENRICHMENT_TEMPLATE,
     enrich,
@@ -327,9 +328,24 @@ def test_decision_edge_is_medium_llm_with_evidence_from_the_ementa_or_the_tese()
     ]
 
 
-def test_decision_relations_exclude_the_norm_types_and_the_decisao_is_no_evidence():
+def test_a_decision_can_oblige_prohibit_and_except():
     items = [
-        {"conceito_id": "socio", "relacao": "OBLIGES", "evidence": "o sócio desvia"},
+        {"conceito_id": "socio", "relacao": kind, "evidence": "o sócio desvia"}
+        for kind in ("OBLIGES", "PROHIBITS", "EXCEPTS")
+    ]
+
+    result, _ = run_decision(reply(items))
+
+    assert [r.type for r in result.relations] == [
+        RelationType.OBLIGES,
+        RelationType.PROHIBITS,
+        RelationType.EXCEPTS,
+    ]
+
+
+def test_decision_drops_unknown_relations_the_decisao_and_cross_boundary_evidence():
+    items = [
+        {"conceito_id": "socio", "relacao": "INVENTADA", "evidence": "o sócio desvia"},
         {"conceito_id": "socio", "relacao": "RELATES_TO", "evidence": "Recurso provido"},
         {"conceito_id": "inventado", "relacao": "RELATES_TO", "evidence": "o sócio desvia"},
         {
@@ -346,7 +362,30 @@ def test_decision_relations_exclude_the_norm_types_and_the_decisao_is_no_evidenc
     assert "Recurso provido" not in provider.calls[0]
 
 
-def test_decision_schema_offers_only_the_three_relations():
+def test_decision_evidence_that_is_a_heading_in_capitals_is_dropped():
+    heading = Jurisprudencia(
+        "STJ:2", "STJ", "REsp 2", "ABUSO DA PERSONALIDADE JURÍDICA. Texto.", "d"
+    )
+    item = {
+        "conceito_id": "abuso",
+        "relacao": "APPLIES_TO",
+        "evidence": "ABUSO DA PERSONALIDADE JURÍDICA",
+    }
+
+    result, _ = run_decision(reply([item]), decision=heading)
+
+    assert result.relations == [] and result.dropped == 1
+
+
+def test_the_decision_prompt_guards_against_false_positives():
+    _, provider = run_decision()
+
+    prompt = provider.calls[0]
+    assert "lista vazia é a resposta esperada" in prompt and "o recorrente sustenta" in prompt
+    assert "APPLIES_TO: a corte aplica" in prompt and "OBLIGES: a posição da corte" in prompt
+
+
+def test_decision_schema_offers_the_six_concept_relations():
     seen = []
     provider = FakeProvider(script=[reply()])
     complete = provider.complete
@@ -356,7 +395,7 @@ def test_decision_schema_offers_only_the_three_relations():
 
     properties = seen[0].response_schema["properties"]
     enum = properties["conceitos"]["items"]["properties"]["relacao"]["enum"]
-    assert enum == ["DEFINES", "APPLIES_TO", "RELATES_TO"]
+    assert enum == [t.value for t in CONCEPT_RELATIONS]
     assert list(properties) == ["conceitos"]
 
 

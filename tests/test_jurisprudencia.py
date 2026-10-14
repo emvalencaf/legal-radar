@@ -198,8 +198,9 @@ def test_enrich_sends_each_decision_once_and_a_rerun_keeps_it():
 def test_enrich_writes_llm_concept_edges_with_the_decisions_own_evidence():
     store = MemoryStore()
     hit = next(h for h in stj().search("REsp 1873811", 10) if h.id == f"STJ:{STJ_SEED}")
-    words = hit.ementa.split()[:3]
-    reply = {"conceito_id": "abuso", "relacao": "APPLIES_TO", "evidence": " ".join(words)}
+    phrase = "a desconsideração da personalidade jurídica requer a efetiva comprovação"
+    assert phrase in hit.tese
+    reply = {"conceito_id": "abuso", "relacao": "APPLIES_TO", "evidence": phrase}
     provider = Scripted(script=[Completion(json.dumps({"conceitos": [reply]}))])
 
     enrich_run(SqliteMetadataStore(), provider, store)

@@ -2,7 +2,11 @@
 
 from dataclasses import dataclass, field
 
-from legal_radar.domain import Jurisprudencia
+from legal_radar.domain import EnrichmentRecord, EnrichmentStatus, Jurisprudencia
+from legal_radar.enricher import enrich_decision
+from legal_radar.enrichment import DECISION_PROMPT, enrichment_key
+from legal_radar.ingest import EnrichConfig, EnrichmentCounts
+from legal_radar.llm import ProviderError
 from legal_radar.ports import GraphStore, JurisprudenciaFetcher
 
 TOP_HITS = 5
@@ -16,6 +20,7 @@ class Seed:
     query: str  # narrow enough that the pinned decision is among its first results
 
 
+ASSUNTO = "desconsideração da personalidade jurídica"  # the assunto the seeds and searches serve
 SEEDS = [
     Seed("STJ", "202001090402", "REsp 1873811"),  # Tema Repetitivo 1210, core (CC art. 50)
     Seed("STF", "sjur550030", 'titulo:"RE 1387795"'),  # Tema 1232, tangential
@@ -30,9 +35,15 @@ SEARCHES = {
 class JurisprudenciaReport:
     ingested: int = 0
     failed: dict[str, str] = field(default_factory=dict)  # seed id or court -> reason
+    enrichment: dict[str, EnrichmentCounts] = field(default_factory=dict)  # court -> LLM phase
 
     def render(self) -> str:
         lines = [f"ingested {self.ingested} jurisprudência nodes"]
+        lines += [
+            f"enriched {court}: {c.processed} processed, {c.too_long} too long, {c.kept} kept, "
+            f"{c.returned} returned to pending, {c.left_pending} left pending"
+            for court, c in self.enrichment.items()
+        ]
         lines += [f"failed {key}: {reason}" for key, reason in self.failed.items()]
         return "\n".join(lines)
 
@@ -42,6 +53,7 @@ def ingest_jurisprudencia(
     store: GraphStore,
     seeds: list[Seed] = SEEDS,
     searches: dict[str, str] = SEARCHES,
+    enrichment: EnrichConfig | None = None,
 ) -> JurisprudenciaReport:
     report = JurisprudenciaReport()
     items: dict[str, Jurisprudencia] = {}
@@ -65,4 +77,67 @@ def ingest_jurisprudencia(
     if items:
         store.write_jurisprudencia(list(items.values()))
     report.ingested = len(items)
+    if enrichment:
+        _enrich(list(items.values()), store, enrichment, report)
     return report
+
+
+def _enrich(
+    items: list[Jurisprudencia],
+    store: GraphStore,
+    config: EnrichConfig,
+    report: JurisprudenciaReport,
+) -> None:
+    """Send each pending decision to `enrich_decision`, record the outcome and replace its `llm`
+    edges. The records are grouped by court. A reply that cannot be read leaves that decision
+    pending; an exhausted provider stops the calls and leaves the rest pending."""
+    limits = (
+        {} if config.max_input_tokens is None else {"max_input_tokens": config.max_input_tokens}
+    )
+    exhausted = False
+    for court in sorted({j.court for j in items}):
+        counts = report.enrichment[court] = EnrichmentCounts()
+        decisions = [j for j in items if j.court == court]
+        keys = {
+            j.id: enrichment_key(
+                f"{j.ementa}\n{j.tese or ''}",
+                config.vocabulary,
+                config.lock,
+                prompt=DECISION_PROMPT,
+            )
+            for j in decisions
+        }
+        stored = config.metadata.records(court)
+        pending = set(config.metadata.pending(court, keys))
+        counts.kept = len(decisions) - len(pending)
+        for j in decisions:
+            if j.id not in pending:
+                continue
+            record = EnrichmentRecord(j.id, court, keys[j.id], EnrichmentStatus.PENDING)
+            try:
+                result = (
+                    None
+                    if exhausted
+                    else enrich_decision(
+                        j, config.vocabulary, config.provider, config.lock, **limits
+                    )
+                )
+            except ProviderError:
+                result = None
+            if result is None or result.failed:
+                exhausted = exhausted or result is None
+                counts.left_pending += 1
+                config.metadata.record(record)
+                continue
+            store.replace_llm_relations(j.id, result.relations)
+            config.metadata.record(
+                EnrichmentRecord(
+                    j.id, court, keys[j.id], EnrichmentStatus.OK, result.dropped, result.skipped
+                )
+            )
+            if result.skipped == "too_long":
+                counts.too_long += 1
+                continue
+            counts.processed += 1
+            if (before := stored.get(j.id)) and before.status is EnrichmentStatus.OK:
+                counts.returned += 1

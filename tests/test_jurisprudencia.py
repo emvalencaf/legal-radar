@@ -143,3 +143,86 @@ def test_live_sources_return_the_seed_precedents():
     assert report.failed == {}
     ids = {j.id for j in store.jurisprudencia[0]}
     assert {f"STF:{STF_SEED}", f"STJ:{STJ_SEED}"} <= ids
+
+
+# --- ingest-jurisprudencia --enrich (#65) ---
+
+from legal_radar.adapters.fake_provider import FakeProvider  # noqa: E402
+from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore  # noqa: E402
+from legal_radar.concepts import Concept, Vocabulary  # noqa: E402
+from legal_radar.domain import EnrichmentStatus, RelationType  # noqa: E402
+from legal_radar.enricher import DECISION_TEMPLATE  # noqa: E402
+from legal_radar.enrichment import DECISION_PROMPT  # noqa: E402
+from legal_radar.ingest import EnrichConfig  # noqa: E402
+from legal_radar.llm import AllProvidersFailedError, Completion  # noqa: E402
+from legal_radar.prompts import refresh  # noqa: E402
+
+VOCAB = Vocabulary(
+    "desconsideração", (Concept("abuso", "Abuso", (), "Quando há abuso.", "REQUISITO"),)
+)
+SEEDS_ONLY = [Seed("STJ", STJ_SEED, "REsp 1873811")]
+NO_CONCEPTS = Completion('{"conceitos": []}')
+
+
+class Scripted(FakeProvider):
+    """Answers `NO_CONCEPTS` once the script runs out."""
+
+    def complete(self, prompt, params=None):
+        if not self.script:
+            self.script.append(NO_CONCEPTS)
+        return super().complete(prompt, params)
+
+
+def enrich_run(metadata, provider, store=None):
+    store = store or MemoryStore()
+    lock = refresh({DECISION_PROMPT: "c1"}, lambda name, commit: (DECISION_TEMPLATE, None))
+    config = EnrichConfig(VOCAB, provider, metadata, lock)
+    report = ingest_jurisprudencia(
+        {"STJ": stj()}, store, seeds=SEEDS_ONLY, searches={}, enrichment=config
+    )
+    return report, store
+
+
+def test_enrich_sends_each_decision_once_and_a_rerun_keeps_it():
+    metadata, provider, store = SqliteMetadataStore(), Scripted(), MemoryStore()
+
+    report, _ = enrich_run(metadata, provider, store)
+    again, _ = enrich_run(metadata, provider, store)
+
+    assert report.enrichment["STJ"].processed == 1 and len(provider.calls) == 1
+    assert again.enrichment["STJ"].kept == 1 and len(provider.calls) == 1
+    assert [chunk for chunk, _ in store.replaced] == [f"STJ:{STJ_SEED}"]
+    assert "enriched STJ: 1 processed" in report.render()
+
+
+def test_enrich_writes_llm_concept_edges_with_the_decisions_own_evidence():
+    store = MemoryStore()
+    hit = next(h for h in stj().search("REsp 1873811", 10) if h.id == f"STJ:{STJ_SEED}")
+    words = hit.ementa.split()[:3]
+    reply = {"conceito_id": "abuso", "relacao": "APPLIES_TO", "evidence": " ".join(words)}
+    provider = Scripted(script=[Completion(json.dumps({"conceitos": [reply]}))])
+
+    enrich_run(SqliteMetadataStore(), provider, store)
+
+    ((chunk, relations),) = store.replaced
+    assert chunk == hit.id
+    assert [(r.type, r.target_id, r.source_id) for r in relations] == [
+        (RelationType.APPLIES_TO, "abuso", hit.id)
+    ]
+
+
+def test_an_exhausted_provider_leaves_the_decision_pending():
+    metadata = SqliteMetadataStore()
+    provider = Scripted(script=[AllProvidersFailedError("down")])
+
+    report, store = enrich_run(metadata, provider)
+
+    assert report.enrichment["STJ"].left_pending == 1 and store.replaced == []
+    (record,) = metadata.records("STJ").values()
+    assert record.status is EnrichmentStatus.PENDING
+
+
+def test_without_enrich_no_provider_is_called_and_the_report_has_no_enrichment_line():
+    report = ingest_jurisprudencia({"STJ": stj()}, MemoryStore(), seeds=SEEDS_ONLY, searches={})
+
+    assert report.enrichment == {} and "enriched" not in report.render()

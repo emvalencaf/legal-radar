@@ -1,6 +1,7 @@
 """CLI: `legal-radar run [fixture]` runs the skeleton pipeline with a fake provider;
 `legal-radar ingest <assunto>` ingests the assunto's anchor leis from LexML/Planalto;
-`legal-radar ingest-jurisprudencia` ingests the seed precedents and top STF/STJ hits;
+`legal-radar ingest-jurisprudencia [--enrich]` ingests the seed precedents and top STF/STJ hits and,
+with --enrich, links each to the assunto's concepts;
 `legal-radar draft-concepts <assunto>` has an LLM draft concept candidates from the graph's corpus;
 `legal-radar ask "<query>"` resolves the assunto, traverses the graph and prints a cited answer;
 `legal-radar eval <assunto>` answers the assunto's question set and scores grounding, citations,
@@ -18,6 +19,7 @@ from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.anchors import ANCHORS
 from legal_radar.answer_evaluation import QUESTION_PATHS
 from legal_radar.concepts import VOCABULARY_PATHS
+from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
 from legal_radar.ingest import ingest
 from legal_radar.pipeline import run
 
@@ -37,11 +39,11 @@ def load_env(path: Path = ENV_PATH) -> None:
             os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
 
 
-def enrich_config(assunto: str):
-    """The LLM phase of `ingest --enrich`; a missing vocabulary or provider is an error."""
+def enrich_config(assunto: str, prompt: str = ENRICHMENT_PROMPT):
+    """The LLM phase of `ingest --enrich` and `ingest-jurisprudencia --enrich`, with the pinned
+    `prompt` the phase needs; a missing vocabulary or provider is an error."""
     from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore
     from legal_radar.concepts import VocabularyError, load_registered
-    from legal_radar.enrichment import ENRICHMENT_PROMPT
     from legal_radar.ingest import EnrichConfig
     from legal_radar.prompts import PromptError, default_lock
     from legal_radar.router_config import (
@@ -54,7 +56,7 @@ def enrich_config(assunto: str):
     )
 
     try:
-        default_lock().prompt_hash(ENRICHMENT_PROMPT)
+        default_lock().prompt_hash(prompt)
         vocabulary = load_registered(assunto)
         config = load_config("router.yaml")
         missing = providers_without_credentials(config)
@@ -68,7 +70,7 @@ def enrich_config(assunto: str):
         limit = enrichment_max_input_tokens(config)
     except (VocabularyError, PromptError, ValueError, OSError, KeyError) as error:
         raise SystemExit(
-            f"ingest --enrich needs a vocabulary, the enrichment prompt and a provider: {error}"
+            f"--enrich needs a vocabulary, the {prompt} prompt and a provider: {error}"
         ) from error
     return EnrichConfig(
         vocabulary,
@@ -95,7 +97,12 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="also send the chunks the rules left to the LLM; re-running resumes the pending ones",
     )
-    commands.add_parser("ingest-jurisprudencia")
+    jurisprudencia_cmd = commands.add_parser("ingest-jurisprudencia")
+    jurisprudencia_cmd.add_argument(
+        "--enrich",
+        action="store_true",
+        help="also link each decision to the assunto's concepts; re-running resumes the pending",
+    )
     draft_cmd = commands.add_parser("draft-concepts")
     draft_cmd.add_argument("assunto", choices=sorted(VOCABULARY_PATHS))
     commands.add_parser("refresh-prompts")
@@ -226,19 +233,23 @@ def main(argv: list[str] | None = None) -> None:
             from legal_radar.adapters.pages import BrowserPageSource
             from legal_radar.adapters.stf import StfFetcher
             from legal_radar.adapters.stj import StjFetcher
-            from legal_radar.jurisprudencia import ingest_jurisprudencia
+            from legal_radar.jurisprudencia import ASSUNTO, ingest_jurisprudencia
+
+            config = enrich_config(ASSUNTO, DECISION_PROMPT) if args.enrich else None
 
             browser = BrowserPageSource(
                 channel="chrome"
             )  # STJ's Cloudflare rejects bundled Chromium
             try:
                 fetchers = {"STF": StfFetcher(browser), "STJ": StjFetcher(browser)}
-                report = ingest_jurisprudencia(fetchers, store)
+                report = ingest_jurisprudencia(fetchers, store, enrichment=config)
                 print(report.render())
                 if report.failed:
                     raise SystemExit(1)
             finally:
                 browser.close()
+                if config:
+                    config.metadata.close()
             return
         ids = None
         if args.assunto:

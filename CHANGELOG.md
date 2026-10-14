@@ -14,6 +14,10 @@ heading when `development` is released to `master`.
   `jurisprudencia-enrichment`, and a schema that carries only `conceitos`. It returns
   `DEFINES`/`APPLIES_TO`/`RELATES_TO` edges, MEDIUM, origin `llm`; `evidence` is a literal slice of
   the ementa or of the tese; out-of-vocabulary and non-literal items are dropped and counted.
+  `legal-radar ingest-jurisprudencia --enrich` runs it over the ingested decisions, resumable like
+  `ingest --enrich` (records grouped by court), and the Neo4j store accepts `Jurisprudencia` as the
+  source of `llm` concept edges. The prompt is published to the Hub and pinned
+  (`scripts/setup-langsmith-decision-prompt.sh`).
 - `ingest <assunto> --enrich` sends the chunks the rules left to the LLM enricher and records each
   one (key, `ok`/`pending`, dropped count) in a SQLite metadata store apart from the graph (#29).
   Re-running resumes only `pending` chunks; a changed text, vocabulary, enrichment prompt or

@@ -2,12 +2,13 @@
 
 from dataclasses import dataclass, field
 
-from legal_radar.domain import EnrichmentRecord, EnrichmentStatus, Jurisprudencia
+from legal_radar.domain import EnrichmentRecord, EnrichmentStatus, Jurisprudencia, Relation
 from legal_radar.enricher import decision_texts, enrich_decision
 from legal_radar.enrichment import DECISION_PROMPT, enrichment_key
 from legal_radar.ingest import EnrichConfig, EnrichmentCounts
 from legal_radar.llm import ProviderError
 from legal_radar.ports import GraphStore, JurisprudenciaFetcher
+from legal_radar.relations import UrnResolver, extract_decision_relations
 
 TOP_HITS = 5
 SEED_WINDOW = 10  # results scanned for a pinned seed's native id
@@ -34,13 +35,18 @@ SEARCHES = {
 @dataclass
 class JurisprudenciaReport:
     ingested: int = 0
+    references: int = 0  # `rule` REFERENCES edges from decisions to the dispositivos they cite
+    unresolved: int = 0  # decisions with a citation no rule resolved (left for the LLM)
     failed: dict[str, str] = field(default_factory=dict)  # seed id or court -> reason
     enrichment: dict[str, EnrichmentCounts] = field(default_factory=dict)  # court -> LLM phase
     dropped: dict[str, int] = field(default_factory=dict)  # court -> items failing validation
     out_of_vocabulary: dict[str, list[str]] = field(default_factory=dict)  # court -> proposed ids
 
     def render(self) -> str:
-        lines = [f"ingested {self.ingested} jurisprudência nodes"]
+        lines = [
+            f"ingested {self.ingested} jurisprudência nodes, {self.references} references, "
+            f"{self.unresolved} decisions with unresolved citations"
+        ]
         lines += [
             f"enriched {court}: {c.processed} processed, {c.empty} empty, {c.too_long} too long, "
             f"{c.kept} kept, {c.returned} returned to pending, {c.left_pending} left pending, "
@@ -62,6 +68,7 @@ def ingest_jurisprudencia(
     seeds: list[Seed] = SEEDS,
     searches: dict[str, str] = SEARCHES,
     enrichment: EnrichConfig | None = None,
+    resolver: UrnResolver | None = None,
 ) -> JurisprudenciaReport:
     report = JurisprudenciaReport()
     items: dict[str, Jurisprudencia] = {}
@@ -83,7 +90,13 @@ def ingest_jurisprudencia(
         except Exception as error:
             report.failed[court] = str(error)
     if items:
-        store.write_jurisprudencia(list(items.values()))
+        relations: list[Relation] = []
+        for j in items.values():
+            extraction = extract_decision_relations(j, resolver)
+            relations += extraction.relations
+            report.unresolved += extraction.needs_enrichment
+        store.write_jurisprudencia(list(items.values()), relations)
+        report.references = len(relations)
     report.ingested = len(items)
     if enrichment:
         _enrich(list(items.values()), store, enrichment, report)

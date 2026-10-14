@@ -151,17 +151,14 @@ questions:
   - id: lacuna-clt-trabalhista
     query: Como a CLT trata o incidente de desconsideração da personalidade jurídica na Justiça do Trabalho?
     abstain: true
-  - id: lacuna-tema-1210
-    query: O que o STJ decidiu no Tema Repetitivo 1210 sobre a desconsideração da personalidade?
-    abstain: true
 # In the leis but not in the provision the traversal reaches.
   - id: lacuna-prazo-prescricional
     query: Qual é o prazo prescricional para pedir a desconsideração da personalidade jurídica?
     abstain: true
 
-# Parked until a decision is linked to the dispositivos it cites: today `write_jurisprudencia`
-# writes the nodes only, so no jurisprudência has an edge and the traversal cannot reach one.
-#  - id: tema-1210  (answerable once linked; until then `lacuna-tema-1210` expects abstention)
-#    query: O que o STJ decidiu no Tema Repetitivo 1210 sobre a desconsideração da personalidade?
-#    citations: ["STJ:202001090402"]
-#    nodes: ["urn:lex:br:federal:lei:2002-01-10;10406#art50", "STJ:202001090402"]
+# Answerable since decisions are linked to the dispositivos they cite (issue #76): the traversal
+# reaches the decision through its `REFERENCES` edge to CC art. 50.
+  - id: tema-1210
+    query: O que o STJ decidiu no Tema Repetitivo 1210 sobre a desconsideração da personalidade?
+    citations: ["STJ:202001090402"]
+    nodes: ["urn:lex:br:federal:lei:2002-01-10;10406#art50", "STJ:202001090402"]

@@ -268,3 +268,14 @@ def test_the_report_counts_dropped_items_and_lists_out_of_vocabulary_ids():
 
     assert "1 dropped" in report.render()
     assert "out of vocabulary STJ: inventado" in report.render()
+
+
+def test_ingestion_links_each_decision_to_the_dispositivos_it_cites():
+    store = MemoryStore()
+
+    report = ingest_jurisprudencia({"STF": stf(), "STJ": stj()}, store)
+
+    sources = {r.source_id for r in store.decision_relations}
+    assert sources <= {j.id for j in store.jurisprudencia[0]}
+    assert report.references == len(store.decision_relations) > 0
+    assert any(r.target_id and r.target_id.endswith("#art50") for r in store.decision_relations)

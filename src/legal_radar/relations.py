@@ -11,7 +11,14 @@ import re
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 
-from legal_radar.domain import Confidence, Dispositivo, Origin, Relation, RelationType
+from legal_radar.domain import (
+    Confidence,
+    Dispositivo,
+    Jurisprudencia,
+    Origin,
+    Relation,
+    RelationType,
+)
 from legal_radar.enrichment import EXTRACTOR_VERSION
 from legal_radar.lexml import LexmlError, search_urn
 from legal_radar.ports import PageSource
@@ -136,6 +143,23 @@ def extract_relations(
     return scan.result()
 
 
+def extract_decision_relations(
+    j: Jurisprudencia,
+    resolver: UrnResolver | None = None,
+    ingested: Mapping[str, Collection[str]] | None = None,
+) -> Extraction:
+    """Extract the REFERENCES edges of a decision from its ementa and tese (never the decisão).
+
+    A decision has no home lei, so a citation that names none (`art. 50` alone) is unresolved, and
+    `deste artigo` / `artigo anterior` mean nothing. Same confidence rules as `extract_relations`.
+    """
+    text = "\n\n".join(t for t in (j.ementa, j.tese) if t and t.strip())
+    scan = _Scan(Dispositivo(j.id, "", "", text), resolver, ingested)
+    for pattern in (_artigo_citations, _act_mentions, _leftover_marks):
+        pattern(scan)
+    return scan.result()
+
+
 @dataclass
 class _Scan:
     """The state one pass over a dispositivo shares between the pattern functions."""
@@ -218,7 +242,8 @@ def _artigo_citations(s: _Scan) -> None:
         if law is None and _UNKNOWN_LAW.match(s.masked, end):
             s.flag(m.start())  # a law the table does not know: not the same lei, not guessable
             continue
-        urn, label = (s.d.lei_id, "") if law is None else _law(law, s.d.lei_id, s.resolver)
+        home = s.d.lei_id or None  # a decision has none
+        urn, label = (home, "lei não informada") if law is None else _law(law, home, s.resolver)
         paths = _paths(m, loc)
         if paths is None:
             s.flag(m.start())
@@ -289,7 +314,9 @@ def _act(m: re.Match[str], resolver: UrnResolver | None) -> tuple[str | None, st
     return urn, f"{key[0]}:{key[1]}/{key[2]}"
 
 
-def _law(m: re.Match[str], this_lei: str, resolver: UrnResolver | None) -> tuple[str | None, str]:
+def _law(
+    m: re.Match[str], this_lei: str | None, resolver: UrnResolver | None
+) -> tuple[str | None, str]:
     if m["same"]:
         return this_lei, m["same"]
     if m["name"]:

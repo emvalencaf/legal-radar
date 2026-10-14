@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Decision → dispositivo links (#76): `extract_decision_relations` reads the ementa and tese of a
+  decision with the same rules as a dispositivo and yields `REFERENCES` edges (HIGH, origin `rule`);
+  a citation that names no lei stays unresolved (LOW) for the LLM. `ingest-jurisprudencia` writes
+  them through `write_jurisprudencia(items, relations)`, so the traversal reaches decisions and the
+  `tema-1210` eval question is active again. LLM resolution of unresolved decision citations is not
+  built yet.
 - Jurisprudência enrichment (#65): `legal_radar.enricher.enrich_decision` runs the concept
   enricher over a decision's ementa and tese (never the decisão) with its own prompt,
   `jurisprudencia-enrichment`, and a schema that carries only `conceitos`. It returns concept

@@ -3,6 +3,8 @@
 `legal-radar ingest-jurisprudencia` ingests the seed precedents and top STF/STJ hits;
 `legal-radar draft-concepts <assunto>` has an LLM draft concept candidates from the graph's corpus;
 `legal-radar ask "<query>"` resolves the assunto, traverses the graph and prints a cited answer;
+`legal-radar eval <assunto>` answers the assunto's question set and scores grounding, citations,
+contradictions and graph paths under assayer (needs `uv sync --extra eval`);
 `legal-radar refresh-prompts` re-snapshots the pinned LangSmith Hub prompts into prompts/lock.json;
 `legal-radar export-seed [path]` / `legal-radar seed [path]` write / rebuild the versioned seed."""
 
@@ -14,6 +16,7 @@ from pathlib import Path
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.anchors import ANCHORS
+from legal_radar.answer_evaluation import QUESTION_PATHS
 from legal_radar.concepts import VOCABULARY_PATHS
 from legal_radar.ingest import ingest
 from legal_radar.pipeline import run
@@ -97,6 +100,13 @@ def main(argv: list[str] | None = None) -> None:
     draft_cmd.add_argument("assunto", choices=sorted(VOCABULARY_PATHS))
     commands.add_parser("refresh-prompts")
     commands.add_parser("ask").add_argument("query")
+    eval_cmd = commands.add_parser("eval")
+    eval_cmd.add_argument("assunto", choices=sorted(QUESTION_PATHS))
+    eval_cmd.add_argument("--price-in", type=float, default=0.0, help="USD per million tokens in")
+    eval_cmd.add_argument("--price-out", type=float, default=0.0, help="USD per million tokens out")
+    eval_cmd.add_argument(
+        "--grounding", action="store_true", help="also score RAGAS faithfulness (RAGAS_* env vars)"
+    )
     for name in ("export-seed", "seed"):
         commands.add_parser(name).add_argument("path", nargs="?", type=Path, default=DEFAULT_SEED)
     args = parser.parse_args(argv)
@@ -145,6 +155,39 @@ def main(argv: list[str] | None = None) -> None:
             for c in result.citations:
                 path = " -> ".join(f"{h.type}({h.target})" for h in c.path) or "anchor"
                 print(f"- {c.kind} {c.id}: {path}")
+            return
+        if args.command == "eval":
+            from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
+            from legal_radar.answer import ask
+            from legal_radar.answer_evaluation import (
+                UsageMeter,
+                llm_flags_contradiction,
+                llm_states_insufficiency,
+                load_questions,
+            )
+            from legal_radar.assayer_harness import (
+                Pricing,
+                ragas_llm_from_env,
+                run_evaluation,
+            )
+            from legal_radar.assunto import AssuntoResolver
+            from legal_radar.prompts import default_lock
+            from legal_radar.router_config import build_router, load_config
+
+            meter = UsageMeter(build_router(load_config("router.yaml")))
+            reader, lock = Neo4jGraphReader(store.driver), default_lock()
+            report = run_evaluation(
+                load_questions(QUESTION_PATHS[args.assunto]),
+                lambda query: ask(query, AssuntoResolver(meter).resolve, reader, meter, lock),
+                meter,
+                llm_flags_contradiction(meter),
+                llm_states_insufficiency(meter),
+                pricing=Pricing(args.price_in, args.price_out),
+                grounding_llm=ragas_llm_from_env() if args.grounding else None,
+                prompt_snapshot=lock.snapshot_hash,
+            )
+            print(report.render())
+            print(f"wrote {report.write()}")
             return
         if args.command == "draft-concepts":
             from legal_radar.concepts import (

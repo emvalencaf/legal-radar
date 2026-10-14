@@ -1,0 +1,167 @@
+# Questions about the anchor assunto, with the citations and traversal nodes a correct answer has.
+# Ids are graph ids: `{lei urn}#{path}` for dispositivos, `{court}:{native id}` for decisions.
+# `citations`: what a good answer relies on (a dispositivo and the children that complete it).
+# `nodes`: the nodes the traversal crosses to reach them (the anchor and the PARTS between).
+# `contradictions` pair sources whose rules pull apart: the answer should say so.
+# Every id was read from the graph (CC art. 50 and CDC art. 28 subtrees, the anchors).
+assunto: desconsideração da personalidade jurídica
+questions:
+  - id: requisitos-cc
+    query: Quais são os requisitos para a desconsideração da personalidade jurídica no Código Civil?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par1"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par1"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2"
+  - id: abuso-definicao
+    query: O que o Código Civil considera desvio de finalidade na desconsideração?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par1"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par5"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par1"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par5"
+  - id: confusao-patrimonial
+    query: Como o Código Civil define a confusão patrimonial?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incI"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incII"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incIII"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incI"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incII"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incIII"
+  - id: expansao-finalidade
+    query: Ampliar ou alterar a atividade econômica da empresa caracteriza desvio de finalidade?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par5"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par5"
+  - id: extensao-inversa
+    query: As obrigações dos sócios podem ser estendidas à própria pessoa jurídica?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par3"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par3"
+  - id: quem-requer
+    query: Quem pode pedir a desconsideração no Código Civil e a quem se estendem os efeitos?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+  - id: grupo-economico-cc
+    query: A mera existência de grupo econômico basta para desconsiderar a personalidade no Código Civil?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par4"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par4"
+  - id: consumidor
+    query: Quando o juiz pode desconsiderar a personalidade jurídica em uma relação de consumo?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+  - id: insolvencia-cdc
+    query: A má administração que leva à falência autoriza a desconsideração no direito do consumidor?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+  - id: obstaculo-ressarcimento
+    query: Dá para desconsiderar a pessoa jurídica só porque ela atrapalha o ressarcimento do consumidor?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+  - id: grupo-societario-cdc
+    query: As sociedades de um grupo societário respondem pelas obrigações do Código de Defesa do Consumidor?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par2"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par2"
+  - id: consorciadas-coligadas
+    query: Como respondem as sociedades consorciadas e as coligadas perante o consumidor?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par3"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par4"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par3"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par4"
+  - id: teoria-menor
+    query: A desconsideração no direito do consumidor exige abuso da personalidade como no Código Civil?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+    contradictions:
+      - ["urn:lex:br:federal:lei:1990-09-11;8078#art28", "urn:lex:br:federal:lei:2002-01-10;10406#art50"]
+  - id: grupos-cc-vs-cdc
+    query: Como o Código Civil e o Código de Defesa do Consumidor tratam a responsabilidade de grupos econômicos?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par4"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par2"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par4"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par2"
+    contradictions:
+      - ["urn:lex:br:federal:lei:2002-01-10;10406#art50_par4", "urn:lex:br:federal:lei:1990-09-11;8078#art28_par2"]
+
+# Questions the graph cannot answer: a good answer cites nothing and says so (`abstain`).
+# Off the assunto: nothing resolves, so nothing is answered.
+  - id: fora-imposto-de-renda
+    query: Qual é a alíquota do imposto de renda para pessoa física em 2026?
+    abstain: true
+  - id: fora-guarda-compartilhada
+    query: Como funciona a guarda compartilhada dos filhos após o divórcio?
+    abstain: true
+  - id: fora-receita-de-bolo
+    query: Qual é a melhor receita de bolo de cenoura?
+    abstain: true
+# On the assunto, but the source is not in the graph (leis and decisions never ingested).
+  - id: lacuna-cpc-incidente
+    query: Como o Código de Processo Civil regula o incidente de desconsideração da personalidade jurídica?
+    abstain: true
+  - id: lacuna-lei-de-falencias
+    query: A Lei de Falências permite desconsiderar a personalidade jurídica do falido?
+    abstain: true
+  - id: lacuna-direito-ambiental
+    query: A Lei de Crimes Ambientais autoriza a desconsideração quando a personalidade for obstáculo à reparação?
+    abstain: true
+  - id: lacuna-clt-trabalhista
+    query: Como a CLT trata o incidente de desconsideração da personalidade jurídica na Justiça do Trabalho?
+    abstain: true
+  - id: lacuna-tema-1210
+    query: O que o STJ decidiu no Tema Repetitivo 1210 sobre a desconsideração da personalidade?
+    abstain: true
+# In the leis but not in the provision the traversal reaches.
+  - id: lacuna-prazo-prescricional
+    query: Qual é o prazo prescricional para pedir a desconsideração da personalidade jurídica?
+    abstain: true
+
+# Parked until a decision is linked to the dispositivos it cites: today `write_jurisprudencia`
+# writes the nodes only, so no jurisprudência has an edge and the traversal cannot reach one.
+#  - id: tema-1210  (answerable once linked; until then `lacuna-tema-1210` expects abstention)
+#    query: O que o STJ decidiu no Tema Repetitivo 1210 sobre a desconsideração da personalidade?
+#    citations: ["STJ:202001090402"]
+#    nodes: ["urn:lex:br:federal:lei:2002-01-10;10406#art50", "STJ:202001090402"]

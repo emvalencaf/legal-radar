@@ -99,6 +99,18 @@ heading when `development` is released to `master`.
   rules cannot read is returned in `needs_llm`. `Extraction` also carries the extractor version, the
   dropped-item count and `needs_enrichment` (unread text or an unresolved citation), so the two
   LLM-bound sets are never counted twice.
+- Evaluation harness (#44): `legal-radar eval <assunto>` (`make eval`) answers the question set in
+  `evals/` and scores it under `assayer` (`legal_radar.assayer_harness`, the `eval` extra):
+  custom, table-tested citation correctness, contradiction surfacing and graph-path metrics
+  (`legal_radar.answer_evaluation`), RAGAS faithfulness for flat grounding (`--grounding`, judge
+  model from `RAGAS_BASE_URL`/`RAGAS_MODEL`), and tokens and cost per run (`--price-in` and
+  `--price-out`, USD per million; zero by default). Results are written to `eval-runs/`.
+  `CitedAnswer` now carries the retrieved ids and each `Citation` its source text.
+  The question set has 23 questions with gabaritos read from the graph: 14 answerable and 9 the
+  graph cannot answer (off the assunto, leis and decisions never ingested). The latter are marked
+  `abstain: true` and scored by a custom abstention metric (an empty answer, or one that admits
+  the sources fall short) instead of citations and paths.
+
 - Retrieval and cited answer (#43): `legal-radar ask "<query>"` runs a LangGraph pipeline
   (`legal_radar.answer`: resolve assunto, traverse, generate) over the knowledge graph. The
   `GraphReader` port (`Neo4jGraphReader`) walks `PARTS` down from the anchor dispositivos (`AnchorLei.artigos`: CC art. 50, CDC art. 28; a lei with none starts from the whole lei, which was ~4,700 dispositivos and broke the model call), then 1 hop of

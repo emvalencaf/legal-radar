@@ -14,6 +14,10 @@ dependencies = [
 [project.optional-dependencies]
 browser = ["playwright>=1.40"]
 prompts = ["langsmith>=0.4"]
+eval = [
+    "assayer @ git+https://github.com/emvalencaf/assayer",
+    "ragas>=0.3",
+]
 
 [project.scripts]
 legal-radar = "legal_radar.__main__:main"
@@ -21,6 +25,9 @@ legal-radar = "legal_radar.__main__:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true  # the eval extra installs assayer from GitHub
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/legal_radar"]

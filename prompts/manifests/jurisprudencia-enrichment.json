@@ -1,0 +1,91 @@
+{
+  "lc": 1,
+  "type": "constructor",
+  "id": [
+    "langchain_core",
+    "prompts",
+    "structured",
+    "StructuredPrompt"
+  ],
+  "kwargs": {
+    "input_variables": [
+      "assunto",
+      "ementa",
+      "numero",
+      "relacoes",
+      "tese",
+      "tribunal",
+      "vocabulario"
+    ],
+    "messages": [
+      {
+        "lc": 1,
+        "type": "constructor",
+        "id": [
+          "langchain",
+          "prompts",
+          "chat",
+          "HumanMessagePromptTemplate"
+        ],
+        "kwargs": {
+          "prompt": {
+            "lc": 1,
+            "type": "constructor",
+            "id": [
+              "langchain",
+              "prompts",
+              "prompt",
+              "PromptTemplate"
+            ],
+            "kwargs": {
+              "input_variables": [
+                "assunto",
+                "ementa",
+                "numero",
+                "relacoes",
+                "tese",
+                "tribunal",
+                "vocabulario"
+              ],
+              "template": "Você relaciona decisões judiciais a conceitos do assunto \"{assunto}\".\n\n## Relações possíveis\n{relacoes}\n\n## Vocabulário de conceitos\nUse somente os ids abaixo. Se nenhum conceito se aplicar, devolva a lista vazia.\n{vocabulario}\n\n## Decisão\nTribunal: {tribunal}\nNúmero: {numero}\n\nEmenta:\n{ementa}\n\nTese:\n{tese}\n\nResponda em JSON. `evidence` é sempre um trecho literal da ementa ou da tese.\nCada item de `conceitos` tem `conceito_id`, `relacao` e `evidence`.",
+              "template_format": "f-string"
+            },
+            "name": "PromptTemplate"
+          }
+        }
+      }
+    ],
+    "schema_": {
+      "title": "jurisprudencia_enrichment",
+      "type": "object",
+      "properties": {
+        "conceitos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "conceito_id": {
+                "type": "string"
+              },
+              "relacao": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "conceito_id",
+              "relacao",
+              "evidence"
+            ]
+          }
+        }
+      },
+      "required": [
+        "conceitos"
+      ]
+    }
+  },
+  "name": "StructuredPrompt"
+}

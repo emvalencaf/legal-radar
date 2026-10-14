@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
@@ -57,3 +59,41 @@ def test_usage_meter_is_reset_per_question():
         experiment="t",
     )
     assert [q["input_tokens"] for q in report.questions] == [4, 4]
+
+
+ROWS = [
+    {"user_input": "q1", "response": "a1", "retrieved_contexts": ["c1"]},
+    {"user_input": "q2", "response": "a2", "retrieved_contexts": ["c2"]},
+    {"user_input": "q3", "response": "a3", "retrieved_contexts": ["c3"]},
+]
+
+
+def test_ragas_imports_despite_the_dropped_vertexai_module():
+    from legal_radar.assayer_harness import _import_ragas
+
+    _import_ragas()
+    from ragas.metrics import Faithfulness
+
+    assert Faithfulness().name == "faithfulness"
+
+
+def test_ragas_faithfulness_scores_each_row_and_drops_failed_judge_scores(monkeypatch):
+    import ragas
+
+    from legal_radar.assayer_harness import ragas_faithfulness
+
+    seen = {}
+
+    nan = float("nan")
+    result = SimpleNamespace(
+        scores=[{"faithfulness": 1.0}, {"faithfulness": nan}, {"faithfulness": 0.5}]
+    )
+
+    def fake_evaluate(dataset, metrics, llm):
+        seen.update(rows=len(dataset), metrics=[m.name for m in metrics], llm=llm)
+        return result
+
+    monkeypatch.setattr(ragas, "evaluate", fake_evaluate)
+
+    assert ragas_faithfulness(ROWS, "judge") == [1.0, 0.5]
+    assert seen == {"rows": 3, "metrics": ["faithfulness"], "llm": "judge"}

@@ -51,7 +51,8 @@ class Report:
         lines.append(
             f"  tokens: {self.input_tokens} in, {self.output_tokens} out; "
             f"cost: ${self.cost_usd:.4f} (zero unless --price-in/--price-out are set; "
-            "RAGAS judge calls are not counted)"
+            "RAGAS judge calls are not counted; the totals include the contradiction judge, "
+            "which the per-question tokens do not)"
         )
         return "\n".join(lines)
 
@@ -193,7 +194,7 @@ def run_evaluation(
         for q in questions
     ]
     evaluators, metrics = build_registries(flags_contradiction)
-    name = experiment or datetime.now(UTC).strftime("eval-%Y%m%dT%H%M%SZ")
+    name = experiment or datetime.now(UTC).strftime("eval-%Y%m%dT%H%M%S%fZ")
     result = EvaluationPipeline(
         target_fn=target,
         dataset=dataset,

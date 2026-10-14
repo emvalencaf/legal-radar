@@ -33,7 +33,8 @@ questions:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
     contradictions:
       - ["urn:lex:br:federal:lei:1990-09-11;8078#art28", "urn:lex:br:federal:lei:2002-01-10;10406#art50"]
-  - id: tema-1210
-    query: O que o STJ decidiu no Tema Repetitivo 1210 sobre a desconsideração da personalidade?
-    citations: ["STJ:202001090402"]
-    nodes: ["urn:lex:br:federal:lei:2002-01-10;10406#art50", "STJ:202001090402"]
+# Parked until the graph has `REFERENCES` edges: decisions are unreachable, so this scores 0.
+#   - id: tema-1210
+#     query: O que o STJ decidiu no Tema Repetitivo 1210 sobre a desconsideração da personalidade?
+#     citations: ["STJ:202001090402"]
+#     nodes: ["urn:lex:br:federal:lei:2002-01-10;10406#art50", "STJ:202001090402"]

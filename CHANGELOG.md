@@ -102,10 +102,10 @@ heading when `development` is released to `master`.
 - Evaluation harness (#44): `legal-radar eval <assunto>` (`make eval`) answers the question set in
   `evals/` and scores it under `assayer` (`legal_radar.assayer_harness`, the `eval` extra):
   custom, table-tested citation correctness, contradiction surfacing and graph-path metrics
-  (`legal_radar.answer_evaluation`), RAGAS faithfulness for flat grounding (`--grounding`, judge model from
-  `RAGAS_BASE_URL`/`RAGAS_MODEL`), and tokens and cost per run (`--price-in`/`--price-out`, USD per
-  million; zero by default). Results are written to `eval-runs/`. `CitedAnswer` now carries the
-  retrieved ids and each `Citation` its source text. Run against the live graph (CC art. 50 and CDC art. 28 ids confirmed): the graph has no `REFERENCES` edges yet, so decisions are unreachable and `tema-1210` scores 0. The RAGAS judge must accept `response_format: json_object`, which LM Studio does not (Gemini's OpenAI-compatible endpoint does); RAGAS 0.4 needs a stub for the `ChatVertexAI` import langchain-community 0.4 dropped.
+  (`legal_radar.answer_evaluation`), RAGAS faithfulness for flat grounding (`--grounding`, judge
+  model from `RAGAS_BASE_URL`/`RAGAS_MODEL`), and tokens and cost per run (`--price-in` and
+  `--price-out`, USD per million; zero by default). Results are written to `eval-runs/`.
+  `CitedAnswer` now carries the retrieved ids and each `Citation` its source text.
 
 - Retrieval and cited answer (#43): `legal-radar ask "<query>"` runs a LangGraph pipeline
   (`legal_radar.answer`: resolve assunto, traverse, generate) over the knowledge graph. The

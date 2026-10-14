@@ -149,7 +149,9 @@ providers and `uv sync --extra eval`). It scores citation correctness, contradic
 graph paths, plus RAGAS faithfulness with `--grounding` (judge model from `RAGAS_BASE_URL` and
 `RAGAS_MODEL`, `RAGAS_API_KEY`; the endpoint must accept `json_object` output, so not LM Studio),
 tracks tokens and cost (`--price-in`/`--price-out`, USD per million) and writes the
-result to `eval-runs/`.
+result to `eval-runs/`. The `tema-1210` question is parked (commented in `evals/`) until the graph
+has `REFERENCES` edges, since decisions are unreachable without them. RAGAS 0.4 needs a stub for
+the `ChatVertexAI` import that langchain-community 0.4 dropped; the harness applies it.
 
 ```bash
 make eval

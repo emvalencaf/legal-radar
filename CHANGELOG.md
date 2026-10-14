@@ -106,6 +106,10 @@ heading when `development` is released to `master`.
   model from `RAGAS_BASE_URL`/`RAGAS_MODEL`), and tokens and cost per run (`--price-in` and
   `--price-out`, USD per million; zero by default). Results are written to `eval-runs/`.
   `CitedAnswer` now carries the retrieved ids and each `Citation` its source text.
+  The question set has 23 questions with gabaritos read from the graph: 14 answerable and 9 the
+  graph cannot answer (off the assunto, leis and decisions never ingested). The latter are marked
+  `abstain: true` and scored by a custom abstention metric (an empty answer, or one that admits
+  the sources fall short) instead of citations and paths.
 
 - Retrieval and cited answer (#43): `legal-radar ask "<query>"` runs a LangGraph pipeline
   (`legal_radar.answer`: resolve assunto, traverse, generate) over the knowledge graph. The

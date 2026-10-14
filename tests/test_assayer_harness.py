@@ -97,3 +97,27 @@ def test_ragas_faithfulness_scores_each_row_and_drops_failed_judge_scores(monkey
 
     assert ragas_faithfulness(ROWS, "judge") == [1.0, 0.5]
     assert seen == {"rows": 3, "metrics": ["faithfulness"], "llm": "judge"}
+
+
+def test_an_abstain_question_is_scored_on_abstention_only():
+    meter = UsageMeter(FakeProvider())
+
+    def ask(query: str) -> CitedAnswer:
+        if query == "off topic":
+            return CitedAnswer(query, None, None, [], [])
+        return CitedAnswer(query, "x", "ok", [Citation(A, "Dispositivo", [], "t")], [A])
+
+    questions = [
+        Question("answerable", "right", (A,), (A,)),
+        Question("off", "off topic", (), (), abstain=True),
+        Question("made-up", "gap", (), (), abstain=True),
+    ]
+    report = run_evaluation(
+        questions, ask, meter, lambda answer: False, lambda answer: False, experiment="abstain"
+    )
+    scores = [q["scores"] for q in report.questions]
+    assert scores[0].keys() == {"citation_correctness", "graph_path"}
+    assert scores[1] == {"abstention": 1.0}  # no answer, nothing to cite
+    assert scores[2] == {"abstention": 0.0}  # answered as if the graph held it
+    assert report.scores["abstention"] == 0.5
+    assert report.scores["citation_correctness"] == 1.0  # the abstain questions are not in it

@@ -28,6 +28,7 @@ class Question:
     citations: tuple[str, ...]  # ids a correct answer cites
     nodes: tuple[str, ...]  # nodes the traversal should walk through to reach those citations
     contradictions: tuple[tuple[str, str], ...] = ()  # cited sources that disagree: flag it
+    abstain: bool = False  # the graph cannot answer it: a good answer says so, citing nothing
 
 
 @dataclass(frozen=True)
@@ -52,15 +53,21 @@ def load_questions(path: Path) -> list[Question]:
         Question(
             q["id"],
             q["query"],
-            tuple(q["citations"]),
-            tuple(q["nodes"]),
+            tuple(q.get("citations", ())),
+            tuple(q.get("nodes", ())),
             tuple((a, b) for a, b in q.get("contradictions", [])),
+            bool(q.get("abstain", False)),
         )
         for q in raw["questions"]
     ]
     ids = [q.id for q in questions]
     if len(ids) != len(set(ids)):
         raise ValueError(f"{path}: duplicate question ids")
+    for q in questions:
+        if q.abstain and (q.citations or q.nodes or q.contradictions):
+            raise ValueError(f"{path}: {q.id} abstains, so it can expect no citation or node")
+        if not q.abstain and not q.citations:
+            raise ValueError(f"{path}: {q.id} expects no citation: mark it `abstain: true`")
     return questions
 
 
@@ -147,6 +154,17 @@ class UsageMeter:
         return self.input_tokens, self.output_tokens
 
 
+def abstention(
+    answer: str, expected: bool, states_insufficient: Callable[[str], bool]
+) -> float | None:
+    """For a question the graph cannot answer: 1.0 when the answer is empty (no assunto, no
+    sources) or the judge says it admits its sources fall short, else 0.0. None when the question
+    is answerable."""
+    if not expected:
+        return None
+    return 1.0 if not answer.strip() or states_insufficient(answer) else 0.0
+
+
 class Outcome(dict):
     """What one question yields: a dict assayer routes by field, with the `usage_metadata` it
     reads token counts from."""
@@ -166,6 +184,7 @@ def outcome_of(answer: CitedAnswer, usage: tuple[int, int]) -> Outcome:
         citation_check={"cited": cited, "retrieved": list(answer.retrieved)},
         path=sorted(path_nodes(answer.citations)),
         contradiction_check={"answer": text, "cited": cited},
+        abstention_check={"answer": text},
     )
     outcome.usage_metadata = {"input_tokens": usage[0], "output_tokens": usage[1]}
     return outcome
@@ -191,5 +210,30 @@ def llm_flags_contradiction(provider: Provider) -> Callable[[str], bool]:
             prompt, CompletionParams(pipeline_step="eval-contradiction", response_schema=schema)
         )
         return bool(json.loads(reply.text)["flags"])
+
+    return judge
+
+
+def llm_states_insufficiency(provider: Provider) -> Callable[[str], bool]:
+    """A judge that asks the model whether an answer admits its sources fall short."""
+    schema = {
+        "title": "states_insufficiency",
+        "type": "object",
+        "properties": {"insufficient": {"type": "boolean"}},
+        "required": ["insufficient"],
+        "additionalProperties": False,
+    }
+
+    def judge(answer: str) -> bool:
+        prompt = (
+            "A resposta abaixo foi dada a partir de fontes jurídicas que não respondem à "
+            "pergunta. Ela admite que as fontes não bastam (ou que não há resposta nelas), em "
+            "vez de responder como se bastassem? Responda em `insufficient`.\n\n"
+            f"Resposta: {answer}"
+        )
+        reply = provider.complete(
+            prompt, CompletionParams(pipeline_step="eval-abstention", response_schema=schema)
+        )
+        return bool(json.loads(reply.text)["insufficient"])
 
     return judge

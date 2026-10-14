@@ -162,6 +162,7 @@ def main(argv: list[str] | None = None) -> None:
             from legal_radar.answer_evaluation import (
                 UsageMeter,
                 llm_flags_contradiction,
+                llm_states_insufficiency,
                 load_questions,
             )
             from legal_radar.assayer_harness import (
@@ -180,6 +181,7 @@ def main(argv: list[str] | None = None) -> None:
                 lambda query: ask(query, AssuntoResolver(meter).resolve, reader, meter, lock),
                 meter,
                 llm_flags_contradiction(meter),
+                llm_states_insufficiency(meter),
                 pricing=Pricing(args.price_in, args.price_out),
                 grounding_llm=ragas_llm_from_env() if args.grounding else None,
                 prompt_snapshot=lock.snapshot_hash,

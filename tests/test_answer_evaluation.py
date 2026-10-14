@@ -7,6 +7,7 @@ from legal_radar.answer import Citation, CitedAnswer
 from legal_radar.answer_evaluation import (
     Question,
     UsageMeter,
+    abstention,
     citation_correctness,
     contradiction_surfaced,
     graph_path,
@@ -147,3 +148,33 @@ def test_the_shipped_question_set_loads():
     for path in QUESTION_PATHS.values():
         assert len(load_questions(path)) >= 5
         json.dumps([q.query for q in load_questions(path)])
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected", "judge", "score"),
+    [
+        ("", True, False, 1.0),  # nothing resolved: no answer is the right one
+        ("   ", True, False, 1.0),
+        ("As fontes não tratam disso.", True, True, 1.0),
+        ("O prazo é de dez anos.", True, False, 0.0),  # answered as if the sources sufficed
+        ("O prazo é de dez anos.", False, False, None),  # answerable: not scored
+        ("", False, True, None),
+    ],
+)
+def test_abstention(answer, expected, judge, score):
+    assert abstention(answer, expected, lambda a: judge) == score
+
+
+def test_an_abstain_question_expects_no_citation_and_an_answerable_one_expects_some(tmp_path):
+    path = tmp_path / "q.yml"
+    path.write_text(
+        "questions:\n  - {id: a, query: q, abstain: true, citations: [x], nodes: []}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="abstains"):
+        load_questions(path)
+    path.write_text(
+        "questions:\n  - {id: a, query: q, citations: [], nodes: []}\n", encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="abstain: true"):
+        load_questions(path)

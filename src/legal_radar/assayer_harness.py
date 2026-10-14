@@ -14,6 +14,7 @@ from legal_radar.answer_evaluation import (
     Outcome,
     Question,
     UsageMeter,
+    abstention,
     citation_correctness,
     contradiction_surfaced,
     graph_path,
@@ -22,6 +23,7 @@ from legal_radar.answer_evaluation import (
 
 RUNS_DIR = Path(__file__).resolve().parents[2] / "eval-runs"
 CITATIONS, PATH, CONTRADICTIONS = "citation_check", "path", "contradiction_check"
+ABSTENTION = "abstention_check"
 
 
 @dataclass(frozen=True)
@@ -65,7 +67,10 @@ class Report:
         return path
 
 
-def build_registries(flags_contradiction: Callable[[str], bool]):
+def build_registries(
+    flags_contradiction: Callable[[str], bool],
+    states_insufficient: Callable[[str], bool] = lambda answer: False,
+):
     """assayer evaluator and metric registries holding the three custom evaluators."""
     from assayer.evaluators.base import BaseEvaluator
     from assayer.models import FieldEvaluation
@@ -80,6 +85,7 @@ def build_registries(flags_contradiction: Callable[[str], bool]):
                     "precision": score.precision,
                     "recall": score.recall,
                     "fabricated": score.fabricated,
+                    "applicable": bool(reference),  # no expected citation: an abstain question
                 },
             )  # fmt: skip
 
@@ -88,7 +94,11 @@ def build_registries(flags_contradiction: Callable[[str], bool]):
             score = graph_path(set(prediction), set(reference))
             return FieldEvaluation(
                 PATH, "graph_path", reference, prediction, score.f1, None,
-                {"precision": score.precision, "recall": score.recall},
+                {
+                    "precision": score.precision,
+                    "recall": score.recall,
+                    "applicable": bool(reference),
+                },
             )  # fmt: skip
 
     class ContradictionEvaluator(BaseEvaluator):
@@ -104,10 +114,19 @@ def build_registries(flags_contradiction: Callable[[str], bool]):
                 surfaced or 0.0, None, {"applicable": surfaced is not None},
             )  # fmt: skip
 
+    class AbstentionEvaluator(BaseEvaluator):
+        def evaluate(self, prediction, reference, **kwargs):
+            score = abstention(prediction["answer"], bool(reference), states_insufficient)
+            return FieldEvaluation(
+                ABSTENTION, "abstention", reference, prediction["answer"], score or 0.0, None,
+                {"applicable": score is not None},
+            )  # fmt: skip
+
     evaluators = EvaluatorRegistry()
     evaluators.register("citation_correctness", CitationEvaluator)
     evaluators.register("graph_path", PathEvaluator)
     evaluators.register("contradiction_surfaced", ContradictionEvaluator)
+    evaluators.register("abstention", AbstentionEvaluator)
     return evaluators, MetricRegistry()
 
 
@@ -155,6 +174,7 @@ def aggregate(runs) -> dict[str, float | None]:
                 values.setdefault("fabricated_citations", []).append(len(e.metadata["fabricated"]))
     scores: dict[str, float | None] = {k: sum(v) / len(v) for k, v in values.items()}
     scores.setdefault("contradiction_surfaced", None)  # no question labeled a contradiction
+    scores.setdefault("abstention", None)  # no question the graph cannot answer
     return scores
 
 
@@ -163,6 +183,7 @@ def run_evaluation(
     ask: Callable[[str], CitedAnswer],
     meter: UsageMeter,
     flags_contradiction: Callable[[str], bool],
+    states_insufficient: Callable[[str], bool] = lambda answer: False,
     *,
     pricing: Pricing | None = None,
     grounding_llm=None,
@@ -189,11 +210,12 @@ def run_evaluation(
                 CITATIONS: list(q.citations),
                 PATH: list(q.nodes),
                 CONTRADICTIONS: [list(pair) for pair in q.contradictions],
+                ABSTENTION: q.abstain,
             },
         }
         for q in questions
     ]
-    evaluators, metrics = build_registries(flags_contradiction)
+    evaluators, metrics = build_registries(flags_contradiction, states_insufficient)
     name = experiment or datetime.now(UTC).strftime("eval-%Y%m%dT%H%M%S%fZ")
     result = EvaluationPipeline(
         target_fn=target,
@@ -202,6 +224,7 @@ def run_evaluation(
             CITATIONS: ["citation_correctness"],
             PATH: ["graph_path"],
             CONTRADICTIONS: ["contradiction_surfaced"],
+            ABSTENTION: ["abstention"],
         },
         metrics=[],
         evaluator_registry=evaluators,

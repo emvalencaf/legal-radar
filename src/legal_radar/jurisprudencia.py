@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 from legal_radar.domain import EnrichmentRecord, EnrichmentStatus, Jurisprudencia
-from legal_radar.enricher import enrich_decision
+from legal_radar.enricher import decision_texts, enrich_decision
 from legal_radar.enrichment import DECISION_PROMPT, enrichment_key
 from legal_radar.ingest import EnrichConfig, EnrichmentCounts
 from legal_radar.llm import ProviderError
@@ -36,13 +36,21 @@ class JurisprudenciaReport:
     ingested: int = 0
     failed: dict[str, str] = field(default_factory=dict)  # seed id or court -> reason
     enrichment: dict[str, EnrichmentCounts] = field(default_factory=dict)  # court -> LLM phase
+    dropped: dict[str, int] = field(default_factory=dict)  # court -> items failing validation
+    out_of_vocabulary: dict[str, list[str]] = field(default_factory=dict)  # court -> proposed ids
 
     def render(self) -> str:
         lines = [f"ingested {self.ingested} jurisprudência nodes"]
         lines += [
-            f"enriched {court}: {c.processed} processed, {c.too_long} too long, {c.kept} kept, "
-            f"{c.returned} returned to pending, {c.left_pending} left pending"
+            f"enriched {court}: {c.processed} processed, {c.empty} empty, {c.too_long} too long, "
+            f"{c.kept} kept, {c.returned} returned to pending, {c.left_pending} left pending, "
+            f"{self.dropped.get(court, 0)} dropped"
             for court, c in self.enrichment.items()
+        ]
+        lines += [
+            f"out of vocabulary {court}: {', '.join(sorted(set(ids)))}"
+            for court, ids in self.out_of_vocabulary.items()
+            if ids
         ]
         lines += [f"failed {key}: {reason}" for key, reason in self.failed.items()]
         return "\n".join(lines)
@@ -100,7 +108,7 @@ def _enrich(
         decisions = [j for j in items if j.court == court]
         keys = {
             j.id: enrichment_key(
-                f"{j.ementa}\n{j.tese or ''}",
+                "\n".join(decision_texts(j)),
                 config.vocabulary,
                 config.lock,
                 prompt=DECISION_PROMPT,
@@ -135,8 +143,13 @@ def _enrich(
                     j.id, court, keys[j.id], EnrichmentStatus.OK, result.dropped, result.skipped
                 )
             )
-            if result.skipped == "too_long":
-                counts.too_long += 1
+            report.dropped[court] = report.dropped.get(court, 0) + result.dropped
+            report.out_of_vocabulary.setdefault(court, []).extend(result.out_of_vocabulary)
+            if result.skipped:
+                if result.skipped == "too_long":
+                    counts.too_long += 1
+                else:
+                    counts.empty += 1
                 continue
             counts.processed += 1
             if (before := stored.get(j.id)) and before.status is EnrichmentStatus.OK:

@@ -399,8 +399,8 @@ def test_decision_schema_offers_the_six_concept_relations():
     assert list(properties) == ["conceitos"]
 
 
-def test_decision_without_ementa_and_tese_is_skipped():
-    empty = Jurisprudencia("STF:1", "STF", "RE 1", " ", "decisão")
+def test_decision_without_ementa_is_skipped():
+    empty = Jurisprudencia("STF:1", "STF", "RE 1", " ", "decisão", "uma tese")
 
     result, provider = run_decision(decision=empty)
 

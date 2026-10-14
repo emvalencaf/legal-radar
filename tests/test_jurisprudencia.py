@@ -227,3 +227,44 @@ def test_without_enrich_no_provider_is_called_and_the_report_has_no_enrichment_l
     report = ingest_jurisprudencia({"STJ": stj()}, MemoryStore(), seeds=SEEDS_ONLY, searches={})
 
     assert report.enrichment == {} and "enriched" not in report.render()
+
+
+def test_an_unreadable_reply_leaves_the_decision_pending():
+    metadata = SqliteMetadataStore()
+
+    report, store = enrich_run(metadata, Scripted(script=[Completion("não é json")]))
+
+    assert report.enrichment["STJ"].left_pending == 1 and store.replaced == []
+    (record,) = metadata.records("STJ").values()
+    assert record.status is EnrichmentStatus.PENDING
+
+
+def test_changing_the_vocabulary_or_the_prompt_enriches_the_decision_again():
+    metadata, provider = SqliteMetadataStore(), Scripted()
+    enrich_run(metadata, provider)
+    other = Vocabulary("desconsideração", (Concept("socio", "Sócio", (), "Sócios.", "ATOR"),))
+
+    def run_with(vocabulary, template):
+        lock = refresh({DECISION_PROMPT: "c2"}, lambda name, commit: (template, None))
+        config = EnrichConfig(vocabulary, provider, metadata, lock)
+        return ingest_jurisprudencia(
+            {"STJ": stj()}, MemoryStore(), seeds=SEEDS_ONLY, searches={}, enrichment=config
+        )
+
+    assert run_with(other, DECISION_TEMPLATE).enrichment["STJ"].returned == 1
+    assert run_with(other, DECISION_TEMPLATE + " ").enrichment["STJ"].returned == 1
+    assert len(provider.calls) == 3
+
+
+def test_the_report_counts_dropped_items_and_lists_out_of_vocabulary_ids():
+    item = {
+        "conceito_id": "inventado",
+        "relacao": "APPLIES_TO",
+        "evidence": "a efetiva comprovação",
+    }
+    provider = Scripted(script=[Completion(json.dumps({"conceitos": [item]}))])
+
+    report, _ = enrich_run(SqliteMetadataStore(), provider)
+
+    assert "1 dropped" in report.render()
+    assert "out of vocabulary STJ: inventado" in report.render()

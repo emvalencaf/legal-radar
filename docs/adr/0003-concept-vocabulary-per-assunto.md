@@ -9,7 +9,7 @@ The graph's Conceito node (issue #7) needs a concrete vocabulary. The sibling re
 - **Categories:** DIREITO, ATOR, PROCESSO, REQUISITO, PRINCIPIO, TEORIA, EFEITO. Exactly one per concept. The sibling's RESTRICAO and REFERENCIA are dropped: the category says what a concept *is*, the edge (`PROHIBITS`, `EXCEPTS`, `REFERENCES`) says the relation a text has to it.
 - **Content conventions:** `id` is lowercase ASCII snake_case; `label`, `aliases`, `instructions` are in Portuguese, to match the text the LLM reads. Target size ~25-40 concepts, so it fits the prompt and stays reviewable.
 - **Authoring:** an LLM drafts candidates from the seed corpus (CC art. 50, CPC arts. 133-137, ementas of Tema 1210 and Tema 1232); a human curates. Versioned in the repo.
-- **Jurisprudência→Conceito** amends ADR-0002's scope: the same enricher and vocabulary run over a decision's ementa + tese, allowing `APPLIES_TO`, `DEFINES` and `RELATES_TO`, always origin `llm` / MEDIUM. ADR-0008 later lifted the limit to the three relations.
+- **Jurisprudência→Conceito** amends ADR-0002's scope: the same enricher and vocabulary run over a decision's ementa + tese, allowing `APPLIES_TO`, `DEFINES` and `RELATES_TO`, always origin `llm` / MEDIUM. ADR-0008 later lifted the limit: a decision takes all six concept relations.
 - **Out-of-vocabulary terms** stay out of the graph but are recorded (proposed term + chunk) in the ingestion report next to the drop counts; the human reads it to curate the next vocabulary version. No review queue, no automatic promotion.
 - **Versioning:** the vocabulary's hash is part of the idempotency key (with text hash and extractor version). A vocabulary change returns only LLM-processed chunks to `pending`; rule-derived edges are kept.
 

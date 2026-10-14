@@ -195,6 +195,11 @@ def enrich(
     )
 
 
+def decision_texts(j: Jurisprudencia) -> tuple[str, ...]:
+    """The parts of a decision the LLM reads and evidence may point at: ementa, then tese."""
+    return tuple(t for t in (j.ementa, j.tese) if t and t.strip())
+
+
 def enrich_decision(
     j: Jurisprudencia,
     vocabulary: Vocabulary,
@@ -205,9 +210,9 @@ def enrich_decision(
 ) -> Enrichment:
     """Concept edges of a decision, read from its ementa and tese only (never the decisão). Only
     `DECISION_RELATIONS` apply, and `evidence` is a literal slice of the ementa or of the tese."""
-    texts = tuple(t for t in (j.ementa, j.tese) if t and t.strip())
-    if not texts:
+    if not j.ementa.strip():
         return Enrichment(skipped="empty")
+    texts = decision_texts(j)
     lock = lock or default_lock()
     prompt = lock.render(
         DECISION_PROMPT,

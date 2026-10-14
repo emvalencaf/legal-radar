@@ -11,8 +11,9 @@ heading when `development` is released to `master`.
 
 - Jurisprudência enrichment (#65): `legal_radar.enricher.enrich_decision` runs the concept
   enricher over a decision's ementa and tese (never the decisão) with its own prompt,
-  `jurisprudencia-enrichment`, and a schema that carries only `conceitos`. It returns
-  `DEFINES`/`APPLIES_TO`/`RELATES_TO` edges, MEDIUM, origin `llm`; `evidence` is a literal slice of
+  `jurisprudencia-enrichment`, and a schema that carries only `conceitos`. It returns concept
+  edges of all six relations (ADR-0008: a thesis can require, forbid and carve out), MEDIUM, origin
+  `llm`; a decision without ementa is skipped, and evidence in capitals (a heading) is dropped; `evidence` is a literal slice of
   the ementa or of the tese; out-of-vocabulary and non-literal items are dropped and counted.
   `legal-radar ingest-jurisprudencia --enrich` runs it over the ingested decisions, resumable like
   `ingest --enrich` (records grouped by court), and the Neo4j store accepts `Jurisprudencia` as the

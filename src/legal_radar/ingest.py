@@ -36,6 +36,7 @@ class EnrichConfig:
 @dataclass
 class EnrichmentCounts:
     processed: int = 0  # sent to the LLM and recorded `ok`
+    empty: int = 0  # recorded `ok` without a call: a decision with no ementa
     too_long: int = 0  # recorded `ok` without a call: the prompt exceeds the input ceiling
     kept: int = 0  # `ok` with an unchanged key: not sent
     returned: int = 0  # `ok` before, back to pending because the key changed

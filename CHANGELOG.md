@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Jurisprudência enrichment (#65): `legal_radar.enricher.enrich_decision` runs the concept
+  enricher over a decision's ementa and tese (never the decisão) with its own prompt,
+  `jurisprudencia-enrichment`, and a schema that carries only `conceitos`. It returns
+  `DEFINES`/`APPLIES_TO`/`RELATES_TO` edges, MEDIUM, origin `llm`; `evidence` is a literal slice of
+  the ementa or of the tese; out-of-vocabulary and non-literal items are dropped and counted.
 - `ingest <assunto> --enrich` sends the chunks the rules left to the LLM enricher and records each
   one (key, `ok`/`pending`, dropped count) in a SQLite metadata store apart from the graph (#29).
   Re-running resumes only `pending` chunks; a changed text, vocabulary, enrichment prompt or

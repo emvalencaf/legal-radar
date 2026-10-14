@@ -2,8 +2,21 @@ import json
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.concepts import Concept, Vocabulary
-from legal_radar.domain import Confidence, Dispositivo, Origin, Relation, RelationType
-from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE, enrich
+from legal_radar.domain import (
+    Confidence,
+    Dispositivo,
+    Jurisprudencia,
+    Origin,
+    Relation,
+    RelationType,
+)
+from legal_radar.enricher import (
+    DECISION_TEMPLATE,
+    ENRICHMENT_TEMPLATE,
+    enrich,
+    enrich_decision,
+)
+from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
 from legal_radar.llm import Completion
 from legal_radar.prompts import refresh
 
@@ -24,7 +37,8 @@ INCISO = Dispositivo(
     CAPUT.id,
 )
 CANDIDATES = [f"{LEI}#art3", f"{LEI}#art50"]
-LOCK = refresh({ENRICHMENT_PROMPT: "c1"}, lambda name, commit: (ENRICHMENT_TEMPLATE, None))
+TEMPLATES = {ENRICHMENT_PROMPT: ENRICHMENT_TEMPLATE, DECISION_PROMPT: DECISION_TEMPLATE}
+LOCK = refresh({name: "c1" for name in TEMPLATES}, lambda name, commit: (TEMPLATES[name], None))
 
 
 def reply(conceitos=(), referencias=()):
@@ -268,3 +282,93 @@ def test_the_token_ceiling_is_read_from_router_yaml_with_a_default():
     for bad in (0, -1, "8000", True):
         with pytest.raises(ValueError):
             enrichment_max_input_tokens({"enrichment": {"max_input_tokens": bad}})
+
+
+DECISION = Jurisprudencia(
+    "STJ:202001090402",
+    "STJ",
+    "REsp 1873811",
+    "Há abuso da personalidade quando o   sócio desvia o patrimônio.",
+    "Recurso provido; o texto da decisão menciona sócio e desvio.",
+    "A desconsideração exige prova do desvio.",
+)
+
+
+def run_decision(answer=None, decision=DECISION, **kwargs):
+    provider = FakeProvider(script=[answer or reply()])
+    return enrich_decision(decision, VOCABULARY, provider, LOCK, **kwargs), provider
+
+
+def test_decision_edge_is_medium_llm_with_evidence_from_the_ementa_or_the_tese():
+    items = [
+        {"conceito_id": "socio", "relacao": "APPLIES_TO", "evidence": "o sócio desvia"},
+        {"conceito_id": "abuso", "relacao": "DEFINES", "evidence": "prova do desvio"},
+    ]
+
+    result, _ = run_decision(reply(items))
+
+    assert result.relations == [
+        Relation(
+            RelationType.APPLIES_TO,
+            DECISION.id,
+            "socio",
+            Confidence.MEDIUM,
+            Origin.LLM,
+            "o   sócio desvia",
+        ),
+        Relation(
+            RelationType.DEFINES,
+            DECISION.id,
+            "abuso",
+            Confidence.MEDIUM,
+            Origin.LLM,
+            "prova do desvio",
+        ),
+    ]
+
+
+def test_decision_relations_exclude_the_norm_types_and_the_decisao_is_no_evidence():
+    items = [
+        {"conceito_id": "socio", "relacao": "OBLIGES", "evidence": "o sócio desvia"},
+        {"conceito_id": "socio", "relacao": "RELATES_TO", "evidence": "Recurso provido"},
+        {"conceito_id": "inventado", "relacao": "RELATES_TO", "evidence": "o sócio desvia"},
+        {
+            "conceito_id": "socio",
+            "relacao": "RELATES_TO",
+            "evidence": "patrimônio. A desconsideração",
+        },
+    ]
+
+    result, provider = run_decision(reply(items))
+
+    assert result.relations == [] and result.dropped == 4
+    assert result.out_of_vocabulary == ["inventado"]
+    assert "Recurso provido" not in provider.calls[0]
+
+
+def test_decision_schema_offers_only_the_three_relations():
+    seen = []
+    provider = FakeProvider(script=[reply()])
+    complete = provider.complete
+    provider.complete = lambda prompt, params=None: seen.append(params) or complete(prompt, params)
+
+    enrich_decision(DECISION, VOCABULARY, provider, LOCK)
+
+    properties = seen[0].response_schema["properties"]
+    enum = properties["conceitos"]["items"]["properties"]["relacao"]["enum"]
+    assert enum == ["DEFINES", "APPLIES_TO", "RELATES_TO"]
+    assert list(properties) == ["conceitos"]
+
+
+def test_decision_without_ementa_and_tese_is_skipped():
+    empty = Jurisprudencia("STF:1", "STF", "RE 1", " ", "decisão")
+
+    result, provider = run_decision(decision=empty)
+
+    assert result.skipped == "empty" and not provider.calls
+
+
+def test_decision_over_the_ceiling_is_skipped():
+    result, provider = run_decision(max_input_tokens=10)
+
+    assert result.skipped == "too_long" and not provider.calls

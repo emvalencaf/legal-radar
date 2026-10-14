@@ -57,7 +57,7 @@ SET n.unresolved_revokers =
     [x IN coalesce(n.unresolved_revokers, []) WHERE x <> $citation] + [$citation]
 """
 DELETE_LLM_RELATIONS = """
-MATCH (:Dispositivo {id: $id})-[r]->() WHERE r.origin = 'llm' DELETE r
+MATCH (:Dispositivo|Jurisprudencia {id: $id})-[r]->() WHERE r.origin = 'llm' DELETE r
 """
 RESOLVE_CITATIONS = """
 MATCH (n:Dispositivo {id: $id})
@@ -65,7 +65,7 @@ SET n.unresolved_references = [x IN coalesce(n.unresolved_references, []) WHERE 
 """
 # Relationship types cannot be parameters; `type` is always a member of `RelationType`.
 MERGE_CONCEPT_EDGE = """
-MATCH (s:Dispositivo {{id: $source}})
+MATCH (s:Dispositivo|Jurisprudencia {{id: $source}})
 MERGE (c:Conceito {{id: $target}})
 MERGE (s)-[r:{type}]->(c)
 SET r.confidence = $confidence, r.origin = $origin, r.evidence = $evidence

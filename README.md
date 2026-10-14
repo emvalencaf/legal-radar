@@ -109,6 +109,10 @@ Cloudflare check rejects bundled Chromium, so this needs Google Chrome installed
 uv run legal-radar ingest-jurisprudencia
 ```
 
+Add `--enrich` to also link each decision's ementa and tese to the concepts of the assunto (the
+`jurisprudencia-enrichment` prompt, pinned in `prompts/`); re-running only sends the pending
+decisions.
+
 Export the graph to the versioned seed (`seed/graph.jsonl`, commit it), or rebuild a fresh
 Neo4j from it; loading is MERGE-based, so repeating it changes nothing:
 

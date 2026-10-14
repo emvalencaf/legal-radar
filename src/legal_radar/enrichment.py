@@ -10,6 +10,7 @@ from legal_radar.llm import content_hash
 from legal_radar.prompts import PromptLock, default_lock
 
 ENRICHMENT_PROMPT = "dispositivo-enrichment"
+DECISION_PROMPT = "jurisprudencia-enrichment"
 EXTRACTOR_VERSION = "1"  # bump when the extraction code changes in a way prompts do not capture
 
 
@@ -18,13 +19,14 @@ def enrichment_key(
     vocabulary: Vocabulary,
     lock: PromptLock | None = None,
     extractor_version: str = EXTRACTOR_VERSION,
+    prompt: str = ENRICHMENT_PROMPT,
 ) -> str:
     lock = lock or default_lock()
     return content_hash(
         {
             "text": content_hash(text),
             "vocabulary": vocabulary.hash,
-            "prompt": lock.prompt_hash(ENRICHMENT_PROMPT),
+            "prompt": lock.prompt_hash(prompt),
             "extractor": extractor_version,
         }
     )

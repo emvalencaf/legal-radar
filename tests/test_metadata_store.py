@@ -44,3 +44,24 @@ def test_resolved_citations_round_trip():
     store.record(rec("a", resolved=("art. 3º da Lei 9", "art. 4º")))
 
     assert store.records(LEI)["a"].resolved == ("art. 3º da Lei 9", "art. 4º")
+
+
+def test_a_database_with_the_old_lei_id_column_is_migrated(tmp_path):
+    import sqlite3
+
+    path = tmp_path / "old.sqlite"
+    old = sqlite3.connect(path)
+    old.execute(
+        "CREATE TABLE enrichment_record (chunk_id TEXT PRIMARY KEY, lei_id TEXT NOT NULL, "
+        "key TEXT NOT NULL, status TEXT NOT NULL, dropped INTEGER NOT NULL, skipped TEXT, "
+        "resolved TEXT NOT NULL DEFAULT '[]', updated_at TEXT NOT NULL)"
+    )
+    old.execute("INSERT INTO enrichment_record VALUES ('a', 'lei', 'k1', 'ok', 0, NULL, '[]', 't')")
+    old.commit()
+    old.close()
+
+    store = SqliteMetadataStore(path)
+
+    assert store.pending("lei", {"a": "k1"}) == []
+    store.record(rec("b", lei="STJ"))
+    assert set(store.records("STJ")) == {"b"}

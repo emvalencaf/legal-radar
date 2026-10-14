@@ -7,6 +7,7 @@ from legal_radar.domain import (
     Confidence,
     Dispositivo,
     GraphBatch,
+    Jurisprudencia,
     Lei,
     Origin,
     Relation,
@@ -149,3 +150,17 @@ def test_replacing_llm_relations_swaps_them_and_keeps_rule_edges(driver):
         {"t": "OBLIGES", "o": "llm", "target": "socio"},
         {"t": "REFERENCES", "o": "rule", "target": f"{A}#art2"},
     ]
+
+
+def test_a_decision_gets_llm_concept_edges_that_a_rerun_replaces(driver):
+    store = Neo4jGraphStore(driver)
+    decision = Jurisprudencia("STJ:1", "STJ", "REsp 1", "ementa", "decisão", "tese")
+    store.write_jurisprudencia([decision])
+    store.replace_llm_relations("STJ:1", [llm(RelationType.APPLIES_TO, "STJ:1", "abuso")])
+    store.replace_llm_relations("STJ:1", [llm(RelationType.DEFINES, "STJ:1", "socio")])
+
+    assert rows(
+        driver,
+        "MATCH (:Jurisprudencia {id: 'STJ:1'})-[r]->(t:Conceito) "
+        "RETURN type(r) AS t, r.origin AS o, r.confidence AS c, t.id AS target",
+    ) == [{"t": "DEFINES", "o": "llm", "c": "MEDIUM", "target": "socio"}]

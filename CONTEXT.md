@@ -41,12 +41,16 @@ The ingestion step that turns bare structural `LegalChunk`s into `EnrichedLegalC
 _Avoid_: Conflating with parsing — parsing (`PlanaltoHtmlParser`) is structural and rule-only; enrichment is semantic.
 
 **Registro de enriquecimento**:
-The persisted state of a dispositivo that went through the LLM: its idempotency key, status (`ok` or `pending`) and count of dropped items. Kept outside the knowledge graph, which only receives validated edges. See ADR-0002 and ADR-0003.
+The persisted state of a dispositivo that went through the LLM: its source (a lei, or the court of a decision), idempotency key, status (`ok` or `pending`) and count of dropped items. Kept outside the knowledge graph, which only receives validated edges. See ADR-0002 and ADR-0003.
 _Avoid_: "Cache" (it does not hold the result), "log".
 
 **Pending**:
 A dispositivo whose `registro de enriquecimento` is missing, failed, or carries a key that no longer matches the current text, vocabulary, prompt or extractor. Only pending dispositivos are sent to the LLM again; their rule-derived edges are kept.
 _Avoid_: "Stale" or "dirty" as synonyms; "pending" is the one status name.
+
+**Enriquecimento de jurisprudência**:
+The enrichment of a `jurisprudência` decision: the LLM reads its ementa and tese (never the decisão) and links the decision to `conceito jurídico` entries of the `assunto`'s vocabulary. It takes the same six relations as a dispositivo, read as what a court does (its thesis can require, forbid or carve out), always origin `llm` / MEDIUM; `evidence` is a literal slice of the ementa or of the tese. It does not resolve citations to dispositivos. See ADR-0003 and ADR-0008.
+_Avoid_: Treating a decision as a dispositivo: it has no lei, path or ancestors, and what a party argues or the lower court held is not the court's position.
 
 **Confidence**:
 The reliability level of an extracted relation, derived from how it was extracted, never self-declared by the LLM: HIGH = a rule matched an explicit pattern in the text; MEDIUM = the LLM inferred it from context; LOW = unresolved target or stub. The origin (`rule` / `llm`) is stored on the edge too. See ADR-0002.

@@ -18,7 +18,8 @@ heading when `development` is released to `master`.
   harness (`graph_path` is n/a), `index-rag` builds an index ahead and `compare-evals` tables the
   graph and the baselines per metric and per `nivel`. `GraphReader.corpus()` reads the whole graph.
 - Reports carry `system`, `k` and per-`nivel` scores, and `Question` reads `nivel` (the questions
-  without one are grouped as `base`).
+  without one are grouped as `base`). `compare-evals` splits every metric by `nivel` and shows the
+  mean input tokens per question, overall and per `nivel`.
 - An interrupted `eval` resumes by default from the answers saved in `eval-runs/checkpoints/`,
   valid while the questions and pinned prompts are the same; `--fresh` discards them.
 

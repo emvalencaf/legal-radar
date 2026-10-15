@@ -4,7 +4,7 @@ import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.answer import Citation, CitedAnswer
-from legal_radar.answer_evaluation import Question, UsageMeter
+from legal_radar.answer_evaluation import Question, System, UsageMeter
 from legal_radar.domain import Hop
 from legal_radar.llm import Completion
 
@@ -158,9 +158,7 @@ def test_a_baseline_without_graph_paths_reports_n_a_and_scores_per_nivel():
         meter,
         lambda answer: False,
         experiment="t",
-        system="rag-naive",
-        k=5,
-        graph_paths=False,
+        system=System("rag-naive", 5),
     )
 
     assert report.scores["graph_path"] is None and "graph_path" not in report.questions[0]["scores"]
@@ -171,7 +169,7 @@ def test_a_baseline_without_graph_paths_reports_n_a_and_scores_per_nivel():
         "medio": 0.0,
     }
     assert [q["nivel"] for q in report.questions] == ["facil", "medio", None]
-    assert "rag-naive (k=5)" in report.render()
+    assert "rag-naive@5" in report.render()
 
 
 def _resumable(tmp_path, fingerprint="f1"):
@@ -236,11 +234,19 @@ def test_checkpoint_for_resumes_the_same_run_and_drops_it_when_questions_or_prom
     questions = [Question("one", "q1", (A,), (A,))]
     answer = CitedAnswer("q1", "x", "ok", [], [])
 
-    assayer_harness.checkpoint_for("rag-naive", 5, questions, "p1").save("one", answer, (1, 1))
+    assayer_harness.checkpoint_for(System("rag-naive", 5), questions, "p1").save(
+        "one", answer, (1, 1)
+    )
 
-    assert assayer_harness.checkpoint_for("rag-naive", 5, questions, "p1").done.keys() == {"one"}
-    assert assayer_harness.checkpoint_for("rag-naive", 15, questions, "p1").done == {}  # own file
+    assert assayer_harness.checkpoint_for(System("rag-naive", 5), questions, "p1").done.keys() == {
+        "one"
+    }
+    assert (
+        assayer_harness.checkpoint_for(System("rag-naive", 15), questions, "p1").done == {}
+    )  # own file
     changed = [Question("one", "other wording", (A,), (A,))]
-    assert assayer_harness.checkpoint_for("rag-naive", 5, changed, "p1").done == {}
-    assayer_harness.checkpoint_for("rag-naive", 5, questions, "p1").save("one", answer, (1, 1))
-    assert assayer_harness.checkpoint_for("rag-naive", 5, questions, "p2").done == {}
+    assert assayer_harness.checkpoint_for(System("rag-naive", 5), changed, "p1").done == {}
+    assayer_harness.checkpoint_for(System("rag-naive", 5), questions, "p1").save(
+        "one", answer, (1, 1)
+    )
+    assert assayer_harness.checkpoint_for(System("rag-naive", 5), questions, "p2").done == {}

@@ -14,6 +14,7 @@ from legal_radar.answer_evaluation import (
     Checkpoint,
     Outcome,
     Question,
+    System,
     UsageMeter,
     abstention,
     citation_correctness,
@@ -52,7 +53,7 @@ class Report:
     by_nivel: dict[str, dict[str, float | None]] = field(default_factory=dict)  # nivel -> scores
 
     def render(self) -> str:
-        label = self.system if self.k is None else f"{self.system} (k={self.k})"
+        label = System(self.system, self.k).label
         lines = [f"experiment {self.experiment} [{label}]: {len(self.questions)} questions"]
         for name, value in {**self.scores, **self.grounding}.items():
             shown = f"{value:.3f}" if isinstance(value, float) else value
@@ -205,14 +206,14 @@ CHECKPOINT_DIR = RUNS_DIR / "checkpoints"
 
 
 def checkpoint_for(
-    system: str, k: int | None, questions: list[Question], prompt_snapshot: str | None
+    system: System, questions: list[Question], prompt_snapshot: str | None
 ) -> Checkpoint:
-    """The checkpoint of the run of `system` (and `k`) over `questions`: one file per system, valid
-    only while the questions and the pinned prompts are the same."""
+    """The checkpoint of the run of `system` over `questions`: one file per system, valid only
+    while the questions and the pinned prompts are the same."""
     fingerprint = content_hash(
         {"prompts": prompt_snapshot, "questions": [(q.id, q.query) for q in questions]}
     )
-    return Checkpoint(CHECKPOINT_DIR / f"{system}{'' if k is None else f'-k{k}'}.json", fingerprint)
+    return Checkpoint(CHECKPOINT_DIR / f"{system.slug}.json", fingerprint)
 
 
 BASE_NIVEL = "base"  # the questions that carry no `nivel`
@@ -239,19 +240,18 @@ def run_evaluation(
     grounding_llm=None,
     prompt_snapshot: str | None = None,
     experiment: str | None = None,
-    system: str = "graph",
-    k: int | None = None,
-    graph_paths: bool = True,
+    system: System | None = None,
     checkpoint: Checkpoint | None = None,
 ) -> Report:
     """Answers every question through `ask` (whose model calls go through `meter`) and scores it.
     A `checkpoint` keeps each answer as it arrives, so a run that dies resumes without asking
-    again (the caller discards it once the report is written). `graph_paths=False` (a RAG
-    baseline has no graph) leaves `graph_path` unscored: n/a."""
+    again (the caller discards it once the report is written). A system with no graph (a RAG
+    baseline) leaves `graph_path` unscored: n/a."""
     from assayer.runner.pipeline import EvaluationPipeline
     from assayer.runner.pricing import PricingConfig
 
     price = pricing or Pricing()
+    system = system or System()
 
     by_id = {q.id: q for q in questions}
 
@@ -274,7 +274,7 @@ def run_evaluation(
             "input": q.id,
             "expected_output": {
                 CITATIONS: {"expected": list(q.citations), "also_ok": list(q.also_ok)},
-                **({PATH: list(q.nodes)} if graph_paths else {}),
+                **({PATH: list(q.nodes)} if system.has_graph else {}),
                 CONTRADICTIONS: [list(pair) for pair in q.contradictions],
                 ABSTENTION: q.abstain,
                 MENTIONS: [],
@@ -289,7 +289,7 @@ def run_evaluation(
         dataset=dataset,
         field_evaluators={
             CITATIONS: ["citation_correctness"],
-            **({PATH: ["graph_path"]} if graph_paths else {}),
+            **({PATH: ["graph_path"]} if system.has_graph else {}),
             CONTRADICTIONS: ["contradiction_surfaced"],
             ABSTENTION: ["abstention"],
             MENTIONS: ["grounded_mentions"],
@@ -318,7 +318,7 @@ def run_evaluation(
     nivel_of = {q.id: q.nivel for q in questions}
     return Report(
         name,
-        aggregate(result.runs, graph_paths),
+        aggregate(result.runs, system.has_graph),
         [
             {
                 "id": run.input,
@@ -340,9 +340,9 @@ def run_evaluation(
         (meter.total_input * price.input + meter.total_output * price.output) / 1e6,
         prompt_snapshot,
         grounding,
-        system,
-        k,
-        aggregate_by_nivel(result.runs, nivel_of, graph_paths),
+        system.name,
+        system.k,
+        aggregate_by_nivel(result.runs, nivel_of, system.has_graph),
     )
 
 

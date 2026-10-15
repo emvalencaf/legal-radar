@@ -13,7 +13,10 @@ def run(system, k, f1, nivel_f1, paths=None):
         "k": k,
         "scores": {"citation_correctness": f1, "graph_path": paths},
         "by_nivel": {"facil": {"citation_correctness": nivel_f1}, "dificil": {"abstention": 1.0}},
-        "questions": [{}, {}],
+        "questions": [
+            {"nivel": "facil", "input_tokens": 100},
+            {"nivel": None, "input_tokens": 300},
+        ],
         "input_tokens": 100,
         "output_tokens": 10,
     }
@@ -84,3 +87,14 @@ def test_compare_evals_command_prints_the_table_of_the_given_runs(tmp_path, caps
     main(["compare-evals", str(path)])
 
     assert "| metric | rag-naive@5 |" in capsys.readouterr().out
+
+
+def test_every_metric_is_split_by_nivel_and_tokens_are_averaged_per_question():
+    text = render_comparison(RUNS)
+
+    for metric in ("citation_correctness_precision", "fabricated_citations", "graph_path"):
+        assert f"## {metric} per nivel" in text
+    rows = {line.split(" | ")[0].strip("| "): line for line in text.splitlines()}
+    assert rows["tokens in / question"].endswith("| 200 | 200 | 200 |")
+    tokens = text.split("## tokens in per question, per nivel")[1]
+    assert "| facil | 100 | 100 | 100 |" in tokens and "| base | 300 | 300 | 300 |" in tokens

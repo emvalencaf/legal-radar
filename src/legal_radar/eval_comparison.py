@@ -4,6 +4,9 @@ and per `nivel`. Reads the JSON that `Report.write` leaves in `eval-runs/`."""
 import json
 from pathlib import Path
 
+from legal_radar.answer_evaluation import System
+from legal_radar.assayer_harness import BASE_NIVEL
+
 METRICS = (
     "citation_correctness",
     "citation_correctness_precision",
@@ -14,18 +17,16 @@ METRICS = (
     "contradiction_surfaced",
     "graph_path",
 )
-PER_NIVEL = (
-    "citation_correctness",
-    "citation_correctness_recall",
-    "grounded_mentions",
-    "abstention",
-)
 ORDER = {"graph": 0, "rag-naive": 1, "rag-contextual": 2}
 
 
+def system_of(run: dict) -> System:
+    """The system of a run file; one from before the baselines is the graph."""
+    return System(run.get("system", "graph"), run.get("k"))
+
+
 def label(run: dict) -> str:
-    k = run.get("k")
-    return run.get("system", "graph") if k is None else f"{run.get('system', 'graph')}@{k}"
+    return system_of(run).label
 
 
 def latest_runs(directory: Path) -> list[dict]:
@@ -42,11 +43,25 @@ def latest_runs(directory: Path) -> list[dict]:
 
 
 def _sorted(runs: list[dict]) -> list[dict]:
-    return sorted(runs, key=lambda r: (ORDER.get(r.get("system", "graph"), 9), r.get("k") or 0))
+    return sorted(runs, key=lambda r: (ORDER.get(system_of(r).name, 9), system_of(r).k or 0))
 
 
 def _cell(value) -> str:
     return "n/a" if value is None else f"{value:.3f}"
+
+
+def _mean_tokens(run: dict, nivel: str | None = None) -> float | None:
+    """Mean input tokens per question (the answer only, not the judges), of one nivel or all."""
+    tokens = [
+        q["input_tokens"]
+        for q in run["questions"]
+        if "input_tokens" in q and (nivel is None or (q.get("nivel") or BASE_NIVEL) == nivel)
+    ]
+    return sum(tokens) / len(tokens) if tokens else None
+
+
+def _tokens_cell(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.0f}"
 
 
 def _table(header: str, columns: list[str], rows: list[tuple[str, list[str]]]) -> list[str]:
@@ -63,14 +78,21 @@ def render_comparison(runs: list[dict]) -> str:
     out = ["## Overall", ""]
     rows = [(m, [_cell(r["scores"].get(m)) for r in runs]) for m in METRICS]
     rows.append(("questions", [str(len(r["questions"])) for r in runs]))
+    rows.append(("tokens in / question", [_tokens_cell(_mean_tokens(r)) for r in runs]))
     rows.append(("tokens in (total)", [str(r["input_tokens"]) for r in runs]))
     rows.append(("tokens out (total)", [str(r["output_tokens"]) for r in runs]))
     out += _table("metric", columns, rows)
-    niveis = sorted({n for r in runs for n in r.get("by_nivel", {})})
-    for metric in PER_NIVEL:
+    niveis = sorted(
+        {n for r in runs for n in r.get("by_nivel", {})}
+        | {q.get("nivel") or BASE_NIVEL for r in runs for q in r["questions"]}
+    )
+    for metric in METRICS:  # every metric is also split by nivel
         out += ["", f"## {metric} per nivel", ""]
         rows = [
             (n, [_cell(r.get("by_nivel", {}).get(n, {}).get(metric)) for r in runs]) for n in niveis
         ]
         out += _table("nivel", columns, rows)
+    out += ["", "## tokens in per question, per nivel", ""]
+    rows = [(n, [_tokens_cell(_mean_tokens(r, n)) for r in runs]) for n in niveis]
+    out += _table("nivel", columns, rows)
     return "\n".join(out)

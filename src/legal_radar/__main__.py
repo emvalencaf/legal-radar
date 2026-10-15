@@ -16,7 +16,6 @@ and the baselines per metric and per nivel;
 import argparse
 import logging
 import os
-from datetime import UTC, datetime
 from pathlib import Path
 
 from legal_radar.adapters.fake_provider import FakeProvider
@@ -229,65 +228,42 @@ def main(argv: list[str] | None = None) -> None:
         if args.command == "eval":
             from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
             from legal_radar.answer import ask
-            from legal_radar.answer_evaluation import (
-                UsageMeter,
-                llm_flags_contradiction,
-                llm_states_insufficiency,
-                load_questions,
-            )
-            from legal_radar.assayer_harness import (
-                Pricing,
-                ragas_llm_from_env,
-                run_evaluation,
-            )
+            from legal_radar.answer_evaluation import System, UsageMeter, load_questions
+            from legal_radar.assayer_harness import Pricing, ragas_llm_from_env
             from legal_radar.assunto import AssuntoResolver
+            from legal_radar.eval_runner import run_systems
             from legal_radar.prompts import default_lock
             from legal_radar.router_config import build_router, load_config
 
             meter = UsageMeter(build_router(load_config("router.yaml")))
             reader, lock = Neo4jGraphReader(store.driver), default_lock()
-            questions = load_questions(QUESTION_PATHS[args.assunto])
             if args.baseline:
                 from legal_radar.rag import RagBaseline
 
                 index = rag_index(args.baseline.removeprefix("rag-"), reader, meter)
                 systems = [
-                    (RagBaseline(args.baseline, index, meter, k, lock).ask, args.baseline, k)
+                    (
+                        System(args.baseline, k),
+                        RagBaseline(args.baseline, index, meter, k, lock).ask,
+                    )
                     for k in args.k
                 ]
             else:
-                graph = lambda query: ask(  # noqa: E731
-                    query, AssuntoResolver(meter).resolve, reader, meter, lock
-                )
-                systems = [(graph, "graph", None)]
-            for answer, system, k in systems:
-                from legal_radar.assayer_harness import checkpoint_for
-
-                checkpoint = checkpoint_for(system, k, questions, lock.snapshot_hash)
-                if args.fresh:
-                    checkpoint.discard()
-                    checkpoint = checkpoint_for(system, k, questions, lock.snapshot_hash)
-                if checkpoint.done:
-                    print(f"{system}: resuming with {len(checkpoint.done)} answers already saved")
-                stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
-                report = run_evaluation(
-                    questions,
-                    answer,
-                    meter,
-                    llm_flags_contradiction(meter),
-                    llm_states_insufficiency(meter),
-                    pricing=Pricing(args.price_in, args.price_out),
-                    grounding_llm=ragas_llm_from_env() if args.grounding else None,
-                    prompt_snapshot=lock.snapshot_hash,
-                    experiment=f"{system}{'' if k is None else f'-k{k}'}-{stamp}",
-                    system=system,
-                    k=k,
-                    graph_paths=k is None,
-                    checkpoint=checkpoint,
-                )
-                print(report.render())
-                print(f"wrote {report.write()}")
-                checkpoint.discard()
+                resolve = AssuntoResolver(meter).resolve
+                systems = [(System(), lambda query: ask(query, resolve, reader, meter, lock))]
+            run_systems(
+                systems,
+                load_questions(QUESTION_PATHS[args.assunto]),
+                meter,
+                lock,
+                pricing=Pricing(args.price_in, args.price_out),
+                grounding_llm=ragas_llm_from_env() if args.grounding else None,
+                fresh=args.fresh,
+                on_report=lambda report, path: print(f"{report.render()}\nwrote {path}"),
+                on_resume=lambda system, answered: print(
+                    f"{system.label}: resuming with {answered} answers already saved"
+                ),
+            )
             return
         if args.command == "draft-concepts":
             from legal_radar.concepts import (

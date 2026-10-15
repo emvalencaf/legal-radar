@@ -35,6 +35,29 @@ class Question:
 
 
 @dataclass(frozen=True)
+class System:
+    """What answers the questions: the graph, or a RAG baseline (`rag-naive`, ...) at a top-k."""
+
+    name: str = "graph"
+    k: int | None = None  # the baseline's top-k; None for the graph
+
+    @property
+    def has_graph(self) -> bool:
+        """Whether a graph path can be scored: a baseline walks no graph."""
+        return self.name == "graph"
+
+    @property
+    def slug(self) -> str:
+        """For file and experiment names: `rag-naive-k5`."""
+        return self.name if self.k is None else f"{self.name}-k{self.k}"
+
+    @property
+    def label(self) -> str:
+        """For reports: `rag-naive@5`."""
+        return self.name if self.k is None else f"{self.name}@{self.k}"
+
+
+@dataclass(frozen=True)
 class SetScore:
     precision: float
     recall: float

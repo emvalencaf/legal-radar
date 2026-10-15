@@ -116,8 +116,25 @@ def test_an_abstain_question_is_scored_on_abstention_only():
         questions, ask, meter, lambda answer: False, lambda answer: False, experiment="abstain"
     )
     scores = [q["scores"] for q in report.questions]
-    assert scores[0].keys() == {"citation_correctness", "graph_path"}
-    assert scores[1] == {"abstention": 1.0}  # no answer, nothing to cite
-    assert scores[2] == {"abstention": 0.0}  # answered as if the graph held it
+    assert scores[0].keys() == {"citation_correctness", "graph_path", "grounded_mentions"}
+    assert scores[1] == {"abstention": 1.0, "grounded_mentions": 1.0}  # nothing answered or cited
+    assert scores[2] == {"abstention": 0.0, "grounded_mentions": 1.0}  # answered as if it held it
     assert report.scores["abstention"] == 0.5
     assert report.scores["citation_correctness"] == 1.0  # the abstain questions are not in it
+
+
+def test_an_answer_naming_an_article_outside_its_sources_scores_zero_on_grounded_mentions():
+    def ask(query: str) -> CitedAnswer:
+        unsupported = ["lei#clt"] if query == "bad" else []
+        return CitedAnswer(query, "x", "ok", [], [A], unsupported)
+
+    report = run_evaluation(
+        [Question("g", "good", (), (), abstain=True), Question("b", "bad", (), (), abstain=True)],
+        ask,
+        UsageMeter(FakeProvider()),
+        lambda answer: False,
+        experiment="t",
+    )
+
+    assert [q["scores"]["grounded_mentions"] for q in report.questions] == [1.0, 0.0]
+    assert report.scores["grounded_mentions"] == 0.5

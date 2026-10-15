@@ -185,6 +185,7 @@ def outcome_of(answer: CitedAnswer, usage: tuple[int, int]) -> Outcome:
         path=sorted(path_nodes(answer.citations)),
         contradiction_check={"answer": text, "cited": cited},
         abstention_check={"answer": text},
+        mentions_check=list(answer.unsupported),
     )
     outcome.usage_metadata = {"input_tokens": usage[0], "output_tokens": usage[1]}
     return outcome

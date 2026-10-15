@@ -163,6 +163,23 @@ the `ChatVertexAI` import that langchain-community 0.4 dropped; the harness appl
 make eval
 ```
 
+Measure what the graph adds with the pure-RAG baselines: they embed the whole corpus (every live
+dispositivo and decision, not only the anchor subtrees), retrieve the top-k by cosine similarity
+and answer with the same `cited-answer` prompt. `naive` indexes each dispositivo's own text;
+`contextual` prepends its caput and parent artigo. The vector index of each chunking is built once
+(`data/rag-<chunking>.sqlite`, resumable after a quota error) and reused. `graph_path` is n/a for
+them.
+
+```bash
+uv run legal-radar index-rag contextual                       # optional: build the index ahead
+uv run --extra eval legal-radar eval "desconsideração da personalidade jurídica" \
+  --baseline rag-contextual --k 5 15                          # likewise rag-naive
+uv run legal-radar compare-evals                              # the latest run of each system
+```
+
+`compare-evals` tables the graph, naive RAG and contextual RAG per metric and, for the main ones,
+per `nivel` (the questions without one are `base`); give it run files to compare specific runs.
+
 Opt-in live smoke test against the real courts (not run by default): `uv run pytest -m live`.
 
 Tests (need Docker for the Neo4j test container): `uv run pytest`.

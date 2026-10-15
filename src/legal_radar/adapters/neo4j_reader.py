@@ -4,6 +4,13 @@ from neo4j import Driver
 
 from legal_radar.domain import Context, Dispositivo, Hop, Jurisprudencia
 
+CORPUS_DISPOSITIVOS = """
+MATCH (d:Dispositivo)
+OPTIONAL MATCH (p:Dispositivo)-[:PARTS]->(d)
+RETURN d AS node, p.id AS parent_id
+ORDER BY d.id
+"""
+CORPUS_JURISPRUDENCIAS = "MATCH (j:Jurisprudencia) RETURN j AS node ORDER BY j.id"
 LEI_IDS = "MATCH (l:Lei) RETURN l.id AS id ORDER BY id"
 PARTS_DOWN = """
 MATCH p = (a)-[:PARTS*0..]->(d:Dispositivo)
@@ -25,14 +32,16 @@ ORDER BY j.id, d.id
 """
 
 
-def _dispositivo(node) -> Dispositivo:
+def _dispositivo(node, parent_id: str | None = None) -> Dispositivo:
     # The Lei is the id's prefix: ids are `{lei_id}#{path}`.
     return Dispositivo(
         id=node["id"],
         lei_id=node["id"].split("#", 1)[0],
         path=node["path"],
         text=node["text"],
+        parent_id=parent_id,
         kind=node["kind"],
+        revoked=bool(node.get("revoked")),
     )
 
 
@@ -57,6 +66,14 @@ class Neo4jGraphReader:
 
     def lei_ids(self) -> list[str]:
         return [r["id"] for r in self._rows(LEI_IDS)]
+
+    def corpus(self) -> tuple[list[Dispositivo], list[Jurisprudencia]]:
+        """Every dispositivo (with its parent and revoked mark) and every decision in the graph,
+        sorted by id: what a retrieval without the graph indexes."""
+        return (
+            [_dispositivo(r["node"], r["parent_id"]) for r in self._rows(CORPUS_DISPOSITIVOS)],
+            [_jurisprudencia(r["node"]) for r in self._rows(CORPUS_JURISPRUDENCIAS)],
+        )
 
     def traverse(self, anchor_ids: list[str]) -> Context:
         dispositivos: dict[str, Dispositivo] = {}

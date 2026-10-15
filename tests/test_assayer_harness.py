@@ -138,3 +138,37 @@ def test_an_answer_naming_an_article_outside_its_sources_scores_zero_on_grounded
 
     assert [q["scores"]["grounded_mentions"] for q in report.questions] == [1.0, 0.0]
     assert report.scores["grounded_mentions"] == 0.5
+
+
+def test_a_baseline_without_graph_paths_reports_n_a_and_scores_per_nivel():
+    meter = UsageMeter(FakeProvider())
+
+    def ask(query: str) -> CitedAnswer:
+        cited = [Citation(A, "Dispositivo", [], "t")] if query == "right" else []
+        return CitedAnswer(query, "rag-naive", "ok", cited, [A])
+
+    questions = [
+        Question("one", "right", (A,), (A,), nivel="facil"),
+        Question("two", "wrong", (A,), (A,), nivel="medio"),
+        Question("three", "right", (A,), (A,)),
+    ]
+    report = run_evaluation(
+        questions,
+        ask,
+        meter,
+        lambda answer: False,
+        experiment="t",
+        system="rag-naive",
+        k=5,
+        graph_paths=False,
+    )
+
+    assert report.scores["graph_path"] is None and "graph_path" not in report.questions[0]["scores"]
+    assert (report.system, report.k) == ("rag-naive", 5)
+    assert {n: s["citation_correctness"] for n, s in report.by_nivel.items()} == {
+        "base": 1.0,
+        "facil": 1.0,
+        "medio": 0.0,
+    }
+    assert [q["nivel"] for q in report.questions] == ["facil", "medio", None]
+    assert "rag-naive (k=5)" in report.render()

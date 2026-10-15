@@ -9,6 +9,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Pure-RAG baselines (#79): `legal_radar.rag` embeds every live dispositivo and decision of the
+  graph (revoked, empty and structural ones and the amendment marks left out), keeps the vectors in
+  SQLite per chunking (`naive`, `contextual` with the ancestors' text) and answers with the same
+  `cited-answer` prompt over the top-k by cosine. `legal-radar eval --baseline rag-naive|rag-contextual
+  --k 5 15` scores them with the same harness (`graph_path` n/a), `index-rag` builds the index
+  ahead, and `compare-evals` tables graph vs. baselines per metric and per `nivel`. Reports now
+  carry `system`, `k` and per-`nivel` scores; `Question` reads `nivel`; `GraphReader.corpus()`.
 - Answer guards and evaluation (#44): `unsupported_mentions` flags the articles an answer names that
   were not retrieved, scored as `grounded_mentions`; a query with no letter resolves to no assunto;
   court texts are read unwrapped and in the case the rules expect; the context shown to the model

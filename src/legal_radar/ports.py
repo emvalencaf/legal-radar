@@ -4,6 +4,7 @@ from typing import Protocol
 
 from legal_radar.domain import (
     Context,
+    Dispositivo,
     EnrichmentRecord,
     GraphBatch,
     Jurisprudencia,
@@ -66,6 +67,9 @@ class MetadataStore(Protocol):
 class GraphReader(Protocol):
     def lei_ids(self) -> list[str]:
         """The ids (URNs) of every lei in the graph, sorted."""
+
+    def corpus(self) -> tuple[list[Dispositivo], list[Jurisprudencia]]:
+        """Every dispositivo (with parent and revoked mark) and decision, sorted by id."""
 
     def traverse(self, anchor_ids: list[str]) -> Context:
         """Walk `PARTS` down from the anchors (leis or dispositivos), then 1 hop of `REFERENCES`

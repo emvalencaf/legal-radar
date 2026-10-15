@@ -97,11 +97,16 @@ def answer_schema(lock: PromptLock, context_ids: list[str]) -> dict:
     return schema
 
 
+def jurisprudencia_text(j: Jurisprudencia) -> str:
+    """The text a decision is shown as: its number, tese and ementa (never the decisão)."""
+    return f"{j.number}. Tese: {j.tese or '-'}. Ementa: {j.ementa}"
+
+
 def source_texts(context: Context) -> dict[str, str]:
     """Each retrieved node's id with the text the model is shown for it."""
     texts = {d.id: d.text for d in context.dispositivos}
     for j in context.jurisprudencias:
-        texts[j.id] = f"{j.number}. Tese: {j.tese or '-'}. Ementa: {j.ementa}"
+        texts[j.id] = jurisprudencia_text(j)
     return texts
 
 
@@ -110,12 +115,14 @@ _AMENDMENT = re.compile(
 )
 
 
-def render_context(context: Context) -> str:
+def render_sources(texts: dict[str, str]) -> str:
     """The sources as shown to the model, without the `(Incluído pela Lei …)` marks: they add
     tokens and no meaning to an answer."""
-    return "\n\n".join(
-        f"[{id}] {_AMENDMENT.sub('', text).strip()}" for id, text in source_texts(context).items()
-    )
+    return "\n\n".join(f"[{id}] {_AMENDMENT.sub('', text).strip()}" for id, text in texts.items())
+
+
+def render_context(context: Context) -> str:
+    return render_sources(source_texts(context))
 
 
 def unsupported_mentions(answer: str, retrieved: list[str]) -> list[str]:
@@ -147,6 +154,23 @@ def anchor_ids_of(resolution: Resolution, urns: list[str]) -> list[str]:
     return found
 
 
+def answer_from(
+    query: str, texts: dict[str, str], provider: Provider, lock: PromptLock
+) -> tuple[str | None, list[str]]:
+    """The cited answer to `query` from the sources `texts` (id -> text) alone, with the ids it
+    cites; `(None, [])` when there are none. Shared by the graph pipeline and the RAG baselines."""
+    if not texts:
+        return None, []
+    schema = answer_schema(lock, list(texts))
+    params = CompletionParams(
+        pipeline_step="answer",
+        response_schema=schema,
+        prompt_snapshot=content_hash({"prompt": lock.prompt_hash(ANSWER_PROMPT), "schema": schema}),
+    )
+    prompt = lock.render(ANSWER_PROMPT, query=query, context=render_sources(texts))
+    return parse_answer(provider.complete(prompt, params).text, schema)
+
+
 def build_graph(resolve, reader: GraphReader, provider: Provider, lock: PromptLock):
     """Compile the pipeline; `resolve(query) -> Resolution | None` is the assunto resolver."""
 
@@ -158,20 +182,7 @@ def build_graph(resolve, reader: GraphReader, provider: Provider, lock: PromptLo
         return {"context": reader.traverse(leis)}
 
     def generate(state: State) -> State:
-        context = state["context"]
-        ids = [d.id for d in context.dispositivos] + [j.id for j in context.jurisprudencias]
-        if not ids:
-            return {"answer": None, "cited": []}
-        schema = answer_schema(lock, ids)
-        params = CompletionParams(
-            pipeline_step="answer",
-            response_schema=schema,
-            prompt_snapshot=content_hash(
-                {"prompt": lock.prompt_hash(ANSWER_PROMPT), "schema": schema}
-            ),
-        )
-        prompt = lock.render(ANSWER_PROMPT, query=state["query"], context=render_context(context))
-        answer, cited = parse_answer(provider.complete(prompt, params).text, schema)
+        answer, cited = answer_from(state["query"], source_texts(state["context"]), provider, lock)
         return {"answer": answer, "cited": cited}
 
     graph = StateGraph(State)

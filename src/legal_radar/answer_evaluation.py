@@ -30,6 +30,7 @@ class Question:
     contradictions: tuple[tuple[str, str], ...] = ()  # cited sources that disagree: flag it
     abstain: bool = False  # the graph cannot answer it: a good answer says so, citing nothing
     also_ok: tuple[str, ...] = ()  # sources a good answer may cite too: not required, not an error
+    nivel: str | None = None  # facil | medio | dificil | armadilha; None for the base questions
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,7 @@ def load_questions(path: Path) -> list[Question]:
             tuple((a, b) for a, b in q.get("contradictions", [])),
             bool(q.get("abstain", False)),
             tuple(q.get("also_ok", ())),
+            q.get("nivel"),
         )
         for q in raw["questions"]
     ]

@@ -172,3 +172,56 @@ def test_a_baseline_without_graph_paths_reports_n_a_and_scores_per_nivel():
     }
     assert [q["nivel"] for q in report.questions] == ["facil", "medio", None]
     assert "rag-naive (k=5)" in report.render()
+
+
+def _resumable(tmp_path, fingerprint="f1"):
+    from legal_radar.answer_evaluation import Checkpoint
+
+    return Checkpoint(tmp_path / "ck.json", fingerprint)
+
+
+QUESTIONS = [Question("one", "q1", (A,), (A,)), Question("two", "q2", (A,), (A,))]
+
+
+def test_a_run_that_dies_resumes_without_asking_the_answered_questions_again(tmp_path):
+    meter = UsageMeter(FakeProvider())
+    asked = []
+
+    def ask(query: str) -> CitedAnswer:
+        asked.append(query)
+        meter.complete(query)
+        if query == "q2" and asked.count("q2") == 1:
+            raise RuntimeError("network down")
+        return CitedAnswer(
+            query, "x", "ok", [Citation(A, "Dispositivo", [Hop("PARTS", "l", A)], "t")], [A]
+        )
+
+    with pytest.raises(RuntimeError, match="network down"):
+        run_evaluation(QUESTIONS, ask, meter, lambda a: False, checkpoint=_resumable(tmp_path))
+
+    report = run_evaluation(
+        QUESTIONS, ask, UsageMeter(FakeProvider()), lambda a: False, checkpoint=_resumable(tmp_path)
+    )
+
+    assert asked == ["q1", "q2", "q2"]  # q1 was not asked on the second run
+    assert report.scores["citation_correctness"] == 1.0
+    assert report.scores["graph_path"] is not None  # the cached answer kept its path
+    assert report.input_tokens > 0  # the answered question's tokens still count
+
+
+def test_a_checkpoint_of_other_questions_or_prompts_is_discarded(tmp_path):
+    first = _resumable(tmp_path)
+    first.save("one", CitedAnswer("q1", "x", "stale", [], []), (1, 1))
+
+    assert _resumable(tmp_path).done.keys() == {"one"}
+    assert _resumable(tmp_path, "f2").done == {}  # another fingerprint starts over
+    assert _resumable(tmp_path, "f2").path.read_text().count("\n") == 1  # only the header is left
+
+
+def test_a_checkpoint_line_cut_short_by_a_crash_is_ignored(tmp_path):
+    first = _resumable(tmp_path)
+    first.save("one", CitedAnswer("q1", "x", "ok", [], []), (1, 1))
+    with first.path.open("a") as file:
+        file.write('{"id": "two", "ans')
+
+    assert _resumable(tmp_path).done.keys() == {"one"}

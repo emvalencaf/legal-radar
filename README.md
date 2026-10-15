@@ -177,7 +177,9 @@ uv run --extra eval legal-radar eval "desconsideração da personalidade jurídi
 uv run legal-radar compare-evals                              # the latest run of each system
 ```
 
-`compare-evals` tables the graph, naive RAG and contextual RAG per metric and, for the main ones,
+An interrupted `eval` resumes by default: each answer is saved to `eval-runs/checkpoints/` and
+reused on the next run (while the questions and pinned prompts are the same); `--fresh` discards
+them. `compare-evals` tables the graph, naive RAG and contextual RAG per metric and, for the main ones,
 per `nivel` (the questions without one are `base`); give it run files to compare specific runs.
 
 Opt-in live smoke test against the real courts (not run by default): `uv run pytest -m live`.

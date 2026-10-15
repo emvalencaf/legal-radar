@@ -11,6 +11,7 @@ from pathlib import Path
 
 from legal_radar.answer import CitedAnswer
 from legal_radar.answer_evaluation import (
+    Checkpoint,
     Outcome,
     Question,
     UsageMeter,
@@ -20,6 +21,7 @@ from legal_radar.answer_evaluation import (
     graph_path,
     outcome_of,
 )
+from legal_radar.llm import content_hash
 
 RUNS_DIR = Path(__file__).resolve().parents[2] / "eval-runs"
 CITATIONS, PATH, CONTRADICTIONS = "citation_check", "path", "contradiction_check"
@@ -199,6 +201,20 @@ def aggregate(runs, graph_paths: bool = True) -> dict[str, float | None]:
     return scores
 
 
+CHECKPOINT_DIR = RUNS_DIR / "checkpoints"
+
+
+def checkpoint_for(
+    system: str, k: int | None, questions: list[Question], prompt_snapshot: str | None
+) -> Checkpoint:
+    """The checkpoint of the run of `system` (and `k`) over `questions`: one file per system, valid
+    only while the questions and the pinned prompts are the same."""
+    fingerprint = content_hash(
+        {"prompts": prompt_snapshot, "questions": [(q.id, q.query) for q in questions]}
+    )
+    return Checkpoint(CHECKPOINT_DIR / f"{system}{'' if k is None else f'-k{k}'}.json", fingerprint)
+
+
 BASE_NIVEL = "base"  # the questions that carry no `nivel`
 
 
@@ -226,9 +242,12 @@ def run_evaluation(
     system: str = "graph",
     k: int | None = None,
     graph_paths: bool = True,
+    checkpoint: Checkpoint | None = None,
 ) -> Report:
     """Answers every question through `ask` (whose model calls go through `meter`) and scores it.
-    `graph_paths=False` (a RAG baseline has no graph) leaves `graph_path` unscored: n/a."""
+    A `checkpoint` keeps each answer as it arrives, so a run that dies resumes without asking
+    again (the caller discards it once the report is written). `graph_paths=False` (a RAG
+    baseline has no graph) leaves `graph_path` unscored: n/a."""
     from assayer.runner.pipeline import EvaluationPipeline
     from assayer.runner.pricing import PricingConfig
 
@@ -237,8 +256,17 @@ def run_evaluation(
     by_id = {q.id: q for q in questions}
 
     def target(question_id: str) -> Outcome:
+        if (
+            checkpoint and question_id in checkpoint.done
+        ):  # answered before a crash: not asked again
+            answer, usage = checkpoint.done[question_id]
+            meter.total_input += usage[0]
+            meter.total_output += usage[1]
+            return outcome_of(answer, usage)
         meter.reset()
         answer = ask(by_id[question_id].query)
+        if checkpoint:
+            checkpoint.save(question_id, answer, meter.usage)
         return outcome_of(answer, meter.usage)
 
     dataset = [

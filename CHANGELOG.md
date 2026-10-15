@@ -15,7 +15,8 @@ heading when `development` is released to `master`.
   `cited-answer` prompt over the top-k by cosine. `legal-radar eval --baseline rag-naive|rag-contextual
   --k 5 15` scores them with the same harness (`graph_path` n/a), `index-rag` builds the index
   ahead, and `compare-evals` tables graph vs. baselines per metric and per `nivel`. Reports now
-  carry `system`, `k` and per-`nivel` scores; `Question` reads `nivel`; `GraphReader.corpus()`.
+  carry `system`, `k` and per-`nivel` scores; an interrupted `eval` resumes from the answers saved
+  in `eval-runs/checkpoints/` (`--fresh` discards them); the embedding build waits out throttling; `Question` reads `nivel`; `GraphReader.corpus()`.
 - Answer guards and evaluation (#44): `unsupported_mentions` flags the articles an answer names that
   were not retrieved, scored as `grounded_mentions`; a query with no letter resolves to no assunto;
   court texts are read unwrapped and in the case the rules expect; the context shown to the model

@@ -7,7 +7,9 @@ with `ancestors_of`). Neither uses an edge, a concept or a traversal."""
 
 import array
 import hashlib
+import logging
 import sqlite3
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,7 +24,7 @@ from legal_radar.answer import (
 from legal_radar.assunto import cosine
 from legal_radar.domain import Dispositivo, Jurisprudencia
 from legal_radar.enricher import STRUCTURAL_KINDS, ancestors_of
-from legal_radar.llm import CompletionParams
+from legal_radar.llm import AllProvidersFailedError, CompletionParams
 from legal_radar.ports import Provider
 from legal_radar.prompts import PromptLock, default_lock
 
@@ -31,6 +33,10 @@ BASELINES = tuple(f"rag-{name}" for name in CHUNKINGS)
 BATCH_SIZE = 50  # Gemini's batchEmbedContents takes at most 100 texts
 INDEX_DIR = Path(__file__).resolve().parents[2] / "data"
 EMBED_STEP = "rag_embedding"
+RETRY_WAIT = 30.0  # seconds: free embedding tiers throttle per minute, counting every text
+RETRIES = 8  # waits per batch before giving up; the saved batches make a rerun resume
+
+log = logging.getLogger(__name__)
 
 
 class RagError(RuntimeError):
@@ -103,13 +109,31 @@ def _connect(path: Path) -> sqlite3.Connection:
     return db
 
 
+def _embed_waiting(provider: Provider, texts: list[str], wait: float, retries: int):
+    """`provider.embed`, waiting out a throttled provider up to `retries` times."""
+    for attempt in range(retries + 1):
+        try:
+            return provider.embed(texts, CompletionParams(pipeline_step=EMBED_STEP))
+        except AllProvidersFailedError:
+            if attempt == retries:
+                raise
+            log.warning("embedding throttled; waiting %.0fs (%d/%d)", wait, attempt + 1, retries)
+            time.sleep(wait)
+
+
 def build_index(
-    chunks: list[Chunk], provider: Provider, path: Path, batch_size: int = BATCH_SIZE
+    chunks: list[Chunk],
+    provider: Provider,
+    path: Path,
+    batch_size: int = BATCH_SIZE,
+    wait: float = RETRY_WAIT,
+    retries: int = RETRIES,
 ) -> RagIndex:
     """The index of `chunks`, embedding only what `path` (SQLite) does not already hold: each
     batch is saved as it arrives, so a quota error mid-build resumes where it stopped. Raises
     `RagError` when the provider falls back to another embedding model, whose vectors cannot be
-    mixed with the stored ones (delete `path` to rebuild with the new model)."""
+    mixed with the stored ones (delete `path` to rebuild with the new model). A throttled provider
+    is waited out: `wait` seconds, up to `retries` times per batch."""
     db = _connect(path)
     try:
         stored = {
@@ -127,9 +151,7 @@ def build_index(
         vectors = {c.id: array.array("f", stored[c.id][2]).tolist() for c in chunks if fresh(c)}
         for start in range(0, len(pending), batch_size):
             batch = pending[start : start + batch_size]
-            embedding = provider.embed(
-                [c.text for c in batch], CompletionParams(pipeline_step=EMBED_STEP)
-            )
+            embedding = _embed_waiting(provider, [c.text for c in batch], wait, retries)
             if model is None:
                 model = embedding.model
             if embedding.model != model:

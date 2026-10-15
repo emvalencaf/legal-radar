@@ -135,6 +135,11 @@ def main(argv: list[str] | None = None) -> None:
         "--k", type=int, nargs="+", default=[5], help="top-k of the baseline (one run per value)"
     )
     eval_cmd.add_argument(
+        "--fresh",
+        action="store_true",
+        help="discard the answers a run that died left behind (default: resume them)",
+    )
+    eval_cmd.add_argument(
         "--grounding", action="store_true", help="also score RAGAS faithfulness (RAGAS_* env vars)"
     )
     commands.add_parser("index-rag").add_argument("chunking", choices=CHUNKINGS)
@@ -256,6 +261,14 @@ def main(argv: list[str] | None = None) -> None:
                 )
                 systems = [(graph, "graph", None)]
             for answer, system, k in systems:
+                from legal_radar.assayer_harness import checkpoint_for
+
+                checkpoint = checkpoint_for(system, k, questions, lock.snapshot_hash)
+                if args.fresh:
+                    checkpoint.discard()
+                    checkpoint = checkpoint_for(system, k, questions, lock.snapshot_hash)
+                if checkpoint.done:
+                    print(f"{system}: resuming with {len(checkpoint.done)} answers already saved")
                 stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
                 report = run_evaluation(
                     questions,
@@ -270,9 +283,11 @@ def main(argv: list[str] | None = None) -> None:
                     system=system,
                     k=k,
                     graph_paths=k is None,
+                    checkpoint=checkpoint,
                 )
                 print(report.render())
                 print(f"wrote {report.write()}")
+                checkpoint.discard()
             return
         if args.command == "draft-concepts":
             from legal_radar.concepts import (

@@ -20,11 +20,22 @@ from legal_radar.prompts import PromptError, PromptLock, default_lock
 from legal_radar.relations import extract_decision_relations
 
 ANSWER_PROMPT = "cited-answer"
-ANSWER_TEMPLATE = (
-    "Responda à pergunta usando apenas as fontes abaixo, e cite em `citations` o id de cada "
-    "fonte em que a resposta se apoia. Se as fontes não bastarem, diga isso.\n\n"
-    "Pergunta: {query}\n\nFontes:\n{context}"
-)
+# The sources come first and the question last, so a provider can cache the fixed context block.
+ANSWER_TEMPLATE = """Responda à pergunta usando apenas as fontes abaixo.
+
+Regras:
+- Use somente o que está nas fontes. Não use conhecimento externo e não mencione artigo, lei \
+ou decisão que não esteja nelas.
+- Em `citations`, liste só as fontes indispensáveis: a menor quantidade que sustenta a resposta. \
+Prefira o dispositivo específico (parágrafo, inciso) ao artigo inteiro quando só ele responde. \
+Não cite uma fonte só por ser do mesmo assunto.
+- Se as fontes não respondem à pergunta, diga que não bastam e deixe `citations` vazio.
+- Se duas fontes divergem, aponte a divergência.
+
+Fontes:
+{context}
+
+Pergunta: {query}"""
 ANSWER_SCHEMA = {  # published to the Hub as `cited-answer`'s structured output
     "title": "cited_answer",
     "type": "object",
@@ -35,7 +46,6 @@ ANSWER_SCHEMA = {  # published to the Hub as `cited-answer`'s structured output
             "type": "array",
             "description": "Ids dos dispositivos e das jurisprudências do contexto citados.",
             "items": {"type": "string", "enum": ["placeholder"]},  # the context's ids at run time
-            "minItems": 1,
             "uniqueItems": True,
         },
     },

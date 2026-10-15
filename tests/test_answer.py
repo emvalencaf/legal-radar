@@ -187,7 +187,8 @@ def test_a_citation_outside_the_retrieved_context_is_rejected():
     }
 
     assert parse_answer('{"answer": "x", "citations": ["a"]}', schema) == ("x", ["a"])
-    for reply in ['{"answer": "x", "citations": ["b"]}', '{"answer": "x", "citations": []}', "no"]:
+    assert parse_answer('{"answer": "x", "citations": []}', schema) == ("x", [])  # it may abstain
+    for reply in ['{"answer": "x", "citations": ["b"]}', "no"]:
         with pytest.raises(CitationError):
             parse_answer(reply, schema)
 

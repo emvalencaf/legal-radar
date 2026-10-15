@@ -3,7 +3,7 @@ import pytest
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.answer import ANSWER_SCHEMA
 from legal_radar.domain import Dispositivo, Jurisprudencia
-from legal_radar.llm import Completion, Embedding
+from legal_radar.llm import AllProvidersFailedError, Completion, Embedding
 from legal_radar.prompts import refresh
 from legal_radar.rag import RagBaseline, RagError, build_chunks, build_index
 
@@ -160,3 +160,28 @@ def test_a_query_embedded_by_another_model_is_refused(tmp_path, lock):
 
     with pytest.raises(RagError, match="other"):
         rag.ask("x")
+
+
+def test_a_throttled_provider_is_waited_out_and_retried(tmp_path):
+    chunks = build_chunks(CORPUS, [DECISION], contextual=False)
+    flaky = FakeProvider(script=[AllProvidersFailedError("busy")] * 2)
+
+    index = build_index(chunks, flaky, tmp_path / "idx.sqlite", wait=0, retries=2)
+
+    assert len(index.chunks) == len(chunks)
+
+
+def test_a_provider_that_stays_down_ends_the_build_but_keeps_what_was_saved(tmp_path):
+    chunks = build_chunks(CORPUS, [DECISION], contextual=False)
+    path = tmp_path / "idx.sqlite"
+    down = FakeProvider(
+        script=[Embedding([[0.1]] * 2, model="fake-embedding")]
+        + [AllProvidersFailedError("busy")] * 3
+    )
+
+    with pytest.raises(AllProvidersFailedError):
+        build_index(chunks, down, path, batch_size=2, wait=0, retries=2)
+
+    resumed = FakeProvider()
+    build_index(chunks, resumed, path, batch_size=2)
+    assert len(resumed.calls) == len(chunks) - 2

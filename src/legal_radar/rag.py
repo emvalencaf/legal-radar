@@ -14,11 +14,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from legal_radar.answer import (
-    _AMENDMENT,
     Citation,
     CitedAnswer,
     answer_from,
     jurisprudencia_text,
+    strip_amendments,
     unsupported_mentions,
 )
 from legal_radar.assunto import cosine
@@ -50,14 +50,9 @@ class Chunk:
     text: str  # what is embedded and what the model is shown
 
 
-def _clean(text: str) -> str:
-    """The text without the `(Redação dada pela …)` marks, which carry no meaning."""
-    return _AMENDMENT.sub("", text).strip()
-
-
 def _live(d: Dispositivo) -> str:
     """The cleaned text of `d`, or "" when it is revoked, structural or says nothing."""
-    return "" if d.revoked or d.kind in STRUCTURAL_KINDS else _clean(d.text)
+    return "" if d.revoked or d.kind in STRUCTURAL_KINDS else strip_amendments(d.text)
 
 
 def build_chunks(

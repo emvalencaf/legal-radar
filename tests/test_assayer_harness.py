@@ -225,3 +225,22 @@ def test_a_checkpoint_line_cut_short_by_a_crash_is_ignored(tmp_path):
         file.write('{"id": "two", "ans')
 
     assert _resumable(tmp_path).done.keys() == {"one"}
+
+
+def test_checkpoint_for_resumes_the_same_run_and_drops_it_when_questions_or_prompts_change(
+    tmp_path, monkeypatch
+):
+    from legal_radar import assayer_harness
+
+    monkeypatch.setattr(assayer_harness, "CHECKPOINT_DIR", tmp_path)
+    questions = [Question("one", "q1", (A,), (A,))]
+    answer = CitedAnswer("q1", "x", "ok", [], [])
+
+    assayer_harness.checkpoint_for("rag-naive", 5, questions, "p1").save("one", answer, (1, 1))
+
+    assert assayer_harness.checkpoint_for("rag-naive", 5, questions, "p1").done.keys() == {"one"}
+    assert assayer_harness.checkpoint_for("rag-naive", 15, questions, "p1").done == {}  # own file
+    changed = [Question("one", "other wording", (A,), (A,))]
+    assert assayer_harness.checkpoint_for("rag-naive", 5, changed, "p1").done == {}
+    assayer_harness.checkpoint_for("rag-naive", 5, questions, "p1").save("one", answer, (1, 1))
+    assert assayer_harness.checkpoint_for("rag-naive", 5, questions, "p2").done == {}

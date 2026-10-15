@@ -115,10 +115,15 @@ _AMENDMENT = re.compile(
 )
 
 
+def strip_amendments(text: str) -> str:
+    """The text without the `(Incluído pela Lei …)` marks: they add tokens and no meaning to an
+    answer or an embedding."""
+    return _AMENDMENT.sub("", text).strip()
+
+
 def render_sources(texts: dict[str, str]) -> str:
-    """The sources as shown to the model, without the `(Incluído pela Lei …)` marks: they add
-    tokens and no meaning to an answer."""
-    return "\n\n".join(f"[{id}] {_AMENDMENT.sub('', text).strip()}" for id, text in texts.items())
+    """The sources as shown to the model, without the amendment marks."""
+    return "\n\n".join(f"[{id}] {strip_amendments(text)}" for id, text in texts.items())
 
 
 def render_context(context: Context) -> str:

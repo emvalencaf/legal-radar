@@ -354,3 +354,14 @@ def test_a_leading_locator_is_covered_and_its_evidence_literal():
     (r,) = result.relations
     assert r.evidence == "§ 1º do art. 50 do Código Civil"
     assert result.needs_llm == []
+
+
+def test_a_decision_text_broken_by_line_wraps_is_read_as_one_citation():
+    ementa = "INTERPRETAÇÃO DO\nART\n.\n50\nDO CÓDIGO CIVIL.\nREQUISITOS."
+
+    result = extract_decision_relations(replace(DECISION, ementa=ementa))
+
+    assert [r.target_id for r in result.relations] == [CC + "#art50"]
+    assert (
+        result.relations[0].evidence == "art. 50 do Código Civil"
+    )  # read in the case the rules expect

@@ -87,6 +87,7 @@ _AMENDMENT = re.compile(
 _CITATION_MARK = re.compile(
     rf"(?:\b[Aa]rts?\.|\b[Aa]rtigos?)\s*\d|§\s*\d|\b{_INC}|\b[Pp]arágrafo único\b"
 )
+_ART_DOT = re.compile(r"\b([Aa]rts?)\s+\.")  # `ART .` once the wraps are joined
 _OWN_ARTIGO = re.compile(r"^art\d+[A-Z]?$")
 _MAX_EXPANSION = 50
 _PRE_WINDOW = 60  # how far back a locator before `art.` is looked for
@@ -157,11 +158,33 @@ def extract_decision_relations(
     A decision has no home lei, so a citation that names none (`art. 50` alone) is unresolved, and
     `deste artigo` / `artigo anterior` mean nothing. Same confidence rules as `extract_relations`.
     """
-    text = "\n\n".join(t for t in (j.ementa, j.tese) if t and t.strip())
+    # court texts arrive wrapped mid-citation (`ART\n.\n50`): read each part on one line
+    parts = (_unwrap(t) for t in (j.ementa, j.tese) if t and t.strip())
+    text = "\n\n".join(parts)
     scan = _Scan(Dispositivo(j.id, "", "", text), resolver, ingested, leading=True)
     for pattern in (_artigo_citations, _act_mentions, _leftover_marks):
         pattern(scan)
     return scan.result()
+
+
+_CONNECTORS = {
+    "do", "da", "dos", "das", "de", "deste", "desta", "neste", "nesta", "inciso", "incisos",
+    "parágrafo", "único", "artigo", "artigos", "art", "arts", "caput", "anterior", "nº", "a", "ao",
+}  # fmt: skip
+
+
+def _unwrap(text: str) -> str:
+    """A court text read by the citation rules: wraps joined, `ART .` closed up, and the words of
+    an all-capitals ementa put back in the case the rules expect (`ART. 50 DO CÓDIGO CIVIL`).
+    Roman numerals and the codes' acronyms stay as they are."""
+
+    def word(m: re.Match[str]) -> str:
+        token = m[0]
+        if len(token) < 2 or not token.isupper() or token in _NAME_URN or _is_roman(token):
+            return token
+        return token.lower() if token.lower() in _CONNECTORS else token.capitalize()
+
+    return _ART_DOT.sub(r"\1.", re.sub(r"[^\W\d_]+", word, " ".join(text.split())))
 
 
 @dataclass
@@ -399,6 +422,10 @@ def _to_roman(n: int) -> str:
 
 
 _VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+
+
+def _is_roman(s: str) -> bool:
+    return bool(re.fullmatch(r"[IVXLCDM]+", s)) and _roman(s) > 0
 
 
 def _roman(s: str) -> int:

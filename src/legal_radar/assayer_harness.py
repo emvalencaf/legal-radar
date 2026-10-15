@@ -79,14 +79,19 @@ def build_registries(
 
     class CitationEvaluator(BaseEvaluator):
         def evaluate(self, prediction, reference, **kwargs):
-            score = citation_correctness(prediction["cited"], prediction["retrieved"], reference)
+            score = citation_correctness(
+                prediction["cited"],
+                prediction["retrieved"],
+                reference["expected"],
+                reference["also_ok"],
+            )
             return FieldEvaluation(
                 CITATIONS, "citation_correctness", reference, prediction["cited"], score.f1, None,
                 {
                     "precision": score.precision,
                     "recall": score.recall,
                     "fabricated": score.fabricated,
-                    "applicable": bool(reference),  # no expected citation: an abstain question
+                    "applicable": bool(reference["expected"]),  # none: an abstain question
                 },
             )  # fmt: skip
 
@@ -217,7 +222,7 @@ def run_evaluation(
         {
             "input": q.id,
             "expected_output": {
-                CITATIONS: list(q.citations),
+                CITATIONS: {"expected": list(q.citations), "also_ok": list(q.also_ok)},
                 PATH: list(q.nodes),
                 CONTRADICTIONS: [list(pair) for pair in q.contradictions],
                 ABSTENTION: q.abstain,

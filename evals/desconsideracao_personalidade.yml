@@ -1,6 +1,7 @@
 # Questions about the anchor assunto, with the citations and traversal nodes a correct answer has.
 # Ids are graph ids: `{lei urn}#{path}` for dispositivos, `{court}:{native id}` for decisions.
 # `citations`: what a good answer relies on (a dispositivo and the children that complete it).
+# `also_ok`: sources a good answer may cite too (not required, not counted against precision).
 # `nodes`: the nodes the traversal crosses to reach them (the anchor and the PARTS between).
 # `contradictions` pair sources whose rules pull apart: the answer should say so.
 # Every id was read from the graph (CC art. 50 and CDC art. 28 subtrees, the anchors).
@@ -170,15 +171,27 @@ questions:
     query: o sócio responde com o patrimônio dele pelas dívidas da empresa?
     citations:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
     nodes:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+    also_ok:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+      - "STJ:202001090402"
   - id: f-o-que-e-desconsideracao
     nivel: facil
     query: desconsideração da personalidade jurídica, o que é isso
     citations:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
     nodes:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+    also_ok:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+      - "STJ:202001090402"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par1"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2"
   - id: f-juiz-de-oficio
     nivel: facil
     query: o juiz pode desconsiderar a pessoa jurídica sozinho, sem ninguem pedir?
@@ -217,8 +230,13 @@ questions:
     query: empresa nao paga e o socio diz q nao tem nada a ver com isso ??
     citations:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
     nodes:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+    also_ok:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+      - "STJ:202001090402"
   - id: m-desvio-oq
     nivel: medio
     query: desvio de finalidade significa oq exatamente
@@ -301,6 +319,9 @@ questions:
     nodes:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
       - "STJ:202001090402"
+    also_ok:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
   - id: d-grupo-trabalhista
     nivel: dificil
     query: na execução trabalhista, empresa do mesmo grupo que nem participou do processo pode ser incluida?
@@ -309,6 +330,8 @@ questions:
     nodes:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
       - "STF:sjur550030"
+    also_ok:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
   - id: d-sem-culpa-do-socio
     nivel: dificil
     query: o consumidor ficou no prejuizo, a empresa so tem divida e o socio nao fez nada de errado. ainda dá pra cobrar dele?
@@ -342,8 +365,14 @@ questions:
     query: Can a Brazilian court pierce the corporate veil to reach a shareholder?
     citations:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
     nodes:
       - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+    also_ok:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+      - "STJ:202001090402"
+      - "STF:sjur550030"
   - id: a-mei
     nivel: armadilha
     query: e se for MEI, muda alguma coisa na desconsideração?

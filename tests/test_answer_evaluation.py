@@ -38,6 +38,44 @@ def test_citation_correctness(cited, retrieved, expected, precision, recall, fab
 
 
 @pytest.mark.parametrize(
+    ("cited", "expected", "also_ok", "precision", "recall"),
+    [
+        ([A, C], [A], [C], 1.0, 1.0),  # an acceptable extra is not an error
+        ([A, C, D], [A], [C], 0.5, 1.0),  # another extra still is
+        ([C], [A], [C], 0.0, 0.0),  # acceptable is not required: the expected one is missing
+        ([A], [A], [C], 1.0, 1.0),  # and not citing it costs nothing
+        ([C], [], [C], 1.0, 1.0),  # nothing but acceptable sources cited
+        ([A, C], [A, C], [C], 1.0, 1.0),  # expected wins over acceptable
+    ],
+)
+def test_acceptable_citations_do_not_count_against_precision(
+    cited, expected, also_ok, precision, recall
+):
+    score = citation_correctness(cited, [A, C, D], expected, also_ok)
+
+    assert (score.precision, score.recall) == (precision, recall)
+
+
+def test_load_questions_reads_also_ok_and_rejects_it_on_an_abstain_question(tmp_path):
+    from legal_radar.answer_evaluation import load_questions
+
+    ok = tmp_path / "ok.yml"
+    ok.write_text(
+        "questions:\n  - id: q\n    query: x\n    citations: [a]\n    also_ok: [b]\n",
+        encoding="utf-8",
+    )
+    assert load_questions(ok)[0].also_ok == ("b",)
+
+    bad = tmp_path / "bad.yml"
+    bad.write_text(
+        "questions:\n  - id: q\n    query: x\n    abstain: true\n    also_ok: [b]\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="also_ok"):
+        load_questions(bad)
+
+
+@pytest.mark.parametrize(
     ("found", "expected", "precision", "recall"),
     [
         ({A, B, C}, {A, B, C}, 1.0, 1.0),

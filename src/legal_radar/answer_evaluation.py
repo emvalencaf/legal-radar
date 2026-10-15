@@ -29,6 +29,7 @@ class Question:
     nodes: tuple[str, ...]  # nodes the traversal should walk through to reach those citations
     contradictions: tuple[tuple[str, str], ...] = ()  # cited sources that disagree: flag it
     abstain: bool = False  # the graph cannot answer it: a good answer says so, citing nothing
+    also_ok: tuple[str, ...] = ()  # sources a good answer may cite too: not required, not an error
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,7 @@ def load_questions(path: Path) -> list[Question]:
             tuple(q.get("nodes", ())),
             tuple((a, b) for a, b in q.get("contradictions", [])),
             bool(q.get("abstain", False)),
+            tuple(q.get("also_ok", ())),
         )
         for q in raw["questions"]
     ]
@@ -64,8 +66,10 @@ def load_questions(path: Path) -> list[Question]:
     if len(ids) != len(set(ids)):
         raise ValueError(f"{path}: duplicate question ids")
     for q in questions:
-        if q.abstain and (q.citations or q.nodes or q.contradictions):
-            raise ValueError(f"{path}: {q.id} abstains, so it can expect no citation or node")
+        if q.abstain and (q.citations or q.nodes or q.contradictions or q.also_ok):
+            raise ValueError(
+                f"{path}: {q.id} abstains, so it can expect no citation, node or also_ok"
+            )
         if not q.abstain and not q.citations:
             raise ValueError(f"{path}: {q.id} expects no citation: mark it `abstain: true`")
     return questions
@@ -79,12 +83,18 @@ def _precision_recall(found: set[str], expected: set[str]) -> tuple[float, float
 
 
 def citation_correctness(
-    cited: Iterable[str], retrieved: Iterable[str], expected: Iterable[str]
+    cited: Iterable[str],
+    retrieved: Iterable[str],
+    expected: Iterable[str],
+    also_ok: Iterable[str] = (),
 ) -> CitationScore:
     """Precision: the cited ids that were expected. Recall: the expected ids that were cited.
-    `fabricated` lists the cited ids outside what was retrieved (the schema should forbid them)."""
+    An `also_ok` id is neither required nor an error: it leaves precision alone when cited and
+    recall alone when not. `fabricated` lists the cited ids outside what was retrieved (the
+    schema should forbid them)."""
     cited, expected = list(cited), set(expected)
-    precision, recall = _precision_recall(set(cited), expected)
+    tolerated = set(also_ok) - expected
+    precision, recall = _precision_recall(set(cited) - tolerated, expected)
     known = set(retrieved)
     return CitationScore(precision, recall, [i for i in cited if i not in known])
 

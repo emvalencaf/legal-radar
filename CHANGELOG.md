@@ -9,6 +9,8 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Eval set grown to 50 questions (#44): informal, broken and implicit-concept questions from easy
+  to hard, plus edge cases the graph cannot answer (`nivel` marks the difficulty).
 - Decision → dispositivo links (#76): `extract_decision_relations` reads the ementa and tese of a
   decision with the same rules as a dispositivo and yields `REFERENCES` edges (HIGH, origin `rule`);
   a citation that names no lei stays unresolved (LOW) for the LLM. `ingest-jurisprudencia` writes
@@ -37,6 +39,8 @@ heading when `development` is released to `master`.
 
 ### Fixed
 
+- Groq rejected the cited-answer schema (`uniqueItems` is unsupported in strict mode): the OpenAI-
+  compatible adapters no longer send it; replies are still validated against the full schema.
 - `enrichment_key` mixes the hash of `dispositivo-enrichment`, the prompt `enrich()` runs, instead
   of `dispositivo-concept`.
 - `AllProvidersFailedError` now says why each provider gave up (quota, rate limit, rejected

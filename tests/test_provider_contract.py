@@ -271,3 +271,12 @@ def test_no_schema_means_no_structured_output_fields():
         make(transport).complete("p")
         body = transport.requests[0][2]
         assert "response_format" not in body and "generationConfig" not in body
+
+
+def test_strict_schemas_drop_unique_items_which_groq_does_not_support():
+    from legal_radar.adapters.http_providers import _closed
+
+    schema = {"type": "array", "items": {"type": "string"}, "uniqueItems": True}
+
+    assert "uniqueItems" not in _closed(schema)
+    assert schema["uniqueItems"] is True  # the caller's schema keeps it for local validation

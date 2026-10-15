@@ -162,3 +162,205 @@ questions:
     query: O que o STJ decidiu no Tema Repetitivo 1210 sobre a desconsideração da personalidade?
     citations: ["STJ:202001090402"]
     nodes: ["urn:lex:br:federal:lei:2002-01-10;10406#art50", "STJ:202001090402"]
+
+# --- Perguntas de usuário (informais, quebradas, conceitos implícitos), de fácil a difícil.
+# `nivel` is documentation: facil, medio, dificil, armadilha (the graph cannot answer: abstain).
+  - id: f-socio-paga-divida
+    nivel: facil
+    query: o sócio responde com o patrimônio dele pelas dívidas da empresa?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+  - id: f-o-que-e-desconsideracao
+    nivel: facil
+    query: desconsideração da personalidade jurídica, o que é isso
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+  - id: f-juiz-de-oficio
+    nivel: facil
+    query: o juiz pode desconsiderar a pessoa jurídica sozinho, sem ninguem pedir?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+  - id: f-ministerio-publico
+    nivel: facil
+    query: MP pode pedir a desconsideração?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+  - id: f-loja-sumiu
+    nivel: facil
+    query: comprei e a loja fechou e sumiu, consigo cobrar do dono?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+  - id: f-misturou-contas
+    nivel: facil
+    query: misturar o dinheiro pessoal com o da firma dá problema?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incI"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incI"
+  - id: m-empresa-deve-socio-nada
+    nivel: medio
+    query: empresa nao paga e o socio diz q nao tem nada a ver com isso ??
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+  - id: m-desvio-oq
+    nivel: medio
+    query: desvio de finalidade significa oq exatamente
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par1"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par1"
+  - id: m-mudou-ramo
+    nivel: medio
+    query: a empresa passou a vender outra coisa, mudou o ramo. isso é fraude?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par5"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par5"
+  - id: m-passou-ativos
+    nivel: medio
+    query: dono passou os bens da empresa pra outra empresa dele de graça, e agora?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incII"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par2_incII"
+  - id: m-controlada-responde
+    nivel: medio
+    query: a controlada responde por dívida de consumo do grupo?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par2"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par2"
+  - id: m-coligada-culpa
+    nivel: medio
+    query: e as coligadas? só se tiver culpa né
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par4"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par4"
+  - id: m-consorcio-solidario
+    nivel: medio
+    query: empresas em consórcio respondem juntas perante o cliente?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par3"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par3"
+  - id: m-pj-por-divida-socio
+    nivel: medio
+    query: o credor do sócio pode ir atrás da empresa?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par3"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par3"
+  - id: m-empresas-irmas
+    nivel: medio
+    query: empresas irmãs, mesma família, dá pra penhorar bem de uma por divida da outra?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par4"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par4"
+  - id: m-art50-par5
+    nivel: medio
+    query: art 50 §5 cc
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par5"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50_par5"
+  - id: d-encerramento-irregular
+    nivel: dificil
+    query: a empresa fechou sem dar baixa e não tem nenhum bem pra penhorar, ja da pra pegar o socio?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "STJ:202001090402"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "STJ:202001090402"
+  - id: d-grupo-trabalhista
+    nivel: dificil
+    query: na execução trabalhista, empresa do mesmo grupo que nem participou do processo pode ser incluida?
+    citations:
+      - "STF:sjur550030"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+      - "STF:sjur550030"
+  - id: d-sem-culpa-do-socio
+    nivel: dificil
+    query: o consumidor ficou no prejuizo, a empresa so tem divida e o socio nao fez nada de errado. ainda dá pra cobrar dele?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+  - id: d-subsidiaria
+    nivel: dificil
+    query: a controladora paga primeiro ou so depois que a filial nao pagar? (consumidor)
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par2"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par2"
+  - id: d-premissa-errada
+    nivel: dificil
+    query: o CDC tambem exige confusao patrimonial pra desconsiderar, certo?
+    citations:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+    nodes:
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28"
+      - "urn:lex:br:federal:lei:1990-09-11;8078#art28_par5"
+    contradictions:
+      - ["urn:lex:br:federal:lei:1990-09-11;8078#art28", "urn:lex:br:federal:lei:2002-01-10;10406#art50"]
+  - id: d-idioma
+    nivel: dificil
+    query: Can a Brazilian court pierce the corporate veil to reach a shareholder?
+    citations:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+    nodes:
+      - "urn:lex:br:federal:lei:2002-01-10;10406#art50"
+  - id: a-mei
+    nivel: armadilha
+    query: e se for MEI, muda alguma coisa na desconsideração?
+    abstain: true
+  - id: a-socio-retirante
+    nivel: armadilha
+    query: sócio que saiu da empresa, por quanto tempo ainda responde?
+    abstain: true
+  - id: a-honorarios
+    nivel: armadilha
+    query: quem paga os honorários e as custas no incidente de desconsideração?
+    abstain: true
+  - id: a-competencia-falencia
+    nivel: armadilha
+    query: falida a empresa, quem decide a desconsideração, o juízo da falência ou a justiça do trabalho?
+    abstain: true
+  - id: a-so-pontuacao
+    nivel: armadilha
+    query: ??
+    abstain: true

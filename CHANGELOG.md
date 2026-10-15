@@ -9,6 +9,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Answer guards and evaluation (#44): `unsupported_mentions` flags the articles an answer names that
+  were not retrieved, scored as `grounded_mentions`; a query with no letter resolves to no assunto;
+  court texts are read unwrapped and in the case the rules expect; the context shown to the model
+  drops the `(Incluído pela Lei …)` marks. The `cited-answer` prompt asks for the fewest sources,
+  forbids outside knowledge, lets `citations` be empty and puts the question after the sources
+  (new Hub commit, pinned). A question may list `also_ok` sources: neither required nor counted
+  against precision.
 - Eval set grown to 50 questions (#44): informal, broken and implicit-concept questions from easy
   to hard, plus edge cases the graph cannot answer (`nivel` marks the difficulty).
 - Decision → dispositivo links (#76): `extract_decision_relations` reads the ementa and tese of a

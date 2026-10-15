@@ -28,10 +28,11 @@ TIMEOUT_SECONDS = 60  # `LLM_TIMEOUT_SECONDS` overrides it: local models can tak
 
 
 def _closed(schema):
-    """The schema with `additionalProperties: false` on every object, which strict mode requires
-    (Groq rejects the request otherwise)."""
+    """The schema with `additionalProperties: false` on every object, which strict mode requires,
+    and without `uniqueItems`, which it does not support (Groq rejects the request otherwise).
+    Replies are validated against the full schema locally."""
     if isinstance(schema, dict):
-        closed = {key: _closed(value) for key, value in schema.items()}
+        closed = {key: _closed(value) for key, value in schema.items() if key != "uniqueItems"}
         if closed.get("type") == "object":
             closed.setdefault("additionalProperties", False)
         return closed

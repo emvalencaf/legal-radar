@@ -11,7 +11,14 @@ import re
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 
-from legal_radar.domain import Confidence, Dispositivo, Origin, Relation, RelationType
+from legal_radar.domain import (
+    Confidence,
+    Dispositivo,
+    Jurisprudencia,
+    Origin,
+    Relation,
+    RelationType,
+)
 from legal_radar.enrichment import EXTRACTOR_VERSION
 from legal_radar.lexml import LexmlError, search_urn
 from legal_radar.ports import PageSource
@@ -61,6 +68,9 @@ _ARTIGO = re.compile(
     rf"(?:\s+(?:a|ao)\s+(?P<n2>{_NUM})[º°]?)?"
 )
 _LOCATOR = re.compile(rf"(?:\s*,?\s*(?:(?P<caput>caput)|{_PAR}))?(?:\s*,?\s*{_INC})?")
+_PRE_LOCATOR = re.compile(  # `§ 1º do`, `incisos I a III do` right before `art. 50`
+    rf"(?:{_PAR}\s*,?\s*)?(?:{_INC}\s*,?\s*)?d[oa]\s+$"
+)
 _LAW = re.compile(
     r"\s*,?\s*(?:(?P<same>desta Lei|deste Código|desta Constituição|desta Consolidação)"
     rf"|d[oa]s?\s+(?:(?P<name>{_NAMES})|{_ACT}"
@@ -77,8 +87,10 @@ _AMENDMENT = re.compile(
 _CITATION_MARK = re.compile(
     rf"(?:\b[Aa]rts?\.|\b[Aa]rtigos?)\s*\d|§\s*\d|\b{_INC}|\b[Pp]arágrafo único\b"
 )
+_ART_DOT = re.compile(r"\b([Aa]rts?)\s+\.")  # `ART .` once the wraps are joined
 _OWN_ARTIGO = re.compile(r"^art\d+[A-Z]?$")
 _MAX_EXPANSION = 50
+_PRE_WINDOW = 60  # how far back a locator before `art.` is looked for
 _SNIPPET = 80
 
 
@@ -136,6 +148,45 @@ def extract_relations(
     return scan.result()
 
 
+def extract_decision_relations(
+    j: Jurisprudencia,
+    resolver: UrnResolver | None = None,
+    ingested: Mapping[str, Collection[str]] | None = None,
+) -> Extraction:
+    """Extract the REFERENCES edges of a decision from its ementa and tese (never the decisão).
+
+    A decision has no home lei, so a citation that names none (`art. 50` alone) is unresolved, and
+    `deste artigo` / `artigo anterior` mean nothing. Same confidence rules as `extract_relations`.
+    """
+    # court texts arrive wrapped mid-citation (`ART\n.\n50`): read each part on one line
+    parts = (_unwrap(t) for t in (j.ementa, j.tese) if t and t.strip())
+    text = "\n\n".join(parts)
+    scan = _Scan(Dispositivo(j.id, "", "", text), resolver, ingested, leading=True)
+    for pattern in (_artigo_citations, _act_mentions, _leftover_marks):
+        pattern(scan)
+    return scan.result()
+
+
+_CONNECTORS = {
+    "do", "da", "dos", "das", "de", "deste", "desta", "neste", "nesta", "inciso", "incisos",
+    "parágrafo", "único", "artigo", "artigos", "art", "arts", "caput", "anterior", "nº", "a", "ao",
+}  # fmt: skip
+
+
+def _unwrap(text: str) -> str:
+    """A court text read by the citation rules: wraps joined, `ART .` closed up, and the words of
+    an all-capitals ementa put back in the case the rules expect (`ART. 50 DO CÓDIGO CIVIL`).
+    Roman numerals and the codes' acronyms stay as they are."""
+
+    def word(m: re.Match[str]) -> str:
+        token = m[0]
+        if len(token) < 2 or not token.isupper() or token in _NAME_URN or _is_roman(token):
+            return token
+        return token.lower() if token.lower() in _CONNECTORS else token.capitalize()
+
+    return _ART_DOT.sub(r"\1.", re.sub(r"[^\W\d_]+", word, " ".join(text.split())))
+
+
 @dataclass
 class _Scan:
     """The state one pass over a dispositivo shares between the pattern functions."""
@@ -143,6 +194,7 @@ class _Scan:
     d: Dispositivo
     resolver: UrnResolver | None
     ingested: Mapping[str, Collection[str]] | None
+    leading: bool = False  # read a locator before the artigo (`§ 1º do art. 50`): decisions only
     out: list[Relation] = field(default_factory=list)
     flags: list[str] = field(default_factory=list)
     covered: list[tuple[int, int]] = field(default_factory=list)
@@ -211,17 +263,23 @@ def _artigo_citations(s: _Scan) -> None:
     for m in _ARTIGO.finditer(s.masked):
         loc = _LOCATOR.match(s.masked, m.end())
         end = loc.end() if loc else m.end()
+        start = m.start()
+        if s.leading and not (loc and (loc["caput"] or loc["par"] or loc["unico"] or loc["i1"])):
+            pre = _PRE_LOCATOR.search(s.masked, max(0, start - _PRE_WINDOW), start)
+            if pre and (pre["par"] or pre["unico"] or pre["i1"]):
+                loc, start = pre, pre.start()  # the locator comes first: `§ 1º do art. 50`
         law = _LAW.match(s.masked, end)
         if law:
             end = law.end()
-        s.cover(m.start(), end)
+        s.cover(start, end)
         if law is None and _UNKNOWN_LAW.match(s.masked, end):
-            s.flag(m.start())  # a law the table does not know: not the same lei, not guessable
+            s.flag(start)  # a law the table does not know: not the same lei, not guessable
             continue
-        urn, label = (s.d.lei_id, "") if law is None else _law(law, s.d.lei_id, s.resolver)
+        home = s.d.lei_id or None  # a decision has none
+        urn, label = (home, "lei não informada") if law is None else _law(law, home, s.resolver)
         paths = _paths(m, loc)
         if paths is None:
-            s.flag(m.start())
+            s.flag(start)
             continue
         for path in paths:
             if urn is None:  # unresolved: the LOW edge carries the citation, no need to flag it too
@@ -229,11 +287,11 @@ def _artigo_citations(s: _Scan) -> None:
                     RelationType.REFERENCES,
                     s.d.id,
                     None,
-                    s.text[m.start() : end],
+                    s.text[start:end],
                     f"{label} {path}",
                 )
             else:
-                s.reference_in(urn, path, s.text[m.start() : end])
+                s.reference_in(urn, path, s.text[start:end])
 
 
 def _this_artigo(s: _Scan) -> None:
@@ -289,58 +347,9 @@ def _act(m: re.Match[str], resolver: UrnResolver | None) -> tuple[str | None, st
     return urn, f"{key[0]}:{key[1]}/{key[2]}"
 
 
-def _law(m: re.Match[str], this_lei: str, resolver: UrnResolver | None) -> tuple[str | None, str]:
-    if m["same"]:
-        return this_lei, m["same"]
-    if m["name"]:
-        return _NAME_URN[m["name"]], m["name"]
-    if m["kind"]:
-        return _act(m, resolver)
-    return None, m["other"]
-
-
-def _previous_artigo(s: _Scan) -> None:
-    """`o artigo anterior`: only for an artigo numbered above 1 and without a letter suffix."""
-    for m in _PREVIOUS_ARTIGO.finditer(s.masked):
-        s.cover(m.start(), m.end())
-        previous = _previous(s.own)
-        if previous is None:
-            s.flag(m.start())
-        else:
-            s.reference(previous, m[0])
-
-
-def _act_mentions(s: _Scan) -> None:
-    """`Lei nº 8.078/1990` on its own: a reference to the lei, not to one of its dispositivos."""
-    for m in _ACT_MENTION.finditer(s.masked):
-        if s.is_covered(m.start()):
-            continue
-        urn, label = _act(m, s.resolver)
-        if urn != s.d.lei_id:
-            s.edge(RelationType.REFERENCES, s.d.id, urn, m[0], label if urn is None else None)
-
-
-def _leftover_marks(s: _Scan) -> None:
-    """Whatever still looks like a citation after the other patterns goes to the LLM."""
-    for m in _CITATION_MARK.finditer(s.masked):
-        if not s.is_covered(m.start()):
-            s.flag(m.start())
-
-
-def _exists(node_id: str | None, ingested: Mapping[str, Collection[str]] | None) -> bool:
-    if ingested is None or node_id is None:
-        return True
-    lei = node_id.split("#", 1)[0]
-    return lei in ingested and ("#" not in node_id or node_id in ingested[lei])
-
-
-def _act(m: re.Match[str], resolver: UrnResolver | None) -> tuple[str | None, str]:
-    key = (_KINDS[m["kind"]], m["numero"].replace(".", ""), int(m["ano"] or m["ano2"]))
-    urn = _ACT_URN.get(key) or (resolver(*key) if resolver else None)
-    return urn, f"{key[0]}:{key[1]}/{key[2]}"
-
-
-def _law(m: re.Match[str], this_lei: str, resolver: UrnResolver | None) -> tuple[str | None, str]:
+def _law(
+    m: re.Match[str], this_lei: str | None, resolver: UrnResolver | None
+) -> tuple[str | None, str]:
     if m["same"]:
         return this_lei, m["same"]
     if m["name"]:
@@ -413,6 +422,10 @@ def _to_roman(n: int) -> str:
 
 
 _VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+
+
+def _is_roman(s: str) -> bool:
+    return bool(re.fullmatch(r"[IVXLCDM]+", s)) and _roman(s) > 0
 
 
 def _roman(s: str) -> int:

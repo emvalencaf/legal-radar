@@ -45,8 +45,8 @@ class AssuntoResolver:
 
     def resolve(self, query: str) -> Resolution | None:
         """The best-matching assunto, or None when nothing reaches the threshold."""
-        if not self._names:
-            return None
+        if not self._names or not any(c.isalpha() for c in query):
+            return None  # nothing to embed: `??` would still land near some assunto
         params = CompletionParams(pipeline_step=PIPELINE_STEP)
         query_embedding = self.provider.embed([query], params)
         if query_embedding.model != self._model:

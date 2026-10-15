@@ -34,8 +34,11 @@ class GraphStore(Protocol):
         A relation whose lei the graph lacks becomes an edge to a stub Lei node keyed by its URN;
         one whose endpoint is unresolved is kept as an attribute of the node it starts from."""
 
-    def write_jurisprudencia(self, items: list[Jurisprudencia]) -> None:
-        """Idempotently upsert the jurisprudência nodes."""
+    def write_jurisprudencia(
+        self, items: list[Jurisprudencia], relations: list[Relation] = ()
+    ) -> None:
+        """Idempotently upsert the jurisprudência nodes and the `rule` edges starting at them
+        (`relations`, written like a dispositivo's: stub lei, unresolved citation kept)."""
 
     def replace_llm_relations(self, chunk_id: str, relations: list[Relation]) -> None:
         """Atomically swap the `llm`-origin edges starting at one dispositivo for `relations`.

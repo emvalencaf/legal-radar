@@ -1,7 +1,7 @@
 {
   "prompts": {
     "cited-answer": {
-      "commit": "d13f0038e067f9bec93d9fadef5d925025fac29ddacf27f17f6e70cd594bb508",
+      "commit": "f10ba1925bebf219128544e5253acf4674ab4a1bc9ac6a2f69f4278903aa87f9",
       "schema": {
         "additionalProperties": false,
         "description": "A resposta à pergunta, com os ids das fontes em que se apoia.",
@@ -18,7 +18,6 @@
               ],
               "type": "string"
             },
-            "minItems": 1,
             "type": "array",
             "uniqueItems": true
           }
@@ -30,7 +29,7 @@
         "title": "cited_answer",
         "type": "object"
       },
-      "template": "Responda à pergunta usando apenas as fontes abaixo, e cite em `citations` o id de cada fonte em que a resposta se apoia. Se as fontes não bastarem, diga isso.\n\nPergunta: {query}\n\nFontes:\n{context}"
+      "template": "Responda à pergunta usando apenas as fontes abaixo.\n\nRegras:\n- Use somente o que está nas fontes. Não use conhecimento externo e não mencione artigo, lei ou decisão que não esteja nelas.\n- Em `citations`, liste só as fontes indispensáveis: a menor quantidade que sustenta a resposta. Prefira o dispositivo específico (parágrafo, inciso) ao artigo inteiro quando só ele responde. Não cite uma fonte só por ser do mesmo assunto.\n- Se as fontes não respondem à pergunta, diga que não bastam e deixe `citations` vazio.\n- Se duas fontes divergem, aponte a divergência.\n\nFontes:\n{context}\n\nPergunta: {query}"
     },
     "concepts-count": {
       "commit": "2a7f98d218db17f1208f41443889d168643a588e7d2d2c7dc9586156811a1ff5",
@@ -243,5 +242,5 @@
       "template": "Você relaciona uma decisão judicial a conceitos do assunto \"{assunto}\".\nSeja conservador: uma lista vazia é a resposta esperada quando houver dúvida.\n\n## Relações possíveis\n{relacoes}\n\n## Regras\n- Só conta a posição da própria corte. Ignore o que a parte alega (\"o recorrente sustenta\")\n  e o que a instância de origem decidiu (\"o tribunal a quo entendeu\").\n- Citar um dispositivo, transcrever doutrina ou apenas mencionar um conceito não é relação.\n- Uma negação muda a relação: se a corte afasta ou não admite o conceito, use EXCEPTS ou\n  PROHIBITS, nunca APPLIES_TO.\n- OBLIGES, PROHIBITS, EXCEPTS e DEFINES precisam de evidência da tese ou do que a corte\n  decide; na dúvida, use APPLIES_TO ou omita.\n- No máximo uma relação por conceito: a mais específica.\n- `evidence` é uma oração completa e literal, nunca um título ou cabeçalho em letras maiúsculas.\n\n## Vocabulário de conceitos\nUse somente os ids abaixo. Se nenhum conceito se aplicar, devolva a lista vazia.\n{vocabulario}\n\n## Decisão\nTribunal: {tribunal}\nNúmero: {numero}\n\nEmenta:\n{ementa}\n\nTese:\n{tese}\n\nResponda em JSON. `evidence` é sempre um trecho literal da ementa ou da tese.\nCada item de `conceitos` tem `conceito_id`, `relacao` e `evidence`."
     }
   },
-  "snapshot_hash": "sha256:d0fad5fa286fd9258389e329575f549729b2ede3fa3bc193fda7fa270cc83844"
+  "snapshot_hash": "sha256:56020b0368b85c30e4d8ed0c7c41470fe91c6aa30c9c83073a6d250e0b2ef07f"
 }

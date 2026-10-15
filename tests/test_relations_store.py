@@ -164,3 +164,36 @@ def test_a_decision_gets_llm_concept_edges_that_a_rerun_replaces(driver):
         "MATCH (:Jurisprudencia {id: 'STJ:1'})-[r]->(t:Conceito) "
         "RETURN type(r) AS t, r.origin AS o, r.confidence AS c, t.id AS target",
     ) == [{"t": "DEFINES", "o": "llm", "c": "MEDIUM", "target": "socio"}]
+
+
+def test_a_decision_gets_rule_references_to_dispositivos_stubs_and_unresolved_citations(driver):
+    store = Neo4jGraphStore(driver)
+    decision = Jurisprudencia("STJ:1", "STJ", "REsp 1", "ementa", "decisão", "tese")
+    store.write(batch())
+    store.write_jurisprudencia(
+        [decision],
+        [
+            rel(RelationType.REFERENCES, "STJ:1", f"{A}#art1", "art. 1"),
+            rel(RelationType.REFERENCES, "STJ:1", f"{OUTSIDE}#art9", confidence=Confidence.LOW),
+            Relation(
+                RelationType.REFERENCES,
+                "STJ:1",
+                None,
+                Confidence.LOW,
+                Origin.RULE,
+                "art. 5",
+                "art5",
+            ),
+        ],
+    )
+    store.write_jurisprudencia([decision], [rel(RelationType.REFERENCES, "STJ:1", f"{A}#art1")])
+
+    assert rows(
+        driver,
+        "MATCH (:Jurisprudencia {id: 'STJ:1'})-[r:REFERENCES]->(t) "
+        "RETURN labels(t)[0] AS l, t.id AS target ORDER BY target",
+    ) == [{"l": "Dispositivo", "target": f"{A}#art1"}, {"l": "Lei", "target": OUTSIDE}]
+    assert rows(
+        driver,
+        "MATCH (j:Jurisprudencia {id: 'STJ:1'}) RETURN j.unresolved_references AS u",
+    ) == [{"u": ["art5"]}]

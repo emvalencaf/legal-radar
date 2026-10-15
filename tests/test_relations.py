@@ -1,12 +1,16 @@
+from dataclasses import replace
 from pathlib import Path
 
-from legal_radar.domain import Confidence, Dispositivo, Origin, RelationType
+import pytest
+
+from legal_radar.domain import Confidence, Dispositivo, Jurisprudencia, Origin, RelationType
 from legal_radar.enrichment import EXTRACTOR_VERSION
 from legal_radar.planalto import decode_html, parse_planalto
-from legal_radar.relations import extract_relations
+from legal_radar.relations import extract_decision_relations, extract_relations
 
 CC = "urn:lex:br:federal:lei:2002-01-10;10406"
 CDC = "urn:lex:br:federal:lei:1990-09-11;8078"
+CPC = "urn:lex:br:federal:lei:2015-03-16;13105"
 LEI = "urn:lex:br:federal:lei:2000-01-01;1"
 
 
@@ -253,3 +257,111 @@ def test_revoking_act_that_does_not_resolve_is_low_and_kept():
         "lei:14382/2022",
         "medida.provisoria:1085/2021",
     }
+
+
+DECISION = Jurisprudencia("STJ:1", "STJ", "REsp 1", "", "", None)
+
+
+def test_a_decision_cites_the_dispositivos_its_ementa_and_tese_name():
+    j = replace(
+        DECISION,
+        ementa="Desconsideração. Art. 50 do CC e arts. 133 a 134 do Código de Processo Civil.",
+        tese="Aplica-se o art. 50, § 1º, do Código Civil.",
+    )
+
+    result = extract_decision_relations(j)
+
+    assert {(r.source_id, r.target_id) for r in result.relations} == {
+        ("STJ:1", CC + "#art50"),
+        ("STJ:1", CC + "#art50_par1"),
+        ("STJ:1", CPC + "#art133"),
+        ("STJ:1", CPC + "#art134"),
+    }
+    assert all(
+        (r.type, r.confidence, r.origin) == (RelationType.REFERENCES, Confidence.HIGH, Origin.RULE)
+        for r in result.relations
+    )
+
+
+def test_a_decision_citation_without_a_lei_is_an_unresolved_edge_for_the_llm():
+    result = extract_decision_relations(replace(DECISION, ementa="Incide o art. 50, sem a lei."))
+
+    (r,) = result.relations
+    assert (r.source_id, r.target_id, r.confidence) == ("STJ:1", None, Confidence.LOW)
+    assert r.unresolved
+    assert result.needs_enrichment
+
+
+def test_a_decision_citation_of_an_unknown_lei_is_left_for_the_llm():
+    result = extract_decision_relations(
+        replace(DECISION, ementa="Ver art. 7º do Estatuto Inexistente.")
+    )
+
+    assert result.relations == []
+    assert result.needs_enrichment
+
+
+def test_a_decision_with_no_citation_has_nothing_to_enrich():
+    result = extract_decision_relations(replace(DECISION, ementa="Nada a citar aqui."))
+
+    assert result.relations == []
+    assert not result.needs_enrichment
+
+
+def test_a_decision_never_reads_its_decisao_or_this_artigo():
+    j = replace(DECISION, ementa="O deste artigo e o artigo anterior.", decisao="art. 50 do CC")
+
+    assert extract_decision_relations(j).relations == []
+
+
+def test_a_decision_citation_of_a_dispositivo_the_graph_lacks_is_low():
+    j = replace(DECISION, ementa="Art. 9999 do CC.")
+
+    (r,) = extract_decision_relations(j, ingested={CC: {CC + "#art50"}}).relations
+
+    assert r.confidence is Confidence.LOW
+
+
+def decision_targets(ementa):
+    result = extract_decision_relations(replace(DECISION, ementa=ementa))
+    return [r.target_id for r in result.relations]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Aplica-se o § 1º do art. 50 do Código Civil.", [CC + "#art50_par1"]),
+        ("O parágrafo único do art. 50 do CC.", [CC + "#art50_parUnico"]),
+        ("Os incisos I a II do art. 50 do CC.", [CC + "#art50_incI", CC + "#art50_incII"]),
+        ("O § 2º, inciso I, do art. 50 do CC.", [CC + "#art50_par2_incI"]),
+        ("Veja o do art. 50 do CC.", [CC + "#art50"]),  # `do` alone is no locator
+        ("Art. 50, § 1º, do CC.", [CC + "#art50_par1"]),  # a trailing locator wins
+    ],
+)
+def test_a_decision_reads_a_locator_before_the_artigo(text, expected):
+    assert decision_targets(text) == expected
+
+
+def test_a_dispositivo_keeps_ignoring_a_locator_before_the_artigo():
+    assert targets("o § 1º do art. 7º do Código Civil") == [CC + "#art7"]
+
+
+def test_a_leading_locator_is_covered_and_its_evidence_literal():
+    text = "Aplica-se o § 1º do art. 50 do Código Civil."
+
+    result = extract_decision_relations(replace(DECISION, ementa=text))
+
+    (r,) = result.relations
+    assert r.evidence == "§ 1º do art. 50 do Código Civil"
+    assert result.needs_llm == []
+
+
+def test_a_decision_text_broken_by_line_wraps_is_read_as_one_citation():
+    ementa = "INTERPRETAÇÃO DO\nART\n.\n50\nDO CÓDIGO CIVIL.\nREQUISITOS."
+
+    result = extract_decision_relations(replace(DECISION, ementa=ementa))
+
+    assert [r.target_id for r in result.relations] == [CC + "#art50"]
+    assert (
+        result.relations[0].evidence == "art. 50 do Código Civil"
+    )  # read in the case the rules expect

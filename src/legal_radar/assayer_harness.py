@@ -24,6 +24,7 @@ from legal_radar.answer_evaluation import (
 RUNS_DIR = Path(__file__).resolve().parents[2] / "eval-runs"
 CITATIONS, PATH, CONTRADICTIONS = "citation_check", "path", "contradiction_check"
 ABSTENTION = "abstention_check"
+MENTIONS = "mentions_check"
 
 
 @dataclass(frozen=True)
@@ -78,14 +79,19 @@ def build_registries(
 
     class CitationEvaluator(BaseEvaluator):
         def evaluate(self, prediction, reference, **kwargs):
-            score = citation_correctness(prediction["cited"], prediction["retrieved"], reference)
+            score = citation_correctness(
+                prediction["cited"],
+                prediction["retrieved"],
+                reference["expected"],
+                reference["also_ok"],
+            )
             return FieldEvaluation(
                 CITATIONS, "citation_correctness", reference, prediction["cited"], score.f1, None,
                 {
                     "precision": score.precision,
                     "recall": score.recall,
                     "fabricated": score.fabricated,
-                    "applicable": bool(reference),  # no expected citation: an abstain question
+                    "applicable": bool(reference["expected"]),  # none: an abstain question
                 },
             )  # fmt: skip
 
@@ -122,11 +128,20 @@ def build_registries(
                 {"applicable": score is not None},
             )  # fmt: skip
 
+    class MentionsEvaluator(BaseEvaluator):
+        def evaluate(self, prediction, reference, **kwargs):
+            """1.0 when every article the answer names was among its sources, else 0.0."""
+            return FieldEvaluation(
+                MENTIONS, "grounded_mentions", reference, prediction,
+                0.0 if prediction else 1.0, None, {"unsupported": list(prediction)},
+            )  # fmt: skip
+
     evaluators = EvaluatorRegistry()
     evaluators.register("citation_correctness", CitationEvaluator)
     evaluators.register("graph_path", PathEvaluator)
     evaluators.register("contradiction_surfaced", ContradictionEvaluator)
     evaluators.register("abstention", AbstentionEvaluator)
+    evaluators.register("grounded_mentions", MentionsEvaluator)
     return evaluators, MetricRegistry()
 
 
@@ -207,10 +222,11 @@ def run_evaluation(
         {
             "input": q.id,
             "expected_output": {
-                CITATIONS: list(q.citations),
+                CITATIONS: {"expected": list(q.citations), "also_ok": list(q.also_ok)},
                 PATH: list(q.nodes),
                 CONTRADICTIONS: [list(pair) for pair in q.contradictions],
                 ABSTENTION: q.abstain,
+                MENTIONS: [],
             },
         }
         for q in questions
@@ -225,6 +241,7 @@ def run_evaluation(
             PATH: ["graph_path"],
             CONTRADICTIONS: ["contradiction_surfaced"],
             ABSTENTION: ["abstention"],
+            MENTIONS: ["grounded_mentions"],
         },
         metrics=[],
         evaluator_registry=evaluators,

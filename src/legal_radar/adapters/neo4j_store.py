@@ -32,12 +32,12 @@ SET d.path = $path, d.text = $text, d.kind = $kind, d.revoked = $revoked,
 MERGE_STUB_LEI = "MERGE (l:Lei {id: $id}) ON CREATE SET l.stub = true"
 COUNT_DISPOSITIVO = "MATCH (d:Dispositivo {id: $id}) RETURN count(d) AS n"
 MERGE_REFERENCE = """
-MATCH (s:Dispositivo {id: $source}), (t:Dispositivo {id: $target})
+MATCH (s:Dispositivo|Jurisprudencia {id: $source}), (t:Dispositivo {id: $target})
 MERGE (s)-[r:REFERENCES]->(t)
 SET r.confidence = $confidence, r.origin = $origin, r.evidence = $evidence
 """
 MERGE_REFERENCE_TO_STUB = """
-MATCH (s:Dispositivo {id: $source}), (t:Lei {id: $target})
+MATCH (s:Dispositivo|Jurisprudencia {id: $source}), (t:Lei {id: $target})
 MERGE (s)-[r:REFERENCES {locator: $locator}]->(t)
 SET r.confidence = $confidence, r.origin = $origin, r.evidence = $evidence
 """
@@ -47,7 +47,7 @@ MERGE (s)-[r:REVOKES]->(t)
 SET r.confidence = $confidence, r.origin = $origin, r.evidence = $evidence
 """
 KEEP_UNRESOLVED_REFERENCE = """
-MATCH (n:Dispositivo {id: $id})
+MATCH (n:Dispositivo|Jurisprudencia {id: $id})
 SET n.unresolved_references =
     [x IN coalesce(n.unresolved_references, []) WHERE x <> $citation] + [$citation]
 """
@@ -60,7 +60,7 @@ DELETE_LLM_RELATIONS = """
 MATCH (:Dispositivo|Jurisprudencia {id: $id})-[r]->() WHERE r.origin = 'llm' DELETE r
 """
 RESOLVE_CITATIONS = """
-MATCH (n:Dispositivo {id: $id})
+MATCH (n:Dispositivo|Jurisprudencia {id: $id})
 SET n.unresolved_references = [x IN coalesce(n.unresolved_references, []) WHERE NOT x IN $citations]
 """
 # Relationship types cannot be parameters; `type` is always a member of `RelationType`.
@@ -109,7 +109,9 @@ class Neo4jGraphStore:
             self._ensure_constraints(session)
             session.execute_write(self._write, batch)
 
-    def write_jurisprudencia(self, items: list[Jurisprudencia]) -> None:
+    def write_jurisprudencia(
+        self, items: list[Jurisprudencia], relations: list[Relation] = ()
+    ) -> None:
         with self._driver.session() as session:
             self._ensure_constraints(session)
             for j in items:
@@ -122,6 +124,12 @@ class Neo4jGraphStore:
                     tese=j.tese,
                     decisao=j.decisao,
                 )
+            session.execute_write(self._write_relations, relations)
+
+    @staticmethod
+    def _write_relations(tx, relations: list[Relation]) -> None:
+        for r in relations:
+            Neo4jGraphStore._write_relation(tx, r)
 
     def replace_llm_relations(self, chunk_id: str, relations: list[Relation]) -> None:
         with self._driver.session() as session:

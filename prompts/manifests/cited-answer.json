@@ -37,7 +37,7 @@
                 "context",
                 "query"
               ],
-              "template": "Responda à pergunta usando apenas as fontes abaixo, e cite em `citations` o id de cada fonte em que a resposta se apoia. Se as fontes não bastarem, diga isso.\n\nPergunta: {query}\n\nFontes:\n{context}",
+              "template": "Responda à pergunta usando apenas as fontes abaixo.\n\nRegras:\n- Use somente o que está nas fontes. Não use conhecimento externo e não mencione artigo, lei ou decisão que não esteja nelas.\n- Em `citations`, liste só as fontes indispensáveis: a menor quantidade que sustenta a resposta. Prefira o dispositivo específico (parágrafo, inciso) ao artigo inteiro quando só ele responde. Não cite uma fonte só por ser do mesmo assunto.\n- Se as fontes não respondem à pergunta, diga que não bastam e deixe `citations` vazio.\n- Se duas fontes divergem, aponte a divergência.\n\nFontes:\n{context}\n\nPergunta: {query}",
               "template_format": "f-string"
             },
             "name": "PromptTemplate"
@@ -63,7 +63,6 @@
               "placeholder"
             ]
           },
-          "minItems": 1,
           "uniqueItems": true
         }
       },

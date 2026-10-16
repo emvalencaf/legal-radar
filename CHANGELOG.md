@@ -9,6 +9,9 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Optional LangSmith tracing (#45): with `LANGSMITH_API_KEY` set, `ask` traces each LangGraph node
+  and `eval` publishes the experiment (a run per question, evaluations as feedback); without it, nothing changes and nothing fails.
+  Ingestion and enrichment emit no traces (ADR-0004). `LANGSMITH_TRACING=false` opts out.
 - Pure-RAG baselines (#79): `legal_radar.rag` embeds every live dispositivo and decision of the
   graph (revoked, empty and structural ones and the amendment marks left out) and keeps the vectors
   in SQLite per chunking: `naive` (the dispositivo's text) and `contextual` (after its ancestors').

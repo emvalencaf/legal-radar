@@ -85,3 +85,17 @@ def test_a_system_that_dies_resumes_and_fresh_starts_over(tmp_path):
     boom.clear()
     run(tmp_path, [(System(), flaky)], fresh=True)
     assert asked == ["q1", "q1", "q2"]  # fresh: q1 asked again
+
+
+def test_a_publisher_hears_each_experiment_under_the_eval_dataset(tmp_path):
+    class Publisher:
+        def __init__(self):
+            self.heard = []
+
+        def publish(self, result, dataset):
+            self.heard.append((result.experiment_name, dataset))
+
+    publisher = Publisher()
+    reports, _ = run(tmp_path, [(System(), answering([]))], publisher=publisher)
+
+    assert publisher.heard == [(reports[0].experiment, "legal-radar-eval")]

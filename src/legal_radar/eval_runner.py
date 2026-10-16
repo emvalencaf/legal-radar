@@ -21,6 +21,7 @@ from legal_radar.assayer_harness import (
     run_evaluation,
 )
 from legal_radar.prompts import PromptLock
+from legal_radar.tracing import DATASET
 
 
 def run_systems(
@@ -35,10 +36,13 @@ def run_systems(
     runs_dir: Path = RUNS_DIR,
     on_report: Callable[[Report, Path], None] = lambda report, path: None,
     on_resume: Callable[[System, int], None] = lambda system, answered: None,
+    publisher=None,
 ) -> list[Report]:
     """Scores each `(system, ask)` over `questions` in turn. A run that dies resumes next time
     from its saved answers (`fresh` discards them); the checkpoint is dropped once the report is
-    written (to `runs_dir`), and `on_report` hears of each report and its file as soon as it is."""
+    written (to `runs_dir`), and `on_report` hears of each report and its file as soon as it is.
+    A LangSmith `publisher` (see `tracing`) gets each experiment's result."""
+    publish = (lambda result: publisher.publish(result, DATASET)) if publisher else None
     reports = []
     for system, ask in systems:
         checkpoint = checkpoint_for(system, questions, lock.snapshot_hash)
@@ -60,6 +64,7 @@ def run_systems(
             experiment=f"{system.slug}-{stamp}",
             system=system,
             checkpoint=checkpoint,
+            publish=publish,
         )
         on_report(report, report.write(runs_dir))
         checkpoint.discard()

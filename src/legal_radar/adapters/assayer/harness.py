@@ -1,7 +1,7 @@
 """Runs the evaluation under the `assayer` harness (`uv sync --extra eval`): it orchestrates the
 questions and counts tokens and cost per run; the custom metrics come from
-`legal_radar.answer_evaluation` and the flat grounding metric from RAGAS. Both libraries are
-imported lazily so the rest of the package runs without them."""
+`legal_radar.application.evaluation.answers` and the flat grounding metric from RAGAS. Both
+libraries are imported lazily so the rest of the package runs without them."""
 
 import json
 from collections.abc import Callable
@@ -10,7 +10,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from legal_radar.adapters.tracing import safely
-from legal_radar.answer_evaluation import (
+from legal_radar.application.answer import CitedAnswer
+from legal_radar.application.evaluation.answers import (
+    BASE_NIVEL,
     Checkpoint,
     Outcome,
     Question,
@@ -22,7 +24,6 @@ from legal_radar.answer_evaluation import (
     graph_path,
     outcome_of,
 )
-from legal_radar.application.answer import CitedAnswer
 from legal_radar.domain.llm import content_hash
 from legal_radar.settings import Settings
 
@@ -216,9 +217,6 @@ def checkpoint_for(
         {"prompts": prompt_snapshot, "questions": [(q.id, q.query) for q in questions]}
     )
     return Checkpoint(CHECKPOINT_DIR / f"{system.slug}.json", fingerprint)
-
-
-BASE_NIVEL = "base"  # the questions that carry no `nivel`
 
 
 def aggregate_by_nivel(

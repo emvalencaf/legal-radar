@@ -4,13 +4,21 @@ query, score the question set and write the report. The CLI and the top-seam tes
 from dataclasses import dataclass
 from pathlib import Path
 
+from legal_radar.adapters.assayer.harness import RUNS_DIR, Report
+from legal_radar.adapters.assayer.runner import run_systems
 from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
 from legal_radar.adapters.neo4j_seed import export_seed
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.adapters.prompt_lock import default_lock
-from legal_radar.answer_evaluation import QUESTION_PATHS, System, UsageMeter, load_questions
 from legal_radar.application.answer import CitedAnswer, ask
 from legal_radar.application.assunto import AssuntoResolver
+from legal_radar.application.evaluation.answers import (
+    QUESTION_PATHS,
+    System,
+    UsageMeter,
+    load_questions,
+)
+from legal_radar.application.evaluation.report import build_report
 from legal_radar.application.ingest import EnrichConfig, IngestionReport, ingest
 from legal_radar.application.jurisprudencia import (
     JURISPRUDENCIA,
@@ -18,11 +26,8 @@ from legal_radar.application.jurisprudencia import (
     ingest_jurisprudencia,
 )
 from legal_radar.application.ports import JurisprudenciaFetcher, PageSource, Provider
-from legal_radar.assayer_harness import RUNS_DIR, Report
 from legal_radar.domain.anchors import ANCHORS
 from legal_radar.domain.prompts import PromptLock
-from legal_radar.eval_runner import run_systems
-from legal_radar.report import build_report
 
 
 @dataclass

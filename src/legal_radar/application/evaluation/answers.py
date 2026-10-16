@@ -1,8 +1,8 @@
 """Evaluation of the cited-answer pipeline over a question set.
 
 The custom metrics (citation correctness, contradiction surfacing, graph path) are pure functions
-over ids, so they are tested table-driven; `legal_radar.assayer_harness` runs them, with the flat
-grounding metrics from RAGAS, under the `assayer` harness."""
+over ids, so they are tested table-driven; `legal_radar.adapters.assayer.harness` runs them, with
+the flat grounding metrics from RAGAS, under the `assayer` harness."""
 
 import json
 from collections.abc import Callable, Iterable
@@ -21,6 +21,8 @@ QUESTIONS_DIR = Settings().questions_dir
 QUESTION_PATHS = {
     "desconsideração da personalidade jurídica": QUESTIONS_DIR / "desconsideracao_personalidade.yml"
 }
+
+BASE_NIVEL = "base"  # the questions that carry no `nivel`
 
 
 @dataclass(frozen=True)

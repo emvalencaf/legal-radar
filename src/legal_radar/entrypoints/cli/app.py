@@ -25,14 +25,14 @@ from pathlib import Path
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.fixture.pipeline import run
 from legal_radar.adapters.tracing import configure_tracing, publisher_if_enabled
-from legal_radar.answer_evaluation import QUESTION_PATHS
 from legal_radar.application.concepts import VOCABULARY_PATHS
 from legal_radar.application.enrichment import DECISION_PROMPT
+from legal_radar.application.evaluation.answers import QUESTION_PATHS
 from legal_radar.application.ingest import ingest
 from legal_radar.application.jurisprudencia import JURISPRUDENCIA
+from legal_radar.application.rag import BASELINES, CHUNKINGS
 from legal_radar.bootstrap import connect_store, enrich_config, load_settings, rag_index
 from legal_radar.domain.anchors import ANCHORS
-from legal_radar.rag import BASELINES, CHUNKINGS
 from legal_radar.settings import Settings
 
 
@@ -122,7 +122,7 @@ def refresh_prompts(args: argparse.Namespace, settings: Settings) -> None:
 
 def report(args: argparse.Namespace, settings: Settings) -> None:
     from legal_radar.adapters.prompt_lock import default_lock
-    from legal_radar.report import build_report
+    from legal_radar.application.evaluation.report import build_report
 
     runs_dir = settings.runs_dir
     if not any(runs_dir.glob("*.json")):
@@ -135,7 +135,7 @@ def report(args: argparse.Namespace, settings: Settings) -> None:
 def compare_evals(args: argparse.Namespace, settings: Settings) -> None:
     import json
 
-    from legal_radar.eval_comparison import latest_runs, render_comparison
+    from legal_radar.application.evaluation.comparison import latest_runs, render_comparison
 
     runs = (
         [json.loads(path.read_text(encoding="utf-8")) for path in args.runs]
@@ -200,6 +200,8 @@ def index_rag(args: argparse.Namespace, settings: Settings, store) -> None:
 
 
 def evaluate(args: argparse.Namespace, settings: Settings, store) -> None:
+    from legal_radar.adapters.assayer.harness import Pricing, ragas_llm_from_env
+    from legal_radar.adapters.assayer.runner import run_systems
     from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
     from legal_radar.adapters.prompt_lock import default_lock
     from legal_radar.adapters.router_config import (
@@ -207,18 +209,16 @@ def evaluate(args: argparse.Namespace, settings: Settings, store) -> None:
         load_config,
         tier_max_context_tokens,
     )
-    from legal_radar.answer_evaluation import System, UsageMeter, load_questions
     from legal_radar.application.answer import ask
     from legal_radar.application.assunto import AssuntoResolver
-    from legal_radar.assayer_harness import Pricing, ragas_llm_from_env
-    from legal_radar.eval_runner import run_systems
+    from legal_radar.application.evaluation.answers import System, UsageMeter, load_questions
 
     publisher = publisher_if_enabled()  # also switches the LangGraph tracing on or off
     config = load_config("router.yaml")
     meter = UsageMeter(build_router(config))
     reader, lock = Neo4jGraphReader(store.driver), default_lock()
     if args.baseline:
-        from legal_radar.rag import RagBaseline
+        from legal_radar.application.rag import RagBaseline
 
         index = rag_index(settings, args.baseline.removeprefix("rag-"), reader, meter)
         systems = [
@@ -264,7 +264,7 @@ def run_all(args: argparse.Namespace, settings: Settings, store) -> None:
     from legal_radar.adapters.router_config import build_router, load_config
     from legal_radar.adapters.stf import StfFetcher
     from legal_radar.adapters.stj import StjFetcher
-    from legal_radar.end_to_end import run_end_to_end
+    from legal_radar.entrypoints.end_to_end import run_end_to_end
 
     configure_tracing()
     lei_config = enrich_config(settings, args.assunto) if args.enrich else None

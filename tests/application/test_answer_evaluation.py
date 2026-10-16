@@ -3,7 +3,8 @@ import json
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.answer_evaluation import (
+from legal_radar.application.answer import Citation, CitedAnswer
+from legal_radar.application.evaluation.answers import (
     Question,
     UsageMeter,
     abstention,
@@ -14,7 +15,6 @@ from legal_radar.answer_evaluation import (
     outcome_of,
     path_nodes,
 )
-from legal_radar.application.answer import Citation, CitedAnswer
 from legal_radar.domain.llm import Completion
 from legal_radar.domain.model import Hop
 
@@ -57,7 +57,7 @@ def test_acceptable_citations_do_not_count_against_precision(
 
 
 def test_load_questions_reads_also_ok_and_rejects_it_on_an_abstain_question(tmp_path):
-    from legal_radar.answer_evaluation import load_questions
+    from legal_radar.application.evaluation.answers import load_questions
 
     ok = tmp_path / "ok.yml"
     ok.write_text(
@@ -189,7 +189,7 @@ def test_load_questions_rejects_a_duplicate_id(tmp_path):
 
 
 def test_the_shipped_question_set_loads():
-    from legal_radar.answer_evaluation import QUESTION_PATHS
+    from legal_radar.application.evaluation.answers import QUESTION_PATHS
 
     for path in QUESTION_PATHS.values():
         assert len(load_questions(path)) >= 5

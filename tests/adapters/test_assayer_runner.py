@@ -2,12 +2,12 @@ import pytest
 
 pytest.importorskip("assayer")  # the `eval` extra
 
-from legal_radar import assayer_harness
+from legal_radar.adapters.assayer import harness as assayer_harness
+from legal_radar.adapters.assayer.runner import run_systems
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.answer_evaluation import Question, System, UsageMeter
 from legal_radar.application.answer import Citation, CitedAnswer
+from legal_radar.application.evaluation.answers import Question, System, UsageMeter
 from legal_radar.domain.prompts import PromptLock
-from legal_radar.eval_runner import run_systems
 
 A = "lei#a"
 QUESTIONS = [Question("one", "q1", (A,), (A,)), Question("two", "q2", (A,), (A,))]

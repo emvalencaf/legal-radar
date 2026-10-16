@@ -4,8 +4,7 @@ and per `nivel`. Reads the JSON that `Report.write` leaves in `eval-runs/`."""
 import json
 from pathlib import Path
 
-from legal_radar.answer_evaluation import System
-from legal_radar.assayer_harness import BASE_NIVEL
+from legal_radar.application.evaluation.answers import BASE_NIVEL, System
 
 METRICS = (
     "citation_correctness",

@@ -1,6 +1,6 @@
 import pytest
 
-from legal_radar.gold_review import assemble, review_all, review_entry
+from legal_radar.application.evaluation.gold_review import assemble, review_all, review_entry
 
 ENTRY = {
     "id": "d1",

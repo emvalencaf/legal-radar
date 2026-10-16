@@ -27,9 +27,7 @@ from legal_radar.adapters.router_config import (
 )
 from legal_radar.application.concepts import load_vocabulary
 from legal_radar.application.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE
-from legal_radar.bootstrap import load_env
-from legal_radar.domain.llm import AllProvidersFailedError
-from legal_radar.evaluation import (
+from legal_radar.application.evaluation.enrichment_gold import (
     append_outcome,
     check_gates,
     enrich_dispositivos,
@@ -40,6 +38,8 @@ from legal_radar.evaluation import (
     score_edges,
     start_run,
 )
+from legal_radar.bootstrap import load_env
+from legal_radar.domain.llm import AllProvidersFailedError
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"

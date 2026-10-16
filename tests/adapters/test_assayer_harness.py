@@ -3,14 +3,14 @@ from types import SimpleNamespace
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.answer_evaluation import Question, System, UsageMeter
 from legal_radar.application.answer import Citation, CitedAnswer
+from legal_radar.application.evaluation.answers import Question, System, UsageMeter
 from legal_radar.domain.llm import Completion
 from legal_radar.domain.model import Hop
 
 pytest.importorskip("assayer")  # the `eval` extra
 
-from legal_radar.assayer_harness import Pricing, run_evaluation
+from legal_radar.adapters.assayer.harness import Pricing, run_evaluation
 
 A, B = "lei#a", "lei#b"
 
@@ -69,7 +69,7 @@ ROWS = [
 
 
 def test_ragas_imports_despite_the_dropped_vertexai_module():
-    from legal_radar.assayer_harness import _import_ragas
+    from legal_radar.adapters.assayer.harness import _import_ragas
 
     _import_ragas()
     from ragas.metrics import Faithfulness
@@ -80,7 +80,7 @@ def test_ragas_imports_despite_the_dropped_vertexai_module():
 def test_ragas_faithfulness_scores_each_row_and_drops_failed_judge_scores(monkeypatch):
     import ragas
 
-    from legal_radar.assayer_harness import ragas_faithfulness
+    from legal_radar.adapters.assayer.harness import ragas_faithfulness
 
     seen = {}
 
@@ -173,7 +173,7 @@ def test_a_baseline_without_graph_paths_reports_n_a_and_scores_per_nivel():
 
 
 def _resumable(tmp_path, fingerprint="f1"):
-    from legal_radar.answer_evaluation import Checkpoint
+    from legal_radar.application.evaluation.answers import Checkpoint
 
     return Checkpoint(tmp_path / "ck.json", fingerprint)
 
@@ -228,7 +228,7 @@ def test_a_checkpoint_line_cut_short_by_a_crash_is_ignored(tmp_path):
 def test_checkpoint_for_resumes_the_same_run_and_drops_it_when_questions_or_prompts_change(
     tmp_path, monkeypatch
 ):
-    from legal_radar import assayer_harness
+    from legal_radar.adapters.assayer import harness as assayer_harness
 
     monkeypatch.setattr(assayer_harness, "CHECKPOINT_DIR", tmp_path)
     questions = [Question("one", "q1", (A,), (A,))]

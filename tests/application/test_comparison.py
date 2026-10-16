@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from legal_radar.eval_comparison import latest_runs, render_comparison
+from legal_radar.application.evaluation.comparison import latest_runs, render_comparison
 
 
 def run(system, k, f1, nivel_f1, paths=None):

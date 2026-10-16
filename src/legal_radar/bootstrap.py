@@ -76,7 +76,7 @@ def enrich_config(settings: Settings, assunto: str, prompt: str = ENRICHMENT_PRO
 
 def rag_index(settings: Settings, chunking: str, reader, provider):
     """The vector index of the whole graph for one chunking, built once and kept under `data/`."""
-    from legal_radar.rag import build_chunks, build_index, index_path
+    from legal_radar.application.rag import build_chunks, build_index, index_path
 
     dispositivos, jurisprudencias = reader.corpus()
     chunks = build_chunks(dispositivos, jurisprudencias, contextual=chunking == "contextual")

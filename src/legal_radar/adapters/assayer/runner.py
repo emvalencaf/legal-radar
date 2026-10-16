@@ -5,21 +5,21 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-from legal_radar.adapters.tracing import DATASET
-from legal_radar.answer_evaluation import (
-    Question,
-    System,
-    UsageMeter,
-    llm_flags_contradiction,
-    llm_states_insufficiency,
-)
-from legal_radar.application.answer import CitedAnswer
-from legal_radar.assayer_harness import (
+from legal_radar.adapters.assayer.harness import (
     RUNS_DIR,
     Pricing,
     Report,
     checkpoint_for,
     run_evaluation,
+)
+from legal_radar.adapters.tracing import DATASET
+from legal_radar.application.answer import CitedAnswer
+from legal_radar.application.evaluation.answers import (
+    Question,
+    System,
+    UsageMeter,
+    llm_flags_contradiction,
+    llm_states_insufficiency,
 )
 from legal_radar.domain.prompts import PromptLock
 

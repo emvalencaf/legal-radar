@@ -1,4 +1,9 @@
-.PHONY: seed export-seed refresh-prompts eval report publish-report
+.PHONY: run-all seed export-seed refresh-prompts eval report publish-report
+
+# The whole pipeline over the anchor assunto: ingest, seed, answer, eval, report (needs Neo4j,
+# a browser, the router's providers and `uv sync --extra browser --extra eval`).
+run-all:
+	uv run --extra browser --extra eval legal-radar run-all "desconsideração da personalidade jurídica"
 
 # Rebuild a fresh Neo4j from the versioned seed (docker compose up -d neo4j first).
 seed:

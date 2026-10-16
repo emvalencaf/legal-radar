@@ -2,6 +2,8 @@
 `legal-radar ingest <assunto>` ingests the assunto's anchor leis from LexML/Planalto;
 `legal-radar ingest-jurisprudencia <assunto> [--enrich]` ingests the assunto's seed precedents and
 top STF/STJ hits and, with --enrich, links each to the assunto's concepts;
+`legal-radar run-all <assunto> [--enrich]` does it all in one go: ingests the leis and decisions,
+exports the seed, answers a cited query, scores the question set and writes the report;
 `legal-radar draft-concepts <assunto>` has an LLM draft concept candidates from the graph's corpus;
 `legal-radar ask "<query>"` resolves the assunto, traverses the graph and prints a cited answer;
 `legal-radar eval <assunto>` answers the assunto's question set and scores grounding, citations,
@@ -123,6 +125,11 @@ def main(argv: list[str] | None = None) -> None:
         "--enrich",
         action="store_true",
         help="also link each decision to the assunto's concepts; re-running resumes the pending",
+    )
+    run_all_cmd = commands.add_parser("run-all")
+    run_all_cmd.add_argument("assunto", choices=sorted(ANCHORS))
+    run_all_cmd.add_argument(
+        "--enrich", action="store_true", help="also link the leis and decisions to the concepts"
     )
     draft_cmd = commands.add_parser("draft-concepts")
     draft_cmd.add_argument("assunto", choices=sorted(VOCABULARY_PATHS))
@@ -313,6 +320,47 @@ def main(argv: list[str] | None = None) -> None:
                     f"{system.label}: resuming with {answered} answers already saved"
                 ),
             )
+            return
+        if args.command == "run-all":
+            from legal_radar.adapters.pages import BrowserPageSource
+            from legal_radar.adapters.stf import StfFetcher
+            from legal_radar.adapters.stj import StjFetcher
+            from legal_radar.end_to_end import run_end_to_end
+            from legal_radar.router_config import build_router, load_config
+
+            configure_tracing()
+            lei_config = enrich_config(args.assunto) if args.enrich else None
+            decision_config = enrich_config(args.assunto, DECISION_PROMPT) if args.enrich else None
+            browser = BrowserPageSource()
+            chrome = BrowserPageSource(channel="chrome")  # STJ's Cloudflare rejects Chromium
+            try:
+                result = run_end_to_end(
+                    args.assunto,
+                    lexml=browser,
+                    planalto=browser,
+                    fetchers={"STF": StfFetcher(chrome), "STJ": StjFetcher(chrome)},
+                    store=store,
+                    provider=build_router(load_config("router.yaml")),
+                    report_out=DEFAULT_REPORT,
+                    seed_out=DEFAULT_SEED,
+                    lei_enrichment=lei_config,
+                    decision_enrichment=decision_config,
+                )
+            finally:
+                browser.close()
+                chrome.close()
+                for config in (lei_config, decision_config):
+                    if config:
+                        config.metadata.close()
+            print(result.ingestion.render())
+            print(result.jurisprudencia.render())
+            print(result.answer.answer or f"no answer for {args.assunto!r}")
+            for c in result.answer.citations:
+                path = " -> ".join(f"{h.type}({h.target})" for h in c.path) or "anchor"
+                print(f"- {c.kind} {c.id}: {path}")
+            for report in result.evaluations:
+                print(report.render())
+            print(f"wrote {result.seed_path} and {result.report_path}")
             return
         if args.command == "draft-concepts":
             from legal_radar.concepts import (

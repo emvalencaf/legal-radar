@@ -10,7 +10,7 @@ from legal_radar.llm import ProviderError
 from legal_radar.ports import GraphStore, JurisprudenciaFetcher
 from legal_radar.relations import UrnResolver, extract_decision_relations
 
-TOP_HITS = 5
+TOP_HITS = 5  # default number of top hits per court
 SEED_WINDOW = 10  # results scanned for a pinned seed's native id
 
 
@@ -21,14 +21,26 @@ class Seed:
     query: str  # narrow enough that the pinned decision is among its first results
 
 
-ASSUNTO = "desconsideração da personalidade jurídica"  # the assunto the seeds and searches serve
-SEEDS = [
-    Seed("STJ", "202001090402", "REsp 1873811"),  # Tema Repetitivo 1210, core (CC art. 50)
-    Seed("STF", "sjur550030", 'titulo:"RE 1387795"'),  # Tema 1232, tangential
-]
-SEARCHES = {
-    "STF": "desconsideração personalidade jurídica art. 50 código civil",
-    "STJ": "desconsideração personalidade jurídica art. 50",
+@dataclass(frozen=True)
+class JurisprudenciaSource:
+    """Where an assunto's decisions come from: pinned seeds plus a search per court."""
+
+    seeds: tuple[Seed, ...] = ()
+    searches: dict[str, str] = field(default_factory=dict)  # court -> free-text query
+    top_hits: int = TOP_HITS  # per court; 0 ingests only the seeds
+
+
+JURISPRUDENCIA: dict[str, JurisprudenciaSource] = {
+    "desconsideração da personalidade jurídica": JurisprudenciaSource(
+        seeds=(
+            Seed("STJ", "202001090402", "REsp 1873811"),  # Tema Repetitivo 1210, core (CC art. 50)
+            Seed("STF", "sjur550030", 'titulo:"RE 1387795"'),  # Tema 1232, tangential
+        ),
+        searches={
+            "STF": "desconsideração personalidade jurídica art. 50 código civil",
+            "STJ": "desconsideração personalidade jurídica art. 50",
+        },
+    ),
 }
 
 
@@ -65,14 +77,13 @@ class JurisprudenciaReport:
 def ingest_jurisprudencia(
     fetchers: dict[str, JurisprudenciaFetcher],
     store: GraphStore,
-    seeds: list[Seed] = SEEDS,
-    searches: dict[str, str] = SEARCHES,
+    source: JurisprudenciaSource,
     enrichment: EnrichConfig | None = None,
     resolver: UrnResolver | None = None,
 ) -> JurisprudenciaReport:
     report = JurisprudenciaReport()
     items: dict[str, Jurisprudencia] = {}
-    for seed in seeds:
+    for seed in source.seeds:
         key = f"{seed.court}:{seed.native_id}"
         try:
             hits = fetchers[seed.court].search(seed.query, SEED_WINDOW)
@@ -83,9 +94,9 @@ def ingest_jurisprudencia(
             items[key] = seed_hit
         else:
             report.failed[key] = f"not among the first {SEED_WINDOW} results of {seed.query!r}"
-    for court, query in searches.items():
+    for court, query in source.searches.items() if source.top_hits > 0 else ():
         try:
-            for hit in fetchers[court].search(query, TOP_HITS)[:TOP_HITS]:
+            for hit in fetchers[court].search(query, source.top_hits)[: source.top_hits]:
                 items.setdefault(hit.id, hit)
         except Exception as error:
             report.failed[court] = str(error)

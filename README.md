@@ -102,11 +102,14 @@ and a provider in `router.yaml`). Each chunk it sends gets a record in `data/ing
 (`METADATA_DB` overrides the path); re-running resumes only the chunks that are still `pending`, or
 whose text, vocabulary, `dispositivo-enrichment` prompt or extractor version changed.
 
-Ingest the seed precedents (STJ Tema 1210, STF Tema 1232) and the top hits of each court. STJ's
-Cloudflare check rejects bundled Chromium, so this needs Google Chrome installed:
+Ingest an assunto's seed precedents (for the anchor assunto: STJ Tema 1210, STF Tema 1232) and the
+top hits of each court's search. The sources are catalogued per assunto in `JURISPRUDENCIA`
+(`legal_radar.jurisprudencia`): the seeds, one search per court and the number of top hits (default
+5; 0 ingests only the seeds). STJ's Cloudflare check rejects bundled Chromium, so this needs Google
+Chrome installed:
 
 ```bash
-uv run legal-radar ingest-jurisprudencia
+uv run legal-radar ingest-jurisprudencia "desconsideração da personalidade jurídica"
 ```
 
 Add `--enrich` to also link each decision's ementa and tese to the concepts of the assunto (the

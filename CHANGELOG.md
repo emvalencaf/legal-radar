@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Jurisprudência per assunto (#74): `JURISPRUDENCIA` catalogues each assunto's seeds, per-court
+  searches and top hits (`JurisprudenciaSource`, 0 ingests only the seeds), in the style of
+  `ANCHORS`. `legal-radar ingest-jurisprudencia <assunto>` now requires the assunto, limited to the
+  catalogue; `ingest_jurisprudencia` takes the source instead of reading module constants. The
+  anchor assunto behaves as before.
 - Static report and GitHub Pages publish (#46): `legal-radar report` (`make report`) writes
   `report/index.html` from the latest runs in `eval-runs/`: ingestion statistics (target-resolved,
   valid-evidence and drop rates, out-of-vocabulary terms), evaluation metrics per system, example

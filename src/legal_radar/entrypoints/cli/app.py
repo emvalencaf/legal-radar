@@ -45,34 +45,35 @@ def build_parser(defaults: Settings) -> argparse.ArgumentParser:
     run_cmd.add_argument("fixture", nargs="?", type=Path, default=defaults.fixture_path)
     run_cmd.add_argument(
         "--assunto",
+        dest="subject",
         choices=sorted(VOCABULARY_PATHS),
         help="only accept conceitos from this assunto's vocabulary",
     )
     ingest_cmd = commands.add_parser("ingest")
-    ingest_cmd.add_argument("assunto", choices=sorted(ANCHORS))
+    ingest_cmd.add_argument("subject", metavar="assunto", choices=sorted(ANCHORS))
     ingest_cmd.add_argument(
         "--enrich",
         action="store_true",
         help="also send the chunks the rules left to the LLM; re-running resumes the pending ones",
     )
     case_law_cmd = commands.add_parser("ingest-jurisprudencia")
-    case_law_cmd.add_argument("assunto", choices=sorted(CASE_LAW))
+    case_law_cmd.add_argument("subject", metavar="assunto", choices=sorted(CASE_LAW))
     case_law_cmd.add_argument(
         "--enrich",
         action="store_true",
         help="also link each decision to the assunto's concepts; re-running resumes the pending",
     )
     run_all_cmd = commands.add_parser("run-all")
-    run_all_cmd.add_argument("assunto", choices=sorted(ANCHORS))
+    run_all_cmd.add_argument("subject", metavar="assunto", choices=sorted(ANCHORS))
     run_all_cmd.add_argument(
         "--enrich", action="store_true", help="also link the leis and decisions to the concepts"
     )
     draft_cmd = commands.add_parser("draft-concepts")
-    draft_cmd.add_argument("assunto", choices=sorted(VOCABULARY_PATHS))
+    draft_cmd.add_argument("subject", metavar="assunto", choices=sorted(VOCABULARY_PATHS))
     commands.add_parser("refresh-prompts")
     commands.add_parser("ask").add_argument("query")
     eval_cmd = commands.add_parser("eval")
-    eval_cmd.add_argument("assunto", choices=sorted(QUESTION_PATHS))
+    eval_cmd.add_argument("subject", metavar="assunto", choices=sorted(QUESTION_PATHS))
     eval_cmd.add_argument("--price-in", type=float, default=0.0, help="USD per million tokens in")
     eval_cmd.add_argument("--price-out", type=float, default=0.0, help="USD per million tokens out")
     eval_cmd.add_argument(
@@ -415,6 +416,6 @@ def main(argv: list[str] | None = None) -> None:
     finally:
         store.close()
     print(
-        f"wrote {batch.statute.id}: {len(batch.provisions)} dispositivos, "
-        f"{len(batch.concepts)} conceitos"
+        f"wrote {batch.statute.id}: {len(batch.provisions)} provisions, "
+        f"{len(batch.concepts)} concepts"
     )

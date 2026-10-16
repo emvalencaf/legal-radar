@@ -216,12 +216,21 @@ def main(argv: list[str] | None = None) -> None:
             from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
             from legal_radar.answer import ask
             from legal_radar.assunto import AssuntoResolver
-            from legal_radar.router_config import build_router, load_config
+            from legal_radar.router_config import (
+                build_router,
+                load_config,
+                tier_max_context_tokens,
+            )
 
             configure_tracing()
-            router = build_router(load_config("router.yaml"))
+            config = load_config("router.yaml")
+            router = build_router(config)
             result = ask(
-                args.query, AssuntoResolver(router).resolve, Neo4jGraphReader(store.driver), router
+                args.query,
+                AssuntoResolver(router).resolve,
+                Neo4jGraphReader(store.driver),
+                router,
+                max_context_tokens=tier_max_context_tokens(config),
             )
             if result.assunto is None:
                 print(f"no known assunto matches {args.query!r}")
@@ -252,10 +261,15 @@ def main(argv: list[str] | None = None) -> None:
             from legal_radar.assunto import AssuntoResolver
             from legal_radar.eval_runner import run_systems
             from legal_radar.prompts import default_lock
-            from legal_radar.router_config import build_router, load_config
+            from legal_radar.router_config import (
+                build_router,
+                load_config,
+                tier_max_context_tokens,
+            )
 
             publisher = publisher_if_enabled()  # also switches the LangGraph tracing on or off
-            meter = UsageMeter(build_router(load_config("router.yaml")))
+            config = load_config("router.yaml")
+            meter = UsageMeter(build_router(config))
             reader, lock = Neo4jGraphReader(store.driver), default_lock()
             if args.baseline:
                 from legal_radar.rag import RagBaseline
@@ -270,7 +284,19 @@ def main(argv: list[str] | None = None) -> None:
                 ]
             else:
                 resolve = AssuntoResolver(meter).resolve
-                systems = [(System(), lambda query: ask(query, resolve, reader, meter, lock))]
+                systems = [
+                    (
+                        System(),
+                        lambda query: ask(
+                            query,
+                            resolve,
+                            reader,
+                            meter,
+                            lock,
+                            tier_max_context_tokens(config),
+                        ),
+                    )
+                ]
             run_systems(
                 systems,
                 load_questions(QUESTION_PATHS[args.assunto]),

@@ -7,6 +7,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from typing import TypeVar
 
+from legal_radar.complexity import COMPLEX, SIMPLE
 from legal_radar.llm import (
     AllProvidersFailedError,
     Completion,
@@ -40,6 +41,7 @@ class Router:
         daily_limits: dict[str, int] | None = None,
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        complex_providers: list[Provider] | None = None,
     ):
         if not providers:
             raise ValueError("Router needs at least one provider")
@@ -48,6 +50,7 @@ class Router:
         self.daily_limits = daily_limits or {}
         self.sleep = sleep
         self.clock = clock
+        self.complex_providers = complex_providers or []  # empty: tiers are off
 
     def complete(self, prompt: str, params: CompletionParams | None = None) -> Completion:
         params = params or CompletionParams()
@@ -74,6 +77,8 @@ class Router:
             "outcome": "failed",
             "fallback_from": None,
             "retry_count": 0,
+            "complexity": params.complexity if self.complex_providers else None,
+            "downgraded_from": None,
         }
         try:
             result = self._route(lambda provider: provider.complete(prompt, params), event)
@@ -134,9 +139,24 @@ class Router:
         event: dict,
         model_of: Callable[[Provider], str] = lambda provider: provider.model,
     ) -> T:
+        if event.get("complexity") == COMPLEX:
+            try:
+                return self._route_among(self.complex_providers, call, event, model_of)
+            except AllProvidersFailedError:
+                event["complexity"] = SIMPLE
+                event["downgraded_from"] = COMPLEX
+        return self._route_among(self.providers, call, event, model_of)
+
+    def _route_among(
+        self,
+        providers: list[Provider],
+        call: Callable[[Provider], T],
+        event: dict,
+        model_of: Callable[[Provider], str],
+    ) -> T:
         fallback_from = None
         reasons: list[str] = []
-        for provider in self.providers:
+        for provider in providers:
             if self._over_daily_limit(provider, model_of(provider)):
                 fallback_from = provider.name
                 reasons.append(f"{provider.name}: over its daily limit")

@@ -19,16 +19,22 @@ RETURN d AS node, [r IN relationships(p) | [startNode(r).id, endNode(r).id]] AS 
 ORDER BY d.id, length(p)
 """
 REFERENCED = """
-MATCH (s:Dispositivo)-[:REFERENCES]->(t:Dispositivo)
+MATCH (s:Dispositivo)-[r:REFERENCES]->(t:Dispositivo)
 WHERE s.id IN $ids
-RETURN t AS node, s.id AS source, t.id AS target
+RETURN t AS node, s.id AS source, t.id AS target, r.confidence AS confidence
 ORDER BY t.id, s.id
 """
 CITING = """
-MATCH (j:Jurisprudencia)-[:REFERENCES]->(d:Dispositivo)
+MATCH (j:Jurisprudencia)-[r:REFERENCES]->(d:Dispositivo)
 WHERE d.id IN $ids
-RETURN j AS node, j.id AS source, d.id AS target
+RETURN j AS node, j.id AS source, d.id AS target, r.confidence AS confidence
 ORDER BY j.id, d.id
+"""
+REVOKING = """
+MATCH (l:Lei)-[r:REVOKES]->(d:Dispositivo)
+WHERE d.id IN $ids
+RETURN l.id AS source, d.id AS target, r.confidence AS confidence
+ORDER BY d.id, l.id
 """
 
 
@@ -91,7 +97,10 @@ class Neo4jGraphReader:
             if node["id"] in dispositivos:  # already reached through PARTS
                 continue
             dispositivos[node["id"]] = _dispositivo(node)
-            paths[node["id"]] = [*paths[r["source"]], Hop("REFERENCES", r["source"], r["target"])]
+            paths[node["id"]] = [
+                *paths[r["source"]],
+                Hop("REFERENCES", r["source"], r["target"], r["confidence"]),
+            ]
 
         jurisprudencias: dict[str, Jurisprudencia] = {}
         # only dispositivos reached by PARTS: a decision citing a REFERENCES target would be hop 2
@@ -100,10 +109,18 @@ class Neo4jGraphReader:
             if node["id"] in jurisprudencias:
                 continue
             jurisprudencias[node["id"]] = _jurisprudencia(node)
-            paths[node["id"]] = [*paths[r["target"]], Hop("REFERENCES", r["source"], r["target"])]
+            paths[node["id"]] = [
+                *paths[r["target"]],
+                Hop("REFERENCES", r["source"], r["target"], r["confidence"]),
+            ]
 
+        revocations = [
+            Hop("REVOKES", r["source"], r["target"], r["confidence"])
+            for r in self._rows(REVOKING, ids=sorted(dispositivos))
+        ]
         return Context(
             sorted(dispositivos.values(), key=lambda d: d.id),
             sorted(jurisprudencias.values(), key=lambda j: j.id),
             paths,
+            revocations,
         )

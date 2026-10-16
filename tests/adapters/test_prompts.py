@@ -3,16 +3,15 @@ from pathlib import Path
 
 import pytest
 
-from legal_radar.prompts import (
-    PromptError,
+from legal_radar.adapters.prompt_lock import (
     default_lock,
     load_lock,
     load_pins,
-    parse_lock,
     parse_manifest,
     refresh,
     refresh_lock,
 )
+from legal_radar.domain.prompts import PromptError, parse_lock
 
 
 def fetch(name, commit):
@@ -72,7 +71,7 @@ def test_manifest_yields_template_and_schema():
 def test_committed_manifests_parse_into_the_committed_lock():
     lock = default_lock()
     for name in lock.prompts:
-        path = Path(__file__).parents[1] / "prompts" / "manifests" / f"{name}.json"
+        path = Path(__file__).parents[2] / "prompts" / "manifests" / f"{name}.json"
         template, schema = parse_manifest(json.loads(path.read_text(encoding="utf-8")))
         assert (template, schema) == (lock.template(name), lock.prompts[name]["schema"])
 
@@ -102,7 +101,7 @@ def test_pipeline_stamps_each_call_with_a_hash_of_its_prompt_and_schema(tag_lock
     provider.complete = lambda prompt, params=None: seen.append(params) or complete(prompt, params)
 
     run(
-        (Path(__file__).parent / "fixtures" / "mini_lei.txt").read_text(encoding="utf-8"),
+        (Path(__file__).parents[1] / "fixtures" / "mini_lei.txt").read_text(encoding="utf-8"),
         provider,
         store,
         tag_lock,

@@ -20,7 +20,7 @@ from pathlib import Path
 import yaml
 from visualize_gold import ROOT, TEMPLATE, build_data
 
-from legal_radar.concepts import load_vocabulary
+from legal_radar.application.concepts import load_vocabulary
 from legal_radar.evaluation import GoldError, load_gold
 from legal_radar.gold_review import assemble
 

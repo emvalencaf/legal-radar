@@ -5,13 +5,13 @@ from ingest_helpers import FIXTURES, MemoryStore
 
 from legal_radar.adapters.stf import StfFetcher
 from legal_radar.adapters.stj import StjFetcher
-from legal_radar.domain.model import Jurisprudencia
-from legal_radar.jurisprudencia import (
+from legal_radar.application.jurisprudencia import (
     JURISPRUDENCIA,
     JurisprudenciaSource,
     Seed,
     ingest_jurisprudencia,
 )
+from legal_radar.domain.model import Jurisprudencia
 
 STF_SEED = "sjur550030"
 STJ_SEED = "202001090402"
@@ -127,7 +127,7 @@ def test_a_seed_missing_from_its_court_results_is_reported_and_the_rest_still_lo
 
 
 def test_the_catalogue_has_exactly_the_assuntos_of_the_anchors_and_the_vocabularies():
-    from legal_radar.concepts import VOCABULARY_PATHS
+    from legal_radar.application.concepts import VOCABULARY_PATHS
     from legal_radar.domain.anchors import ANCHORS
 
     assert set(JURISPRUDENCIA) == set(ANCHORS) == set(VOCABULARY_PATHS)
@@ -186,14 +186,14 @@ def test_live_sources_return_the_seed_precedents():
 # --- ingest-jurisprudencia --enrich (#65) ---
 
 from legal_radar.adapters.fake_provider import FakeProvider  # noqa: E402
+from legal_radar.adapters.prompt_lock import refresh  # noqa: E402
 from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore  # noqa: E402
-from legal_radar.concepts import Concept, Vocabulary  # noqa: E402
+from legal_radar.application.concepts import Concept, Vocabulary  # noqa: E402
+from legal_radar.application.enricher import DECISION_TEMPLATE  # noqa: E402
+from legal_radar.application.enrichment import DECISION_PROMPT  # noqa: E402
+from legal_radar.application.ingest import EnrichConfig  # noqa: E402
 from legal_radar.domain.llm import AllProvidersFailedError, Completion  # noqa: E402
 from legal_radar.domain.model import EnrichmentStatus, RelationType  # noqa: E402
-from legal_radar.enricher import DECISION_TEMPLATE  # noqa: E402
-from legal_radar.enrichment import DECISION_PROMPT  # noqa: E402
-from legal_radar.ingest import EnrichConfig  # noqa: E402
-from legal_radar.prompts import refresh  # noqa: E402
 
 VOCAB = Vocabulary(
     "desconsideração", (Concept("abuso", "Abuso", (), "Quando há abuso.", "REQUISITO"),)

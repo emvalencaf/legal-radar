@@ -1,9 +1,9 @@
 import json
 from datetime import UTC, datetime
 
+from legal_radar.adapters.prompt_lock import refresh
 from legal_radar.domain.model import Confidence, Dispositivo, Origin, Relation, RelationType
 from legal_radar.evaluation import Outcome, append_outcome, start_run
-from legal_radar.prompts import refresh
 from legal_radar.report import build_report, load_enrichment_run, render_report
 
 LEI = "urn:lex:br:federal:lei:2002-01-10;10406"

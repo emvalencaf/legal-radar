@@ -1,7 +1,7 @@
 from ingest_helpers import CC, CDC
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.answer import render_context, unsupported_mentions
+from legal_radar.application.answer import render_context, unsupported_mentions
 from legal_radar.application.assunto import AssuntoResolver
 from legal_radar.domain.model import Context, Dispositivo
 

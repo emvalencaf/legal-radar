@@ -62,6 +62,14 @@ include_external_packages = true
 name = "Layers point inward"
 type = "layers"
 layers = ["legal_radar.entrypoints", "legal_radar.adapters", "legal_radar.application", "legal_radar.domain"]
+# Known debt, each removed once its seam gets a port or an injected value (see ADR-0009):
+# the use cases still default to the file-backed prompt lock, and `ingest` still calls the
+# LexML and Planalto adapters directly instead of going through ports.
+ignore_imports = [
+    "legal_radar.application.* -> legal_radar.adapters.prompt_lock",
+    "legal_radar.application.ingest -> legal_radar.adapters.lexml",
+    "legal_radar.application.ingest -> legal_radar.adapters.planalto",
+]
 
 [[tool.importlinter.contracts]]
 name = "The domain stays free of infrastructure"

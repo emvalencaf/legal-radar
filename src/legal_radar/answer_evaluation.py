@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from legal_radar.answer import Citation, CitedAnswer
+from legal_radar.application.answer import Citation, CitedAnswer
 from legal_radar.application.ports import Provider
 from legal_radar.domain.llm import Completion, CompletionParams, Embedding
 from legal_radar.domain.model import Hop

@@ -4,9 +4,9 @@ from pathlib import Path
 import pytest
 
 from legal_radar.adapters.planalto import decode_html, parse_planalto
+from legal_radar.application.enrichment import EXTRACTOR_VERSION
 from legal_radar.domain.model import Confidence, Dispositivo, Jurisprudencia, Origin, RelationType
-from legal_radar.enrichment import EXTRACTOR_VERSION
-from legal_radar.relations import extract_decision_relations, extract_relations
+from legal_radar.domain.relations import extract_decision_relations, extract_relations
 
 CC = "urn:lex:br:federal:lei:2002-01-10;10406"
 CDC = "urn:lex:br:federal:lei:1990-09-11;8078"
@@ -177,7 +177,9 @@ def test_citation_free_text_yields_nothing():
 
 
 def test_real_planalto_chunks():
-    html = decode_html((Path(__file__).parent / "fixtures/planalto/l8078_excerpt.htm").read_bytes())
+    html = decode_html(
+        (Path(__file__).parents[1] / "fixtures/planalto/l8078_excerpt.htm").read_bytes()
+    )
     results = [extract_relations(d) for d in parse_planalto(html, CDC)]
 
     assert all(
@@ -216,7 +218,7 @@ def test_unreadable_inciso_range_goes_to_the_llm():
 
 
 def test_roman_numerals_round_trip_and_reject_malformed():
-    from legal_radar.relations import _roman, _to_roman
+    from legal_radar.domain.relations import _roman, _to_roman
 
     assert all(_roman(_to_roman(n)) == n for n in range(1, 400))
     assert _roman("IIII") == 0 and _roman("IC") == 0
@@ -228,7 +230,7 @@ L14382 = "urn:lex:br:federal:lei:2022-06-22;14382"
 
 def cc_art44_vi():
     html = decode_html(
-        (Path(__file__).parent / "fixtures/planalto/l10406_excerpt.htm").read_bytes()
+        (Path(__file__).parents[1] / "fixtures/planalto/l10406_excerpt.htm").read_bytes()
     )
     return next(d for d in parse_planalto(html, CC) if d.path == "art44_incVI")
 

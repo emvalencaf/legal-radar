@@ -1,7 +1,16 @@
 import json
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.concepts import Concept, Vocabulary
+from legal_radar.adapters.prompt_lock import refresh
+from legal_radar.application.concepts import Concept, Vocabulary
+from legal_radar.application.enricher import (
+    CONCEPT_RELATIONS,
+    DECISION_TEMPLATE,
+    ENRICHMENT_TEMPLATE,
+    enrich,
+    enrich_decision,
+)
+from legal_radar.application.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
 from legal_radar.domain.llm import Completion
 from legal_radar.domain.model import (
     Confidence,
@@ -11,15 +20,6 @@ from legal_radar.domain.model import (
     Relation,
     RelationType,
 )
-from legal_radar.enricher import (
-    CONCEPT_RELATIONS,
-    DECISION_TEMPLATE,
-    ENRICHMENT_TEMPLATE,
-    enrich,
-    enrich_decision,
-)
-from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
-from legal_radar.prompts import refresh
 
 LEI = "urn:lex:br:federal:lei:2002-01-10;10406"
 VOCABULARY = Vocabulary(
@@ -251,10 +251,10 @@ def test_it_enriches_a_dispositivo_parsed_from_planalto_with_its_unresolved_cita
     from pathlib import Path
 
     from legal_radar.adapters.planalto import decode_html, parse_planalto
-    from legal_radar.enricher import candidate_targets
-    from legal_radar.relations import extract_relations
+    from legal_radar.application.enricher import candidate_targets
+    from legal_radar.domain.relations import extract_relations
 
-    raw = (Path(__file__).parent / "fixtures" / "planalto" / "l10406_excerpt.htm").read_bytes()
+    raw = (Path(__file__).parents[1] / "fixtures" / "planalto" / "l10406_excerpt.htm").read_bytes()
     everything = parse_planalto(decode_html(raw), LEI)
     d = next(x for x in everything if x.path == "art50")
     unresolved = [r for r in extract_relations(d).relations if r.unresolved]
@@ -275,7 +275,7 @@ def test_the_token_ceiling_is_read_from_router_yaml_with_a_default():
     import pytest
 
     from legal_radar.adapters.router_config import enrichment_max_input_tokens, load_config
-    from legal_radar.enricher import MAX_INPUT_TOKENS
+    from legal_radar.application.enricher import MAX_INPUT_TOKENS
 
     assert enrichment_max_input_tokens({"enrichment": {"max_input_tokens": 123}}) == 123
     assert enrichment_max_input_tokens({}) == MAX_INPUT_TOKENS

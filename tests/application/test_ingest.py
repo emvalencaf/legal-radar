@@ -5,13 +5,13 @@ from unittest.mock import patch
 import pytest
 from ingest_helpers import CC, CC_AGENT, FakePages, MemoryStore, lexml_pages, read
 
-from legal_radar import ingest as ingest_module
 from legal_radar.adapters import lexml
 from legal_radar.adapters.lexml import resolve_urn, search_urn
+from legal_radar.application import ingest as ingest_module
+from legal_radar.application.ingest import ingest
 from legal_radar.domain.anchors import AnchorLei
 from legal_radar.domain.model import Dispositivo
 from legal_radar.domain.urn import LexmlError
-from legal_radar.ingest import ingest
 
 
 def test_search_resolves_the_urn_of_the_requested_lei():
@@ -114,13 +114,13 @@ def test_ingest_extracts_relations_and_reports_them():
 from dataclasses import replace  # noqa: E402
 
 from legal_radar.adapters.fake_provider import FakeProvider  # noqa: E402
+from legal_radar.adapters.prompt_lock import refresh  # noqa: E402
 from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore  # noqa: E402
-from legal_radar.concepts import Concept, Vocabulary  # noqa: E402
+from legal_radar.application.concepts import Concept, Vocabulary  # noqa: E402
+from legal_radar.application.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE  # noqa: E402
+from legal_radar.application.ingest import EnrichConfig  # noqa: E402
 from legal_radar.domain.llm import AllProvidersFailedError, Completion  # noqa: E402
 from legal_radar.domain.model import EnrichmentStatus  # noqa: E402
-from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE  # noqa: E402
-from legal_radar.ingest import EnrichConfig  # noqa: E402
-from legal_radar.prompts import refresh  # noqa: E402
 
 ANCHOR = [AnchorLei("lei 10406 2002 código civil", "10406", 2002)]
 VOCAB = Vocabulary(

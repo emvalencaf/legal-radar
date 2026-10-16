@@ -28,11 +28,11 @@ from legal_radar.adapters.fixture.pipeline import run
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.adapters.tracing import configure_tracing, publisher_if_enabled
 from legal_radar.answer_evaluation import QUESTION_PATHS
-from legal_radar.concepts import VOCABULARY_PATHS
+from legal_radar.application.concepts import VOCABULARY_PATHS
+from legal_radar.application.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
+from legal_radar.application.ingest import ingest
+from legal_radar.application.jurisprudencia import JURISPRUDENCIA
 from legal_radar.domain.anchors import ANCHORS
-from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
-from legal_radar.ingest import ingest
-from legal_radar.jurisprudencia import JURISPRUDENCIA
 from legal_radar.rag import BASELINES, CHUNKINGS
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
@@ -55,6 +55,7 @@ def load_env(path: Path = ENV_PATH) -> None:
 def enrich_config(assunto: str, prompt: str = ENRICHMENT_PROMPT):
     """The LLM phase of `ingest --enrich` and `ingest-jurisprudencia --enrich`, with the pinned
     `prompt` the phase needs; a missing vocabulary or provider is an error."""
+    from legal_radar.adapters.prompt_lock import default_lock
     from legal_radar.adapters.router_config import (
         API_KEYS,
         DEFAULT_PRIORITY,
@@ -64,9 +65,9 @@ def enrich_config(assunto: str, prompt: str = ENRICHMENT_PROMPT):
         providers_without_credentials,
     )
     from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore
-    from legal_radar.concepts import VocabularyError, load_registered
-    from legal_radar.ingest import EnrichConfig
-    from legal_radar.prompts import PromptError, default_lock
+    from legal_radar.application.concepts import VocabularyError, load_registered
+    from legal_radar.application.ingest import EnrichConfig
+    from legal_radar.domain.prompts import PromptError
 
     try:
         default_lock().prompt_hash(prompt)
@@ -172,15 +173,15 @@ def main(argv: list[str] | None = None) -> None:
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
     if args.command == "refresh-prompts":
-        from legal_radar.prompts import LOCK_PATH, langsmith_fetch, refresh_lock
+        from legal_radar.adapters.prompt_lock import LOCK_PATH, langsmith_fetch, refresh_lock
 
         lock = refresh_lock(langsmith_fetch)
         print(f"wrote {LOCK_PATH} ({len(lock.prompts)} prompts, {lock.snapshot_hash})")
         return
 
     if args.command == "report":
+        from legal_radar.adapters.prompt_lock import default_lock
         from legal_radar.assayer_harness import RUNS_DIR
-        from legal_radar.prompts import default_lock
         from legal_radar.report import build_report
 
         if not any(RUNS_DIR.glob("*.json")):
@@ -228,7 +229,7 @@ def main(argv: list[str] | None = None) -> None:
                 load_config,
                 tier_max_context_tokens,
             )
-            from legal_radar.answer import ask
+            from legal_radar.application.answer import ask
             from legal_radar.application.assunto import AssuntoResolver
 
             configure_tracing()
@@ -264,17 +265,17 @@ def main(argv: list[str] | None = None) -> None:
             return
         if args.command == "eval":
             from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
+            from legal_radar.adapters.prompt_lock import default_lock
             from legal_radar.adapters.router_config import (
                 build_router,
                 load_config,
                 tier_max_context_tokens,
             )
-            from legal_radar.answer import ask
             from legal_radar.answer_evaluation import System, UsageMeter, load_questions
+            from legal_radar.application.answer import ask
             from legal_radar.application.assunto import AssuntoResolver
             from legal_radar.assayer_harness import Pricing, ragas_llm_from_env
             from legal_radar.eval_runner import run_systems
-            from legal_radar.prompts import default_lock
 
             publisher = publisher_if_enabled()  # also switches the LangGraph tracing on or off
             config = load_config("router.yaml")
@@ -365,7 +366,7 @@ def main(argv: list[str] | None = None) -> None:
         if args.command == "draft-concepts":
             from legal_radar.adapters.neo4j_corpus import graph_corpus
             from legal_radar.adapters.router_config import build_router, load_config
-            from legal_radar.concepts import corpus_ids, draft_candidates, with_assunto
+            from legal_radar.application.concepts import corpus_ids, draft_candidates, with_assunto
 
             router = build_router(load_config("router.yaml"))
             corpus = graph_corpus(store.driver)
@@ -395,7 +396,7 @@ def main(argv: list[str] | None = None) -> None:
             from legal_radar.adapters.pages import BrowserPageSource
             from legal_radar.adapters.stf import StfFetcher
             from legal_radar.adapters.stj import StjFetcher
-            from legal_radar.jurisprudencia import ingest_jurisprudencia
+            from legal_radar.application.jurisprudencia import ingest_jurisprudencia
 
             config = enrich_config(args.assunto, DECISION_PROMPT) if args.enrich else None
 
@@ -417,7 +418,7 @@ def main(argv: list[str] | None = None) -> None:
             return
         ids = None
         if args.assunto:
-            from legal_radar.concepts import load_registered
+            from legal_radar.application.concepts import load_registered
 
             ids = [c.id for c in load_registered(args.assunto).conceitos]
         batch = run(

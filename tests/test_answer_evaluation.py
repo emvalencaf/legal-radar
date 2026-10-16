@@ -3,7 +3,6 @@ import json
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.answer import Citation, CitedAnswer
 from legal_radar.answer_evaluation import (
     Question,
     UsageMeter,
@@ -15,6 +14,7 @@ from legal_radar.answer_evaluation import (
     outcome_of,
     path_nodes,
 )
+from legal_radar.application.answer import Citation, CitedAnswer
 from legal_radar.domain.llm import Completion
 from legal_radar.domain.model import Hop
 

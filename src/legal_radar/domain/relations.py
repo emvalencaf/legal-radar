@@ -19,9 +19,9 @@ from legal_radar.domain.model import (
     Relation,
     RelationType,
 )
-from legal_radar.enrichment import EXTRACTOR_VERSION
 
 logger = logging.getLogger(__name__)
+EXTRACTOR_VERSION = "1"  # bump when the extraction code changes in a way prompts do not capture
 UrnResolver = Callable[[str, str, int], str | None]  # (kind, numero, ano) -> URN, e.g. ("lei", ...)
 
 _FEDERAL = "urn:lex:br:federal"

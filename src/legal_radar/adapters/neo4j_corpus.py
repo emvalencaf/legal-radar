@@ -2,7 +2,7 @@
 
 from neo4j import Driver
 
-from legal_radar.concepts import CORPUS_ROOTS
+from legal_radar.application.concepts import CORPUS_ROOTS
 
 CORPUS_QUERY = """
 MATCH (d:Dispositivo)

@@ -3,7 +3,7 @@ from neo4j import GraphDatabase
 from testcontainers.neo4j import Neo4jContainer
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.concepts import (
+from legal_radar.application.concepts import (
     CATEGORIES,
     VocabularyError,
     draft_candidates,
@@ -169,8 +169,8 @@ def test_each_step_sends_its_own_schema_and_pipeline_step():
 
 
 def test_schemas_describe_every_field_and_limit_categories_and_sources():
-    from legal_radar.concepts import extract_schema
-    from legal_radar.prompts import default_lock
+    from legal_radar.adapters.prompt_lock import default_lock
+    from legal_radar.application.concepts import extract_schema
 
     lock = default_lock()
 
@@ -211,7 +211,7 @@ def test_draft_candidates_rejects_an_answer_off_the_schema(script):
 
 
 def test_with_assunto_reports_a_count_mismatch():
-    from legal_radar.concepts import Draft, with_assunto
+    from legal_radar.application.concepts import Draft, with_assunto
 
     entry = draft_of().conceitos
     assert with_assunto("a", Draft(entry, "fake/m", expected=1))[1] is None
@@ -219,7 +219,7 @@ def test_with_assunto_reports_a_count_mismatch():
 
 
 def test_every_anchor_assunto_has_a_valid_registered_vocabulary():
-    from legal_radar.concepts import VOCABULARY_PATHS, load_registered
+    from legal_radar.application.concepts import VOCABULARY_PATHS, load_registered
     from legal_radar.domain.anchors import ANCHORS
 
     assert set(ANCHORS) == set(VOCABULARY_PATHS)
@@ -228,7 +228,7 @@ def test_every_anchor_assunto_has_a_valid_registered_vocabulary():
 
 
 def test_load_registered_rejects_unknown_and_mismatched_assuntos(monkeypatch, tmp_path):
-    from legal_radar import concepts
+    from legal_radar.application import concepts
 
     with pytest.raises(VocabularyError, match="no vocabulary registered"):
         concepts.load_registered("outro")
@@ -242,7 +242,7 @@ def test_load_registered_rejects_unknown_and_mismatched_assuntos(monkeypatch, tm
 
 def test_graph_corpus_reads_the_seed_dispositivos_and_all_jurisprudencia(driver):
     from legal_radar.adapters.neo4j_corpus import graph_corpus
-    from legal_radar.concepts import CORPUS_ROOTS
+    from legal_radar.application.concepts import CORPUS_ROOTS
 
     root = CORPUS_ROOTS[0]
     driver.execute_query(
@@ -266,7 +266,7 @@ def test_graph_corpus_reads_the_seed_dispositivos_and_all_jurisprudencia(driver)
 
 
 def draft_of(**overrides):
-    from legal_radar.concepts import Draft
+    from legal_radar.application.concepts import Draft
 
     entry = {
         "id": "x",
@@ -281,7 +281,7 @@ def draft_of(**overrides):
 
 
 def test_with_assunto_builds_a_loadable_draft_and_reports_when_it_does_not():
-    from legal_radar.concepts import Draft, with_assunto
+    from legal_radar.application.concepts import Draft, with_assunto
 
     text, error = with_assunto("a b", draft_of())
     assert text.startswith("assunto: a b\n") and error is None
@@ -342,7 +342,7 @@ def test_status_defaults_to_draft_and_curated_needs_every_concept_reviewed():
 
 
 def test_a_draft_vocabulary_only_warns_when_loaded(caplog, monkeypatch, tmp_path):
-    from legal_radar import concepts
+    from legal_radar.application import concepts
 
     path = tmp_path / "v.yml"
     path.write_text(valid_yaml().replace("assunto: a", "assunto: b"), encoding="utf-8")
@@ -356,7 +356,7 @@ def test_a_draft_vocabulary_only_warns_when_loaded(caplog, monkeypatch, tmp_path
 
 
 def test_the_committed_vocabulary_is_curated_and_loads_without_a_warning(caplog):
-    from legal_radar.concepts import VOCABULARY_PATHS, load_registered
+    from legal_radar.application.concepts import VOCABULARY_PATHS, load_registered
 
     with caplog.at_level("WARNING"):
         for assunto in VOCABULARY_PATHS:
@@ -370,7 +370,7 @@ def test_the_committed_vocabulary_is_curated_and_loads_without_a_warning(caplog)
 def test_with_assunto_marks_the_draft_as_llm_origin():
     from datetime import date
 
-    from legal_radar.concepts import with_assunto
+    from legal_radar.application.concepts import with_assunto
 
     text, error = with_assunto("a", draft_of())
 
@@ -394,7 +394,7 @@ def test_sources_are_loaded_but_never_change_the_hash():
 
 
 def test_with_assunto_reports_sources_missing_from_the_corpus():
-    from legal_radar.concepts import corpus_ids, with_assunto
+    from legal_radar.application.concepts import corpus_ids, with_assunto
 
     ids = corpus_ids(["[STJ:1]\nementa", "[lei#art50]\ntexto"])
     assert ids == {"STJ:1", "lei#art50"}

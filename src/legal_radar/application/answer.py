@@ -11,14 +11,15 @@ from typing import TypedDict
 import jsonschema
 from langgraph.graph import END, START, StateGraph
 
+from legal_radar.adapters.prompt_lock import default_lock
 from legal_radar.application.assunto import Resolution
 from legal_radar.application.ports import GraphReader, Provider
 from legal_radar.domain.complexity import DEFAULT_MAX_CONTEXT_TOKENS, classify
 from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.domain.model import Context, Hop, Jurisprudencia
+from legal_radar.domain.prompts import PromptError, PromptLock
+from legal_radar.domain.relations import extract_decision_relations
 from legal_radar.domain.urn import FEDERAL_LEI
-from legal_radar.prompts import PromptError, PromptLock, default_lock
-from legal_radar.relations import extract_decision_relations
 
 ANSWER_PROMPT = "cited-answer"
 # The sources come first and the question last, so a provider can cache the fixed context block.

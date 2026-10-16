@@ -3,10 +3,11 @@ import json
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.concepts import Concept, Vocabulary
+from legal_radar.adapters.prompt_lock import refresh
+from legal_radar.application.concepts import Concept, Vocabulary
+from legal_radar.application.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE
 from legal_radar.domain.llm import Completion
 from legal_radar.domain.model import Confidence, Dispositivo, Origin, Relation, RelationType
-from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE
 from legal_radar.evaluation import (
     GoldError,
     Outcome,
@@ -22,7 +23,6 @@ from legal_radar.evaluation import (
     score_edges,
     start_run,
 )
-from legal_radar.prompts import refresh
 
 LEI = "urn:lex:br:federal:lei:2002-01-10;10406"
 VOCABULARY = Vocabulary(

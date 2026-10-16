@@ -1,8 +1,8 @@
 from dataclasses import replace
 
-from legal_radar.concepts import Concept, Vocabulary
-from legal_radar.enrichment import enrichment_key
-from legal_radar.prompts import refresh
+from legal_radar.adapters.prompt_lock import refresh
+from legal_radar.application.concepts import Concept, Vocabulary
+from legal_radar.application.enrichment import enrichment_key
 
 CONCEPT = Concept(
     id="abuso",

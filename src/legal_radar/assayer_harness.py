@@ -10,7 +10,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from legal_radar.adapters.tracing import safely
-from legal_radar.answer import CitedAnswer
 from legal_radar.answer_evaluation import (
     Checkpoint,
     Outcome,
@@ -23,6 +22,7 @@ from legal_radar.answer_evaluation import (
     graph_path,
     outcome_of,
 )
+from legal_radar.application.answer import CitedAnswer
 from legal_radar.domain.llm import content_hash
 
 RUNS_DIR = Path(__file__).resolve().parents[2] / "eval-runs"

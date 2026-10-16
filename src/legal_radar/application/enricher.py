@@ -14,8 +14,10 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
+from legal_radar.adapters.prompt_lock import default_lock
+from legal_radar.application.concepts import Vocabulary
+from legal_radar.application.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
 from legal_radar.application.ports import Provider
-from legal_radar.concepts import Vocabulary
 from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.domain.model import (
     CONCEPT_RELATIONS,
@@ -26,9 +28,8 @@ from legal_radar.domain.model import (
     Relation,
     RelationType,
 )
-from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
-from legal_radar.prompts import PromptLock, default_lock
-from legal_radar.relations import CURATED_CODES
+from legal_radar.domain.prompts import PromptLock
+from legal_radar.domain.relations import CURATED_CODES
 
 logger = logging.getLogger(__name__)
 

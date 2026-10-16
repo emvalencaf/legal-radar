@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 from legal_radar.adapters.planalto import decode_html, parse_planalto
-from legal_radar.concepts import load_vocabulary
+from legal_radar.application.concepts import load_vocabulary
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"

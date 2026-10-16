@@ -5,13 +5,14 @@ extractor, the vocabulary of its assunto or the prompt that enriches it (`dispos
 Rule-derived edges do not use it, so they are kept.
 """
 
-from legal_radar.concepts import Vocabulary
+from legal_radar.adapters.prompt_lock import default_lock
+from legal_radar.application.concepts import Vocabulary
 from legal_radar.domain.llm import content_hash
-from legal_radar.prompts import PromptLock, default_lock
+from legal_radar.domain.prompts import PromptLock
+from legal_radar.domain.relations import EXTRACTOR_VERSION
 
 ENRICHMENT_PROMPT = "dispositivo-enrichment"
 DECISION_PROMPT = "jurisprudencia-enrichment"
-EXTRACTOR_VERSION = "1"  # bump when the extraction code changes in a way prompts do not capture
 
 
 def enrichment_key(

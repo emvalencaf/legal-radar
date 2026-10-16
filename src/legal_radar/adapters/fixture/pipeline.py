@@ -6,10 +6,11 @@ import json
 import jsonschema
 
 from legal_radar.adapters.fixture.parser import parse_lei
+from legal_radar.adapters.prompt_lock import default_lock
 from legal_radar.application.ports import GraphStore, Provider
 from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.domain.model import Conceito, ConceptLink, GraphBatch
-from legal_radar.prompts import PromptError, PromptLock, default_lock
+from legal_radar.domain.prompts import PromptError, PromptLock
 
 TAG_PROMPT = "dispositivo-concept"
 TAG_SCHEMA = {  # published to the Hub as `dispositivo-concept`'s structured output

@@ -68,8 +68,8 @@ def test_pipeline_writes_graph_and_is_idempotent(driver, tag_lock):
 def test_ingested_lei_is_loaded_with_parts_edges_and_reload_is_idempotent(driver):
     from ingest_helpers import CC, CC_AGENT, FakePages, lexml_pages, read
 
+    from legal_radar.application.ingest import ingest
     from legal_radar.domain.anchors import AnchorLei
-    from legal_radar.ingest import ingest
 
     store = Neo4jGraphStore(driver)
     anchors = [AnchorLei("lei 10406 2002 código civil", "10406", 2002)]

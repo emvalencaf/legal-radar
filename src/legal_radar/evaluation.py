@@ -17,8 +17,9 @@ from pathlib import Path
 
 import yaml
 
+from legal_radar.application.concepts import Vocabulary
+from legal_radar.application.enricher import ancestors_of, candidate_targets, enrich
 from legal_radar.application.ports import Provider
-from legal_radar.concepts import Vocabulary
 from legal_radar.domain.model import (
     CONCEPT_RELATIONS,
     Confidence,
@@ -27,9 +28,8 @@ from legal_radar.domain.model import (
     Relation,
     RelationType,
 )
-from legal_radar.enricher import ancestors_of, candidate_targets, enrich
-from legal_radar.prompts import PromptLock
-from legal_radar.relations import extract_relations
+from legal_radar.domain.prompts import PromptLock
+from legal_radar.domain.relations import extract_relations
 
 ALL = "all"
 CONCEPT = "CONCEPT"  # aggregate of the dispositivo→conceito relation types

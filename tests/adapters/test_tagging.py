@@ -6,8 +6,9 @@ from conftest import RecordingStore
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.fixture.pipeline import TAG_SCHEMA, TaggingError, run
+from legal_radar.adapters.prompt_lock import refresh
 from legal_radar.domain.llm import Completion
-from legal_radar.prompts import PromptError, refresh
+from legal_radar.domain.prompts import PromptError
 
 RAW = (Path(__file__).parents[1] / "fixtures" / "mini_lei.txt").read_text(encoding="utf-8")
 

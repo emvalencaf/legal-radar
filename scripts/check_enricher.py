@@ -1,8 +1,8 @@
 """Live check of the LLM enricher: CC art. 50 and CDC art. 28 against the draft vocabulary.
 
 Usage: check_enricher.py [gemini|groq|lmstudio] (default gemini); Gemini needs GEMINI_API_KEY
-(read from the environment or `.env`). Uses the template shipped in `legal_radar.enricher`, not the
-Hub, and prints per dispositivo whether the reply followed the schema, what was dropped and why,
+(read from the environment or `.env`). Uses the template shipped in
+`legal_radar.application.enricher`, not the Hub, and prints per dispositivo whether the reply followed the schema, what was dropped and why,
 the tokens spent and the edges produced. It does not measure quality: that is the gold set (#28).
 """
 
@@ -11,15 +11,20 @@ from pathlib import Path
 
 from legal_radar.__main__ import load_env
 from legal_radar.adapters.planalto import decode_html, parse_planalto
+from legal_radar.adapters.prompt_lock import refresh
 from legal_radar.adapters.router_config import (
     build_router,
     enrichment_max_input_tokens,
     load_config,
 )
-from legal_radar.concepts import load_vocabulary
-from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE, candidate_targets, enrich
-from legal_radar.prompts import refresh
-from legal_radar.relations import extract_relations
+from legal_radar.application.concepts import load_vocabulary
+from legal_radar.application.enricher import (
+    ENRICHMENT_PROMPT,
+    ENRICHMENT_TEMPLATE,
+    candidate_targets,
+    enrich,
+)
+from legal_radar.domain.relations import extract_relations
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"

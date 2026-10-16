@@ -6,10 +6,10 @@ from testcontainers.neo4j import Neo4jContainer
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
-from legal_radar.answer import ANSWER_SCHEMA, CitationError, ask, parse_answer
+from legal_radar.adapters.prompt_lock import refresh
+from legal_radar.application.answer import ANSWER_SCHEMA, CitationError, ask, parse_answer
 from legal_radar.application.assunto import AssuntoResolver
 from legal_radar.domain.model import Dispositivo, GraphBatch, Hop, Jurisprudencia, Lei
-from legal_radar.prompts import refresh
 
 ART_50 = f"{CC}#art50"
 ART_50_1 = f"{CC}#art50_par1"

@@ -7,6 +7,16 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Added
+
+- MIT `LICENSE`; an English glossary of the domain terms in `CONTEXT.md`; the `ask-flow` and
+  `evaluation-loop` diagrams in `docs/diagrams/`, embedded in `ARCHITECTURE.md`.
+
+### Changed
+
+- README rewritten for an international reader: the problem, the graph against RAG results, the
+  design decisions, the Portuguese to English terms and a real roadmap.
+
 ### Removed
 
 - Obsolete scripts: the `setup-langsmith-*` wizards (the prompts are published and pinned in

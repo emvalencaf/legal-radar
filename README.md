@@ -7,11 +7,11 @@
   <h3 align="center">Legal Radar</h3>
 
   <p align="center">
-    A RAG-based project that ingests a given legal topic (pointing to a law)
-    and finds jurisprudence precedents, doctrine, and law amendments via the
-    LexML Brasil portal.
+    A graph-RAG system over Brazilian law: given a legal subject, it links the statute,
+    the court decisions and the legal concepts that bear on it, and answers questions with
+    citations you can trace back to the graph.
     <br />
-    <a href="CONTRIBUTING.md"><strong>Explore the docs »</strong></a>
+    <a href="ARCHITECTURE.md"><strong>Explore the architecture »</strong></a>
     <br />
     <br />
     <a href="https://github.com/emvalencaf/legal-radar/issues/new">Report Bug</a>
@@ -26,6 +26,9 @@
     <li>
       <a href="#about-the-project">About The Project</a>
       <ul>
+        <li><a href="#does-the-graph-help">Does the graph help?</a></li>
+        <li><a href="#design-decisions">Design decisions</a></li>
+        <li><a href="#domain-terms">Domain terms</a></li>
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
@@ -47,20 +50,65 @@
 
 ## About The Project
 
-A RAG-based project that ingests a given legal topic (pointing to a law) and
-finds jurisprudence precedents, doctrine, and law amendments via the
-[LexML Brasil](https://www.lexml.gov.br/) portal.
+Legal questions rarely live in one place: a provision of the Civil Code is interpreted by
+court decisions, qualified by other statutes and shaped by legal concepts. Plain vector search
+over the text finds *similar* passages but not *related* ones. Legal Radar builds a knowledge
+graph over the Brazilian legal sources ([LexML](https://www.lexml.gov.br/), Planalto, STF, STJ),
+resolves a user's legal subject (*assunto*) to anchor statutes, walks the graph from there and
+asks an LLM to answer **only** from what it reached, citing each source.
 
-The code is organised in layers (domain, application, adapters, entrypoints) with the
-dependency rule enforced in CI; see [ARCHITECTURE.md](ARCHITECTURE.md) for the layout and the
-diagrams of the pipeline and its outputs.
+![How a question is answered](docs/diagrams/ask-flow.svg)
+
+### Does the graph help?
+
+The graph system is scored against two pure-RAG baselines on the same 50 questions about one
+anchor subject (disregard of the corporate entity), so its value is measured, not assumed:
+
+| Metric | Graph | RAG @5 | RAG @15 |
+|---|---:|---:|---:|
+| Citation correctness | **0.84** | 0.59 | 0.71 |
+| Citation recall | **0.91** | 0.61 | 0.74 |
+| Fabricated citations | 0.00 | 0.00 | 0.00 |
+| Input tokens per question | 4,274 | 875 | 2,424 |
+
+The graph answers better on the hardest questions (0.89 against 0.28 and 0.58) and costs about
+1.8 times the input tokens of the larger RAG baseline. Contradiction surfacing is low for every
+system (0.33 at best). Read the caveats before trusting any number: one subject, one language,
+and a gold set annotated by a single person (see [evaluation/BASELINE.md](evaluation/BASELINE.md)
+and `uv run legal-radar compare-evals`). The numbers come from `eval-runs/`, which is not versioned.
+
+### Design decisions
+
+Each non-obvious choice is recorded as an ADR in [docs/adr/](docs/adr/): why the statute text comes
+from Planalto and not LexML (0001), hybrid rule + LLM relation extraction with provenance and
+confidence (0002), a concept vocabulary per subject (0003), pinned and versioned prompts (0004),
+and a layered architecture whose dependency rule is enforced in CI (0009). The layout and the
+diagrams are in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+### Domain terms
+
+The domain is Brazilian law, so the code, prompts and data keep the Portuguese terms on purpose.
+
+| Portuguese | English |
+|---|---|
+| assunto | legal subject |
+| lei | statute |
+| dispositivo | provision (article, paragraph, item) |
+| jurisprudência | case law |
+| doutrina | legal scholarship |
+| ementa / acórdão | case summary / appellate ruling |
+
+The full table is in [CONTEXT.md](CONTEXT.md#english-glossary).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Built With
 
 * [Python](https://www.python.org) managed with [uv](https://docs.astral.sh/uv/)
-* [ruff](https://docs.astral.sh/ruff/)
+* [Neo4j](https://neo4j.com/) for the knowledge graph and [LangGraph](https://langchain-ai.github.io/langgraph/) for the query pipeline
+* [LangSmith](https://smith.langchain.com/) for versioned prompts and tracing, [RAGAS](https://docs.ragas.io/) for grounding checks
+* Groq, Gemini or a local LM Studio model behind a fallback router (`router.yaml`)
+* [ruff](https://docs.astral.sh/ruff/) and [import-linter](https://import-linter.readthedocs.io/) for the standards CI enforces
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -224,7 +272,11 @@ Tests (need Docker for the Neo4j test container): `uv run pytest`.
 
 ## Roadmap
 
-- [ ] First milestone
+- [ ] A source for *doutrina*, the third pillar of the graph (not chosen yet, see `docs/research/doutrina-source.md`)
+- [ ] Legislative amendments and their cascade of affected entities (modelled, not implemented)
+- [ ] Link decisions to the provisions they cite, so the parked `tema-1210` question can run
+- [ ] Tune the enrichment quality gates from evidence and enable them in CI
+- [ ] More than one anchor subject, to measure how the results generalise
 
 See the [open issues](https://github.com/emvalencaf/legal-radar/issues) for proposed features and known issues.
 

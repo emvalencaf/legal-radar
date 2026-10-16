@@ -1,7 +1,7 @@
 """CLI: `legal-radar run [fixture]` runs the skeleton pipeline with a fake provider;
 `legal-radar ingest <assunto>` ingests the assunto's anchor leis from LexML/Planalto;
-`legal-radar ingest-jurisprudencia [--enrich]` ingests the seed precedents and top STF/STJ hits and,
-with --enrich, links each to the assunto's concepts;
+`legal-radar ingest-jurisprudencia <assunto> [--enrich]` ingests the assunto's seed precedents and
+top STF/STJ hits and, with --enrich, links each to the assunto's concepts;
 `legal-radar draft-concepts <assunto>` has an LLM draft concept candidates from the graph's corpus;
 `legal-radar ask "<query>"` resolves the assunto, traverses the graph and prints a cited answer;
 `legal-radar eval <assunto>` answers the assunto's question set and scores grounding, citations,
@@ -28,6 +28,7 @@ from legal_radar.answer_evaluation import QUESTION_PATHS
 from legal_radar.concepts import VOCABULARY_PATHS
 from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
 from legal_radar.ingest import ingest
+from legal_radar.jurisprudencia import JURISPRUDENCIA
 from legal_radar.pipeline import run
 from legal_radar.rag import BASELINES, CHUNKINGS
 from legal_radar.tracing import configure_tracing, publisher_if_enabled
@@ -117,6 +118,7 @@ def main(argv: list[str] | None = None) -> None:
         help="also send the chunks the rules left to the LLM; re-running resumes the pending ones",
     )
     jurisprudencia_cmd = commands.add_parser("ingest-jurisprudencia")
+    jurisprudencia_cmd.add_argument("assunto", choices=sorted(JURISPRUDENCIA))
     jurisprudencia_cmd.add_argument(
         "--enrich",
         action="store_true",
@@ -349,16 +351,18 @@ def main(argv: list[str] | None = None) -> None:
             from legal_radar.adapters.pages import BrowserPageSource
             from legal_radar.adapters.stf import StfFetcher
             from legal_radar.adapters.stj import StjFetcher
-            from legal_radar.jurisprudencia import ASSUNTO, ingest_jurisprudencia
+            from legal_radar.jurisprudencia import ingest_jurisprudencia
 
-            config = enrich_config(ASSUNTO, DECISION_PROMPT) if args.enrich else None
+            config = enrich_config(args.assunto, DECISION_PROMPT) if args.enrich else None
 
             browser = BrowserPageSource(
                 channel="chrome"
             )  # STJ's Cloudflare rejects bundled Chromium
             try:
                 fetchers = {"STF": StfFetcher(browser), "STJ": StjFetcher(browser)}
-                report = ingest_jurisprudencia(fetchers, store, enrichment=config)
+                report = ingest_jurisprudencia(
+                    fetchers, store, JURISPRUDENCIA[args.assunto], enrichment=config
+                )
                 print(report.render())
                 if report.failed:
                     raise SystemExit(1)

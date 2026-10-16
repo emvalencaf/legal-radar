@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Jurisprudência per assunto (#74): `JURISPRUDENCIA` catalogues each assunto's seeds, per-court
+  searches and top hits (`JurisprudenciaSource`, 0 ingests only the seeds), in the style of
+  `ANCHORS`. `legal-radar ingest-jurisprudencia <assunto>` now requires the assunto, limited to the
+  catalogue; `ingest_jurisprudencia` takes the source instead of reading module constants. The
+  anchor assunto behaves as before.
 - Optional complexity tiers (#47), off by default: `legal_radar.complexity.classify` is a pure
   rule over the retrieved context (more than one lei, any jurisprudência, a REVOKES or LOW-confidence
   edge, or more than `tiers.max_context_tokens`). With `tiers.enabled: true` in `router.yaml`, a

@@ -207,7 +207,7 @@ say "Installs the optional 'prompts' extra (langsmith) into the project environm
 uv sync --extra prompts
 
 stage "Publish dispositivo-concept with its schema"
-say "Pushes the current template plus the {conceito_id} schema (legal_radar.pipeline.TAG_SCHEMA)"
+say "Pushes the current template plus the {conceito_id} schema (legal_radar.adapters.fixture.pipeline.TAG_SCHEMA)"
 say "as a structured prompt under the same name. The enum is a placeholder: the pipeline fills"
 say "in the assunto's vocabulary ids at run time."
 warn "This publishes the prompt text to LangSmith (private to your workspace by default)."
@@ -216,8 +216,8 @@ if confirm "Push dispositivo-concept now?"; then
 from langchain_core.prompts.structured import StructuredPrompt
 from langsmith import Client
 
-from legal_radar.pipeline import TAG_PROMPT, TAG_SCHEMA
-from legal_radar.prompts import load_lock
+from legal_radar.adapters.fixture.pipeline import TAG_PROMPT, TAG_SCHEMA
+from legal_radar.adapters.prompt_lock import load_lock
 
 template = load_lock().template(TAG_PROMPT)
 prompt = StructuredPrompt.from_messages_and_schema([("human", template)], TAG_SCHEMA)
@@ -239,8 +239,8 @@ from pathlib import Path
 
 from langsmith import Client
 
-from legal_radar.pipeline import TAG_PROMPT
-from legal_radar.prompts import PINS_PATH
+from legal_radar.adapters.fixture.pipeline import TAG_PROMPT
+from legal_radar.adapters.prompt_lock import PINS_PATH
 
 commit = Client().pull_prompt_commit(TAG_PROMPT)
 Path(sys.argv[1]).write_text(

@@ -207,8 +207,8 @@ say "Installs the optional 'prompts' extra (langsmith) into the project environm
 uv sync --extra prompts
 
 stage "Publish dispositivo-enrichment with its schema"
-say "Pushes legal_radar.enricher.ENRICHMENT_TEMPLATE plus the {conceitos, referencias} schema"
-say "(legal_radar.enricher.ENRICHMENT_SCHEMA) as a structured prompt. The enums (concept ids,"
+say "Pushes legal_radar.application.enricher.ENRICHMENT_TEMPLATE plus the {conceitos, referencias} schema"
+say "(legal_radar.application.enricher.ENRICHMENT_SCHEMA) as a structured prompt. The enums (concept ids,"
 say "relations, citations, candidates) are filled in by the pipeline at run time."
 warn "This publishes the prompt text to LangSmith (private to your workspace by default)."
 if confirm "Push dispositivo-enrichment now?"; then
@@ -216,7 +216,7 @@ if confirm "Push dispositivo-enrichment now?"; then
 from langchain_core.prompts.structured import StructuredPrompt
 from langsmith import Client
 
-from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_SCHEMA, ENRICHMENT_TEMPLATE
+from legal_radar.application.enricher import ENRICHMENT_PROMPT, ENRICHMENT_SCHEMA, ENRICHMENT_TEMPLATE
 
 prompt = StructuredPrompt.from_messages_and_schema(
     [("human", ENRICHMENT_TEMPLATE)], ENRICHMENT_SCHEMA
@@ -238,8 +238,8 @@ from pathlib import Path
 
 from langsmith import Client
 
-from legal_radar.enricher import ENRICHMENT_PROMPT
-from legal_radar.prompts import PINS_PATH, load_pins
+from legal_radar.application.enricher import ENRICHMENT_PROMPT
+from legal_radar.adapters.prompt_lock import PINS_PATH, load_pins
 
 commit = Client().pull_prompt_commit(ENRICHMENT_PROMPT)
 Path(sys.argv[1]).write_text(

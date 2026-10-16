@@ -208,7 +208,7 @@ grep -E '^[a-z]' prompts/pins.yml | cut -d: -f1 | sed 's/^/    - /'
 stage "Publish the prompts to the Hub"
 say "Pushes each template in prompts/lock.json to your LangSmith workspace under the same name."
 say "concepts-count and concepts-extract are pushed as structured prompts (JSON Schema from"
-say "legal_radar.concepts); the 'sources' enum of concepts-extract is a placeholder, because"
+say "legal_radar.application.concepts); the 'sources' enum of concepts-extract is a placeholder, because"
 say "the real one is injected at run time."
 warn "This publishes the prompt text to LangSmith (private to your workspace by default)."
 if confirm "Push the prompts now?"; then
@@ -220,8 +220,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts.structured import StructuredPrompt
 from langsmith import Client
 
-from legal_radar.concepts import count_schema, extract_schema
-from legal_radar.prompts import load_lock
+from legal_radar.application.concepts import count_schema, extract_schema
+from legal_radar.adapters.prompt_lock import load_lock
 
 schemas = {"concepts-count": count_schema(), "concepts-extract": extract_schema(["placeholder"])}
 client = Client()
@@ -250,7 +250,7 @@ from pathlib import Path
 
 from langsmith import Client
 
-from legal_radar.prompts import load_pins
+from legal_radar.adapters.prompt_lock import load_pins
 
 out = Path(sys.argv[1])
 client = Client()

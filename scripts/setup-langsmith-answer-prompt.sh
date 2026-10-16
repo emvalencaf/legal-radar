@@ -207,8 +207,8 @@ say "Installs the optional 'prompts' extra (langsmith) into the project environm
 uv sync --extra prompts
 
 stage "Publish cited-answer with its schema"
-say "Pushes legal_radar.answer.ANSWER_TEMPLATE plus the {answer, citations} schema"
-say "(legal_radar.answer.ANSWER_SCHEMA) as a structured prompt. The citations enum is a"
+say "Pushes legal_radar.application.answer.ANSWER_TEMPLATE plus the {answer, citations} schema"
+say "(legal_radar.application.answer.ANSWER_SCHEMA) as a structured prompt. The citations enum is a"
 say "placeholder: the pipeline fills in the retrieved node ids at run time."
 warn "This publishes the prompt text to LangSmith (private to your workspace by default)."
 if confirm "Push cited-answer now?"; then
@@ -216,7 +216,7 @@ if confirm "Push cited-answer now?"; then
 from langchain_core.prompts.structured import StructuredPrompt
 from langsmith import Client
 
-from legal_radar.answer import ANSWER_PROMPT, ANSWER_SCHEMA, ANSWER_TEMPLATE
+from legal_radar.application.answer import ANSWER_PROMPT, ANSWER_SCHEMA, ANSWER_TEMPLATE
 
 prompt = StructuredPrompt.from_messages_and_schema([("human", ANSWER_TEMPLATE)], ANSWER_SCHEMA)
 print(f"  pushed {ANSWER_PROMPT}: {Client().push_prompt(ANSWER_PROMPT, object=prompt)}")
@@ -236,8 +236,8 @@ from pathlib import Path
 
 from langsmith import Client
 
-from legal_radar.answer import ANSWER_PROMPT
-from legal_radar.prompts import PINS_PATH, load_pins
+from legal_radar.application.answer import ANSWER_PROMPT
+from legal_radar.adapters.prompt_lock import PINS_PATH, load_pins
 
 commit = Client().pull_prompt_commit(ANSWER_PROMPT)
 Path(sys.argv[1]).write_text(

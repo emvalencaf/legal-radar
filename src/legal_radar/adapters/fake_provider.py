@@ -61,6 +61,8 @@ class FakeProvider:
         properties = (params.response_schema or {}).get("properties", {}) if params else {}
         if "conceito_id" in properties:
             text = json.dumps({"conceito_id": text})
+        elif "flags" in properties or "insufficient" in properties:  # the evaluation judges
+            text = json.dumps({key: False for key in properties})
         elif "citations" in properties:  # cites every source it was allowed to
             sources = properties["citations"]["items"]["enum"]
             text = json.dumps(

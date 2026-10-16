@@ -196,6 +196,18 @@ make report            # writes report/index.html
 make publish-report    # builds it and pushes the gh-pages branch
 ```
 
+Run the whole pipeline over the anchor assunto with one command: it ingests the leis and the
+decisions, exports the seed to `seed/graph.jsonl`, answers the assunto as a cited query, scores the
+question set (`eval-runs/`) and writes `report/index.html`. It needs Neo4j up
+(`docker compose up -d neo4j`), the `browser` and `eval` extras, Google Chrome and the router's
+providers. It overwrites `seed/graph.jsonl` with the graph it just built; `--enrich` adds the LLM enrichment of the leis and decisions. The same entrypoint runs in
+the test suite over pinned fixtures with the fake provider and a Neo4j container
+(`tests/test_end_to_end.py`).
+
+```bash
+make run-all
+```
+
 Opt-in live smoke test against the real courts (not run by default): `uv run pytest -m live`.
 
 Tests (need Docker for the Neo4j test container): `uv run pytest`.

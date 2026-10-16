@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- One-command end-to-end run (#48): `legal-radar run-all <assunto> [--enrich]` (`make run-all`)
+  ingests the leis and decisions, exports the seed, answers the assunto as a cited query, scores
+  the question set and writes the report (`legal_radar.end_to_end.run_end_to_end`). Its top-seam
+  test runs the same entrypoint over pinned fixtures with the fake provider (which now also answers
+  the evaluation judges) and a Neo4j test container.
 - Jurisprudência per assunto (#74): `JURISPRUDENCIA` catalogues each assunto's seeds, per-court
   searches and top hits (`JurisprudenciaSource`, 0 ingests only the seeds), in the style of
   `ANCHORS`. `legal-radar ingest-jurisprudencia <assunto>` now requires the assunto, limited to the

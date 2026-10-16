@@ -58,4 +58,21 @@ The graph itself has a small model, with every edge carrying its confidence and 
 
 ![The knowledge graph](docs/diagrams/graph-model.svg)
 
+## How a question is answered
+
+![How a question is answered](docs/diagrams/ask-flow.svg)
+
+The query-time pipeline is a small LangGraph (`application/answer.py`) that only orchestrates
+three steps; the graph is read through the `GraphReader` port. A query that matches no known
+*assunto* (legal subject) is not answered. The LLM sees only the traversed context, and every
+citation is checked against the nodes the traversal reached.
+
+## How quality is measured
+
+![How quality is measured](docs/diagrams/evaluation-loop.svg)
+
+The graph system is scored against two pure-RAG baselines on the same question set, so the value
+the graph adds is measured, not assumed. Enrichment is scored separately against a hand-validated
+gold set, with quality gates that fail the run (see [evaluation/BASELINE.md](evaluation/BASELINE.md)).
+
 The same diagrams are available as standalone HTML in [docs/diagrams/](docs/diagrams/).

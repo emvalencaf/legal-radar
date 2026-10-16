@@ -1,7 +1,7 @@
 from pathlib import Path
 
+from legal_radar.adapters.planalto import decode_html
 from legal_radar.domain.model import GraphBatch, Jurisprudencia, Relation
-from legal_radar.planalto import decode_html
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CC = "urn:lex:br:federal:lei:2002-01-10;10406"

@@ -2,8 +2,13 @@
 
 from neo4j import Driver, GraphDatabase
 
-from legal_radar.domain.model import GraphBatch, Jurisprudencia, Relation, RelationType
-from legal_radar.enricher import CONCEPT_RELATIONS
+from legal_radar.domain.model import (
+    CONCEPT_RELATIONS,
+    GraphBatch,
+    Jurisprudencia,
+    Relation,
+    RelationType,
+)
 
 CONSTRAINTS = [
     "CREATE CONSTRAINT lei_id IF NOT EXISTS FOR (n:Lei) REQUIRE n.id IS UNIQUE",

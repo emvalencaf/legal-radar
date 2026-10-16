@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass, field, replace
 
+from legal_radar.adapters.lexml import resolve_urn, search_urn
+from legal_radar.adapters.planalto import parse_planalto
 from legal_radar.application.ports import GraphStore, MetadataStore, PageSource, Provider
 from legal_radar.concepts import Vocabulary
 from legal_radar.domain.anchors import AnchorLei
@@ -14,10 +16,9 @@ from legal_radar.domain.model import (
     Lei,
     Relation,
 )
+from legal_radar.domain.urn import LexmlError
 from legal_radar.enricher import Enrichment, ancestors_of, candidate_targets, enrich, triage
 from legal_radar.enrichment import enrichment_key
-from legal_radar.lexml import LexmlError, resolve_urn, search_urn
-from legal_radar.planalto import parse_planalto
 from legal_radar.prompts import PromptLock
 from legal_radar.relations import Extraction, UrnResolver, extract_relations
 

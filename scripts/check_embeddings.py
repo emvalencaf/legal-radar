@@ -8,8 +8,8 @@ Prints each query's best score so the resolver threshold
 
 import sys
 
+from legal_radar.adapters.router_config import build_router, load_config
 from legal_radar.application.assunto import DEFAULT_THRESHOLD, AssuntoResolver, cosine
-from legal_radar.router_config import build_router, load_config
 
 RELATED = [
     "desconsideração da personalidade jurídica",

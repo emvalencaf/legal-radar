@@ -250,8 +250,8 @@ def test_a_reply_with_the_wrong_shape_is_flagged_as_failed():
 def test_it_enriches_a_dispositivo_parsed_from_planalto_with_its_unresolved_citations():
     from pathlib import Path
 
+    from legal_radar.adapters.planalto import decode_html, parse_planalto
     from legal_radar.enricher import candidate_targets
-    from legal_radar.planalto import decode_html, parse_planalto
     from legal_radar.relations import extract_relations
 
     raw = (Path(__file__).parent / "fixtures" / "planalto" / "l10406_excerpt.htm").read_bytes()
@@ -274,8 +274,8 @@ def test_it_enriches_a_dispositivo_parsed_from_planalto_with_its_unresolved_cita
 def test_the_token_ceiling_is_read_from_router_yaml_with_a_default():
     import pytest
 
+    from legal_radar.adapters.router_config import enrichment_max_input_tokens, load_config
     from legal_radar.enricher import MAX_INPUT_TOKENS
-    from legal_radar.router_config import enrichment_max_input_tokens, load_config
 
     assert enrichment_max_input_tokens({"enrichment": {"max_input_tokens": 123}}) == 123
     assert enrichment_max_input_tokens({}) == MAX_INPUT_TOKENS

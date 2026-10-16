@@ -16,7 +16,7 @@ from legal_radar.application.ports import GraphReader, Provider
 from legal_radar.domain.complexity import DEFAULT_MAX_CONTEXT_TOKENS, classify
 from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.domain.model import Context, Hop, Jurisprudencia
-from legal_radar.lexml import FEDERAL_LEI
+from legal_radar.domain.urn import FEDERAL_LEI
 from legal_radar.prompts import PromptError, PromptLock, default_lock
 from legal_radar.relations import extract_decision_relations
 

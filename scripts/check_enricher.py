@@ -10,12 +10,16 @@ import sys
 from pathlib import Path
 
 from legal_radar.__main__ import load_env
+from legal_radar.adapters.planalto import decode_html, parse_planalto
+from legal_radar.adapters.router_config import (
+    build_router,
+    enrichment_max_input_tokens,
+    load_config,
+)
 from legal_radar.concepts import load_vocabulary
 from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE, candidate_targets, enrich
-from legal_radar.planalto import decode_html, parse_planalto
 from legal_radar.prompts import refresh
 from legal_radar.relations import extract_relations
-from legal_radar.router_config import build_router, enrichment_max_input_tokens, load_config
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"

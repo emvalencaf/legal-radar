@@ -13,11 +13,11 @@ from legal_radar.adapters.http_providers import (
     Transport,
     urllib_transport,
 )
+from legal_radar.adapters.router import Router
+from legal_radar.adapters.wide_events import WideEventLog
 from legal_radar.application.ports import Provider
 from legal_radar.domain.complexity import DEFAULT_MAX_CONTEXT_TOKENS
 from legal_radar.enricher import MAX_INPUT_TOKENS
-from legal_radar.router import Router
-from legal_radar.wide_events import WideEventLog
 
 DEFAULT_PRIORITY = ["groq", "gemini", "lmstudio"]
 DEFAULT_MODELS = {

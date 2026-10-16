@@ -11,7 +11,6 @@ import re
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 
-from legal_radar.application.ports import PageSource
 from legal_radar.domain.model import (
     Confidence,
     Dispositivo,
@@ -21,7 +20,6 @@ from legal_radar.domain.model import (
     RelationType,
 )
 from legal_radar.enrichment import EXTRACTOR_VERSION
-from legal_radar.lexml import LexmlError, search_urn
 
 logger = logging.getLogger(__name__)
 UrnResolver = Callable[[str, str, int], str | None]  # (kind, numero, ano) -> URN, e.g. ("lei", ...)
@@ -109,20 +107,6 @@ class Extraction:
     def needs_enrichment(self) -> bool:
         """Whether the chunk goes to the LLM: something unread, or a citation left unresolved."""
         return bool(self.needs_llm) or any(r.unresolved for r in self.relations)
-
-
-def lexml_resolver(pages: PageSource) -> UrnResolver:
-    """Fall back to a LexML keyword search for federal leis missing from the curated table."""
-
-    def resolve(kind: str, numero: str, ano: int) -> str | None:
-        if kind != "lei":
-            return None
-        try:
-            return search_urn(pages, f"lei {numero} {ano}", numero, ano, retries=0)
-        except LexmlError:
-            return None
-
-    return resolve
 
 
 def extract_relations(

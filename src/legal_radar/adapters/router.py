@@ -7,6 +7,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from typing import TypeVar
 
+from legal_radar.adapters.wide_events import WideEventLog
 from legal_radar.application.ports import Provider
 from legal_radar.domain.complexity import COMPLEX, SIMPLE
 from legal_radar.domain.llm import (
@@ -19,7 +20,6 @@ from legal_radar.domain.llm import (
     TransientError,
     content_hash,
 )
-from legal_radar.wide_events import WideEventLog
 
 T = TypeVar("T", Completion, Embedding)
 

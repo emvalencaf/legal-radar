@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from legal_radar.planalto import decode_html, parse_planalto
+from legal_radar.adapters.planalto import decode_html, parse_planalto
 
-FIXTURES = Path(__file__).parent / "fixtures" / "planalto"
+FIXTURES = Path(__file__).parents[1] / "fixtures" / "planalto"
 URN = "urn:lex:br:federal:lei:2002-01-10;10406"
 
 

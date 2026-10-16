@@ -5,6 +5,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
+from legal_radar.adapters.tracing import DATASET
 from legal_radar.answer import CitedAnswer
 from legal_radar.answer_evaluation import (
     Question,
@@ -21,7 +22,6 @@ from legal_radar.assayer_harness import (
     run_evaluation,
 )
 from legal_radar.prompts import PromptLock
-from legal_radar.tracing import DATASET
 
 
 def run_systems(

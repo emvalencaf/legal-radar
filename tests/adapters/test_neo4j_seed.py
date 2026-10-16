@@ -6,12 +6,12 @@ from test_pipeline import snapshot
 from testcontainers.neo4j import Neo4jContainer
 
 from legal_radar.adapters.fake_provider import FakeProvider
+from legal_radar.adapters.fixture.pipeline import run
+from legal_radar.adapters.neo4j_seed import export_seed, load_seed
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.domain.model import Jurisprudencia
-from legal_radar.pipeline import run
-from legal_radar.seed import export_seed, load_seed
 
-FIXTURE = Path(__file__).parent / "fixtures" / "mini_lei.txt"
+FIXTURE = Path(__file__).parents[1] / "fixtures" / "mini_lei.txt"
 
 
 @pytest.fixture(scope="module")

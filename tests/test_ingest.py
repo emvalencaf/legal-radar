@@ -6,11 +6,12 @@ import pytest
 from ingest_helpers import CC, CC_AGENT, FakePages, MemoryStore, lexml_pages, read
 
 from legal_radar import ingest as ingest_module
-from legal_radar import lexml
+from legal_radar.adapters import lexml
+from legal_radar.adapters.lexml import resolve_urn, search_urn
 from legal_radar.domain.anchors import AnchorLei
 from legal_radar.domain.model import Dispositivo
+from legal_radar.domain.urn import LexmlError
 from legal_radar.ingest import ingest
-from legal_radar.lexml import LexmlError, resolve_urn, search_urn
 
 
 def test_search_resolves_the_urn_of_the_requested_lei():

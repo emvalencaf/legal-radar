@@ -3,29 +3,17 @@
 import logging
 import re
 import time
-from dataclasses import dataclass
+from collections.abc import Callable
 from urllib.parse import quote_plus, urlparse
 
 from bs4 import BeautifulSoup
 
 from legal_radar.application.ports import PageSource
+from legal_radar.domain.urn import FEDERAL_LEI, LexmlError, UrnPage
 
 SEARCH_URL = "https://www.lexml.gov.br/busca/search?keyword={keyword}"
 URN_URL = "https://www.lexml.gov.br/urn/{urn}"
 logger = logging.getLogger(__name__)
-FEDERAL_LEI = re.compile(r"^urn:lex:br:federal:lei:(\d{4})-\d{2}-\d{2};(\d+)$")
-
-
-class LexmlError(Exception):
-    pass
-
-
-@dataclass(frozen=True)
-class UrnPage:
-    urn: str
-    title: str
-    planalto_url: str | None
-    destinations: list[str]  # hosts the "Texto Atualizado" links point to, for the report
 
 
 def search_urn(
@@ -79,3 +67,17 @@ def resolve_urn(pages: PageSource, urn: str) -> UrnPage:
         (u for u, h in zip(links, hosts, strict=True) if h.endswith("planalto.gov.br")), None
     )
     return UrnPage(urn, title, planalto, hosts)
+
+
+def lexml_resolver(pages: PageSource) -> Callable[[str, str, int], str | None]:
+    """Fall back to a LexML keyword search for federal leis missing from the curated table."""
+
+    def resolve(kind: str, numero: str, ano: int) -> str | None:
+        if kind != "lei":
+            return None
+        try:
+            return search_urn(pages, f"lei {numero} {ano}", numero, ano, retries=0)
+        except LexmlError:
+            return None
+
+    return resolve

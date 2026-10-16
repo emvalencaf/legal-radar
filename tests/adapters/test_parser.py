@@ -1,6 +1,6 @@
 import pytest
 
-from legal_radar.parser import parse_lei
+from legal_radar.adapters.fixture.parser import parse_lei
 
 
 def test_parses_artigos_and_paragrafos_with_hierarchy():

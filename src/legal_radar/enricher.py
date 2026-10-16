@@ -18,6 +18,7 @@ from legal_radar.application.ports import Provider
 from legal_radar.concepts import Vocabulary
 from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.domain.model import (
+    CONCEPT_RELATIONS,
     Confidence,
     Dispositivo,
     Jurisprudencia,
@@ -34,14 +35,6 @@ logger = logging.getLogger(__name__)
 MAX_INPUT_TOKENS = 8000  # per call; the default of the configurable ceiling
 CHARS_PER_TOKEN = 4  # rough estimate; no tokenizer is shipped
 STRUCTURAL_KINDS = ("parte", "livro", "titulo", "subtitulo", "capitulo", "secao", "subsecao")
-CONCEPT_RELATIONS = (
-    RelationType.DEFINES,
-    RelationType.APPLIES_TO,
-    RelationType.OBLIGES,
-    RelationType.PROHIBITS,
-    RelationType.EXCEPTS,
-    RelationType.RELATES_TO,
-)
 DECISION_RELATIONS = CONCEPT_RELATIONS  # a thesis can require, forbid and carve out (ADR-0008)
 RELATION_DEFINITIONS = {
     RelationType.DEFINES: "o dispositivo define o conceito",

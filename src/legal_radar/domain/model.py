@@ -137,3 +137,13 @@ class EnrichmentRecord:
     dropped: int = 0
     skipped: str | None = None  # why no call was made (`too_long`), or None
     resolved: tuple[str, ...] = ()  # the unresolved citations the LLM grounded
+
+
+CONCEPT_RELATIONS = (
+    RelationType.DEFINES,
+    RelationType.APPLIES_TO,
+    RelationType.OBLIGES,
+    RelationType.PROHIBITS,
+    RelationType.EXCEPTS,
+    RelationType.RELATES_TO,
+)

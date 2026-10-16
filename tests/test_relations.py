@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
+from legal_radar.adapters.planalto import decode_html, parse_planalto
 from legal_radar.domain.model import Confidence, Dispositivo, Jurisprudencia, Origin, RelationType
 from legal_radar.enrichment import EXTRACTOR_VERSION
-from legal_radar.planalto import decode_html, parse_planalto
 from legal_radar.relations import extract_decision_relations, extract_relations
 
 CC = "urn:lex:br:federal:lei:2002-01-10;10406"

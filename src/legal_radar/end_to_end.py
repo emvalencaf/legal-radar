@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
+from legal_radar.adapters.neo4j_seed import export_seed
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.answer import CitedAnswer, ask
 from legal_radar.answer_evaluation import QUESTION_PATHS, System, UsageMeter, load_questions
@@ -17,7 +18,6 @@ from legal_radar.ingest import EnrichConfig, IngestionReport, ingest
 from legal_radar.jurisprudencia import JURISPRUDENCIA, JurisprudenciaReport, ingest_jurisprudencia
 from legal_radar.prompts import PromptLock, default_lock
 from legal_radar.report import build_report
-from legal_radar.seed import export_seed
 
 
 @dataclass

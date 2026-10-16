@@ -241,7 +241,8 @@ def test_load_registered_rejects_unknown_and_mismatched_assuntos(monkeypatch, tm
 
 
 def test_graph_corpus_reads_the_seed_dispositivos_and_all_jurisprudencia(driver):
-    from legal_radar.concepts import CORPUS_ROOTS, graph_corpus
+    from legal_radar.adapters.neo4j_corpus import graph_corpus
+    from legal_radar.concepts import CORPUS_ROOTS
 
     root = CORPUS_ROOTS[0]
     driver.execute_query(

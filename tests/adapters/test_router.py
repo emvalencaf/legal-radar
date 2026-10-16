@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
+from legal_radar.adapters.router import Router
+from legal_radar.adapters.wide_events import WideEventLog
 from legal_radar.domain.llm import (
     AllProvidersFailedError,
     Completion,
@@ -14,8 +16,6 @@ from legal_radar.domain.llm import (
     TransientError,
     content_hash,
 )
-from legal_radar.router import Router
-from legal_radar.wide_events import WideEventLog
 
 NOW = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
 
@@ -232,7 +232,7 @@ def test_event_carries_the_prompt_snapshot(tmp_path):
 
 
 def test_providers_without_credentials_lists_the_keyless_ones():
-    from legal_radar.router_config import providers_without_credentials
+    from legal_radar.adapters.router_config import providers_without_credentials
 
     config = {"providers": ["groq", "gemini", "lmstudio"]}
 

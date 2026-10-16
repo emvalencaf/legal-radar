@@ -7,7 +7,8 @@ from neo4j import GraphDatabase
 from test_jurisprudencia import stf, stj
 from testcontainers.neo4j import Neo4jContainer
 
-from legal_radar import assayer_harness, lexml
+from legal_radar import assayer_harness
+from legal_radar.adapters import lexml
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.end_to_end import run_end_to_end

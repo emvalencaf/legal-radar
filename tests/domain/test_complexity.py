@@ -4,12 +4,12 @@ from datetime import UTC, datetime
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
+from legal_radar.adapters.router import Router
+from legal_radar.adapters.router_config import build_router, tier_max_context_tokens
+from legal_radar.adapters.wide_events import WideEventLog
 from legal_radar.domain.complexity import COMPLEX, DEFAULT_MAX_CONTEXT_TOKENS, SIMPLE, classify
 from legal_radar.domain.llm import CompletionParams, QuotaExhaustedError
 from legal_radar.domain.model import Context, Dispositivo, Hop, Jurisprudencia
-from legal_radar.router import Router
-from legal_radar.router_config import build_router, tier_max_context_tokens
-from legal_radar.wide_events import WideEventLog
 
 LEI_A = "urn:lex:br:federal:lei:2002-01-10;10406"
 LEI_B = "urn:lex:br:federal:lei:1990-09-11;8078"

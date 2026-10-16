@@ -19,8 +19,15 @@ import yaml
 
 from legal_radar.application.ports import Provider
 from legal_radar.concepts import Vocabulary
-from legal_radar.domain.model import Confidence, Dispositivo, Origin, Relation, RelationType
-from legal_radar.enricher import CONCEPT_RELATIONS, ancestors_of, candidate_targets, enrich
+from legal_radar.domain.model import (
+    CONCEPT_RELATIONS,
+    Confidence,
+    Dispositivo,
+    Origin,
+    Relation,
+    RelationType,
+)
+from legal_radar.enricher import ancestors_of, candidate_targets, enrich
 from legal_radar.prompts import PromptLock
 from legal_radar.relations import extract_relations
 

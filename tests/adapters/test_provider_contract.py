@@ -4,10 +4,10 @@ the router (fallback on quota, wait on RPM, single retry on a transient error)."
 import pytest
 
 from legal_radar.adapters.http_providers import GeminiProvider, GroqProvider, LMStudioProvider
+from legal_radar.adapters.router import Router
+from legal_radar.adapters.router_config import DEFAULT_PRIORITY, build_router, load_config
+from legal_radar.adapters.wide_events import WideEventLog
 from legal_radar.domain.llm import AllProvidersFailedError
-from legal_radar.router import Router
-from legal_radar.router_config import DEFAULT_PRIORITY, build_router, load_config
-from legal_radar.wide_events import WideEventLog
 
 
 def openai_ok(payload=None):

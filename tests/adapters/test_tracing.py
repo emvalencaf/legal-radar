@@ -1,6 +1,6 @@
 import logging
 
-from legal_radar.tracing import configure_tracing, publisher_if_enabled, safely
+from legal_radar.adapters.tracing import configure_tracing, publisher_if_enabled, safely
 
 
 def test_without_a_key_tracing_is_switched_off_even_if_asked_for():
@@ -41,7 +41,7 @@ def test_a_failing_trace_publish_is_logged_and_never_raised(caplog):
 def test_the_experiment_is_published_as_runs_with_feedback_after_a_flush():
     from types import SimpleNamespace as Ns
 
-    from legal_radar.tracing import ExperimentPublisher
+    from legal_radar.adapters.tracing import ExperimentPublisher
 
     calls = []
 

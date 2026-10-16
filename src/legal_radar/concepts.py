@@ -13,7 +13,6 @@ from datetime import date
 from pathlib import Path
 
 import yaml
-from neo4j import Driver
 
 from legal_radar.application.ports import Provider
 from legal_radar.domain.llm import CompletionParams, content_hash
@@ -35,14 +34,6 @@ CORPUS_ROOTS = (
     "urn:lex:br:federal:lei:2002-01-10;10406#art50",  # CC art. 50
     "urn:lex:br:federal:lei:1990-09-11;8078#art28",  # CDC art. 28
 )
-CORPUS_QUERY = """
-MATCH (d:Dispositivo)
-WHERE any(root IN $roots WHERE d.id = root OR d.id STARTS WITH root + "_")
-RETURN d.id AS id, d.text AS text
-UNION
-MATCH (j:Jurisprudencia)
-RETURN j.id AS id, j.ementa + coalesce("\\n" + j.tese, "") AS text
-"""
 logger = logging.getLogger(__name__)
 COUNT_STEP = "concept_vocabulary_count"
 PIPELINE_STEP = "concept_vocabulary_draft"
@@ -290,12 +281,6 @@ def draft_candidates(
         raise VocabularyError("the LLM did not answer the extract schema: not a list")
     model = f"{completion.provider or provider.name}/{completion.model or provider.model}"
     return Draft(conceitos, model, quantidade)
-
-
-def graph_corpus(driver: Driver) -> list[str]:
-    """Texts of `CORPUS_ROOTS` and every jurisprudência (ementa + tese), in id order."""
-    rows, _, _ = driver.execute_query(CORPUS_QUERY, roots=list(CORPUS_ROOTS))
-    return [f"[{row['id']}]\n{row['text']}" for row in sorted(rows, key=lambda r: r["id"])]
 
 
 def with_assunto(

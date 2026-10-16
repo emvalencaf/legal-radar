@@ -5,11 +5,11 @@ import pytest
 from conftest import RecordingStore
 
 from legal_radar.adapters.fake_provider import FakeProvider
+from legal_radar.adapters.fixture.pipeline import TAG_SCHEMA, TaggingError, run
 from legal_radar.domain.llm import Completion
-from legal_radar.pipeline import TAG_SCHEMA, TaggingError, run
 from legal_radar.prompts import PromptError, refresh
 
-RAW = (Path(__file__).parent / "fixtures" / "mini_lei.txt").read_text(encoding="utf-8")
+RAW = (Path(__file__).parents[1] / "fixtures" / "mini_lei.txt").read_text(encoding="utf-8")
 
 
 def lock(schema=TAG_SCHEMA):

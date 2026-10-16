@@ -94,7 +94,7 @@ def test_prompt_hash_moves_only_with_its_own_prompt():
 
 def test_pipeline_stamps_each_call_with_a_hash_of_its_prompt_and_schema(tag_lock, store):
     from legal_radar.adapters.fake_provider import FakeProvider
-    from legal_radar.pipeline import run
+    from legal_radar.adapters.fixture.pipeline import run
 
     seen = []
     provider = FakeProvider()

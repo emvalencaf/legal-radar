@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from legal_radar.adapters.tracing import safely
 from legal_radar.answer import CitedAnswer
 from legal_radar.answer_evaluation import (
     Checkpoint,
@@ -23,7 +24,6 @@ from legal_radar.answer_evaluation import (
     outcome_of,
 )
 from legal_radar.domain.llm import content_hash
-from legal_radar.tracing import safely
 
 RUNS_DIR = Path(__file__).resolve().parents[2] / "eval-runs"
 CITATIONS, PATH, CONTRADICTIONS = "citation_check", "path", "contradiction_check"

@@ -1,6 +1,6 @@
 import pytest
 
-from legal_radar.pipeline import TAG_SCHEMA
+from legal_radar.adapters.fixture.pipeline import TAG_SCHEMA
 from legal_radar.prompts import PromptLock, refresh
 
 

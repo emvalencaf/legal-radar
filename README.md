@@ -66,16 +66,23 @@ anchor subject (disregard of the corporate entity), so its value is measured, no
 
 | Metric | Graph | RAG @5 | RAG @15 |
 |---|---:|---:|---:|
-| Citation correctness | **0.84** | 0.59 | 0.71 |
+| Citation correctness | **0.77** | 0.59 | 0.71 |
 | Citation recall | **0.91** | 0.61 | 0.74 |
 | Fabricated citations | 0.00 | 0.00 | 0.00 |
-| Input tokens per question | 4,274 | 875 | 2,424 |
+| Abstention | **0.85** | 0.77 | 0.69 |
+| Input tokens per question | 7,418 | 875 | 2,424 |
 
-The graph answers better on the hardest questions (0.89 against 0.28 and 0.58) and costs about
-1.8 times the input tokens of the larger RAG baseline. Contradiction surfacing is low for every
-system (0.33 at best). Read the caveats before trusting any number: one subject, one language,
-and a gold set annotated by a single person (see [evaluation/BASELINE.md](evaluation/BASELINE.md)
-and `uv run legal-radar compare-evals`). The numbers come from `eval-runs/`, which is not versioned.
+The graph wins on the harder questions (0.83 on the hardest tier against 0.28 and 0.58, and 0.81
+against 0.52 on the middle one) and on recall, but it loses on the easy tier (0.54 against 0.58 and
+0.74) and costs about three times the input tokens of the larger RAG baseline. Contradiction
+surfacing is low for every system (0.33 at best).
+
+Read the caveats before trusting any number: one subject, one language, one run per system and a
+gold set annotated by a single person. An earlier run of the same graph system scored 0.84 with
+4,274 input tokens per question; the two runs differ in which provider answered (the router falls back
+between Groq and Gemini) and in a re-ingestion of the graph in between, so run-to-run variance is not
+separated from real change. See [evaluation/BASELINE.md](evaluation/BASELINE.md) and
+`uv run legal-radar compare-evals`; the runs live in `eval-runs/`, which is not versioned.
 
 ### Design decisions
 

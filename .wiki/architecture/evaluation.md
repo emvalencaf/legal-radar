@@ -36,9 +36,13 @@ valid-evidence and drop rates), and the quality gates in `evaluation.yml` make t
 
 # Results
 
-On the 50-question set over one subject, citation correctness was 0.84 for the graph against 0.59 (RAG at 5) and
-0.71 (RAG at 15), with no fabricated citations; the graph used about 1.8 times the input tokens of RAG at 15 and
-surfaced contradictions poorly (0.33 at best for any system).
+On the 50-question set over one subject (run of 2026-10-16), citation correctness was 0.77 for the graph against 0.59
+(RAG at 5) and 0.71 (RAG at 15), citation recall 0.91 against 0.61 and 0.74, with no fabricated citations. The graph
+wins on the harder tiers (0.83 against 0.28 and 0.58 on the hardest) and loses on the easy one (0.54 against 0.58 and
+0.74); it used about three times the input tokens of RAG at 15 (7,418 per question against 2,424) and surfaced
+contradictions poorly (0.33 at best for any system). An earlier run of the same graph system scored 0.84 with 4,274
+tokens per question; provider fallback and a re-ingestion in between mean run-to-run variance is not separated from real
+change.
 
 The first enrichment baseline (2026-10-13, Groq `openai/gpt-oss-120b`, 60 provisions, 73 edges) gave rule
 `REFERENCES` precision and recall of 0.67 and LLM concept edges precision 0.39 and recall 0.40; all four

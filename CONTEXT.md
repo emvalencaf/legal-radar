@@ -2,6 +2,28 @@
 
 A graph-RAG system over Brazilian legal sources (LexML) that, given a legal subject, associates the law, jurisprudência, and doutrina that bear on it.
 
+## English glossary
+
+The domain is Brazilian law, so the code, the prompts and the data keep the Portuguese terms:
+most have no faithful English equivalent, and renaming them would hide the link to the sources.
+This table is the way in for English readers; the definitions below stay authoritative.
+
+| Portuguese | English gloss | Note |
+|---|---|---|
+| **assunto** | legal subject | The topic a user searches for; resolves to anchor leis. |
+| **lei** | statute / piece of legislation | Constitution, code, statute or decree. |
+| **dispositivo** | provision | One structural unit of a lei: artigo, parágrafo, inciso or alínea. |
+| **artigo / parágrafo / inciso / alínea** | article / paragraph / item / sub-item | The levels of a lei's structure tree. |
+| **jurisprudência** | case law | Court decisions that interpret or apply a lei. |
+| **ementa** | case summary | The official headnote of a decision. |
+| **tese** | legal thesis | The binding rule a court fixes in a precedent. |
+| **acórdão** | appellate ruling | A collegiate court decision. |
+| **doutrina** | legal scholarship | Treatises and academic commentary. |
+| **conceito jurídico** | legal concept | A node of the per-assunto vocabulary. |
+| **enriquecimento** | enrichment | Extraction of relations (rules and LLM) between dispositivos and concepts. |
+| **citação não resolvida** | unresolved citation | A reference the rules could not map to a target, left to the LLM. |
+| **alteração legislativa** | legislative amendment | A change to a lei and its cascade of affected entities. |
+
 ## Language
 
 **Assunto**:

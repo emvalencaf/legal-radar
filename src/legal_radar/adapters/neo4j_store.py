@@ -2,7 +2,7 @@
 
 from neo4j import Driver, GraphDatabase
 
-from legal_radar.domain import GraphBatch, Jurisprudencia, Relation, RelationType
+from legal_radar.domain.model import GraphBatch, Jurisprudencia, Relation, RelationType
 from legal_radar.enricher import CONCEPT_RELATIONS
 
 CONSTRAINTS = [

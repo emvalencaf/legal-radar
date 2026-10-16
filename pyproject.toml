@@ -34,6 +34,7 @@ packages = ["src/legal_radar"]
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.15",
     "pytest",
     "testcontainers>=4.15.0",
 ]
@@ -52,3 +53,18 @@ testpaths = ["tests"]
 pythonpath = ["tests"]
 addopts = "-m 'not live'"
 markers = ["live: hits the real STF/STJ sources through a browser; run with `pytest -m live`"]
+
+[tool.importlinter]
+root_package = "legal_radar"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers point inward"
+type = "layers"
+layers = ["legal_radar.entrypoints", "legal_radar.adapters", "legal_radar.application", "legal_radar.domain"]
+
+[[tool.importlinter.contracts]]
+name = "The domain stays free of infrastructure"
+type = "forbidden"
+source_modules = ["legal_radar.domain"]
+forbidden_modules = ["neo4j", "bs4", "sqlite3", "langsmith", "playwright", "langgraph", "yaml", "jsonschema"]

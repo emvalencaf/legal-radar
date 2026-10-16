@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from legal_radar.concepts import Vocabulary
-from legal_radar.domain import (
+from legal_radar.domain.model import (
     Confidence,
     Dispositivo,
     Jurisprudencia,

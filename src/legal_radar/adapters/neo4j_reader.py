@@ -2,7 +2,7 @@
 
 from neo4j import Driver
 
-from legal_radar.domain import Context, Dispositivo, Hop, Jurisprudencia
+from legal_radar.domain.model import Context, Dispositivo, Hop, Jurisprudencia
 
 CORPUS_DISPOSITIVOS = """
 MATCH (d:Dispositivo)

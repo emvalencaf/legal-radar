@@ -5,7 +5,7 @@ import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
-from legal_radar.domain import EnrichmentRecord, EnrichmentStatus
+from legal_radar.domain.model import EnrichmentRecord, EnrichmentStatus
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS enrichment_record (

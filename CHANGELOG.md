@@ -7,6 +7,13 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Changed
+
+- Layered architecture (ADR-0009): `legal_radar` is organised as `entrypoints > adapters >
+  application > domain`, enforced by `import-linter` in CI. `domain.py` moved to
+  `legal_radar.domain.model`, and `legal_radar.settings.Settings` centralises paths and
+  environment-derived values. No behaviour change.
+
 ### Added
 
 - One-command end-to-end run (#48): `legal-radar run-all <assunto> [--enrich]` (`make run-all`)

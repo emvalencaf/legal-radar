@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 from legal_radar.concepts import Vocabulary
-from legal_radar.domain import Confidence, Dispositivo, Origin, Relation, RelationType
+from legal_radar.domain.model import Confidence, Dispositivo, Origin, Relation, RelationType
 from legal_radar.enricher import CONCEPT_RELATIONS, ancestors_of, candidate_targets, enrich
 from legal_radar.ports import Provider
 from legal_radar.prompts import PromptLock

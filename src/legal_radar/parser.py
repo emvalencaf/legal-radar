@@ -2,7 +2,7 @@
 
 import re
 
-from legal_radar.domain import Dispositivo, Lei
+from legal_radar.domain.model import Dispositivo, Lei
 
 _LEI = re.compile(r"^Lei (?P<number>\S+) (?P<title>.+)$")
 _ARTIGO = re.compile(r"^Art\. (?P<n>\d+)º? (?P<text>.+)$")

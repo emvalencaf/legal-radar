@@ -5,7 +5,7 @@ import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.complexity import COMPLEX, DEFAULT_MAX_CONTEXT_TOKENS, SIMPLE, classify
-from legal_radar.domain import Context, Dispositivo, Hop, Jurisprudencia
+from legal_radar.domain.model import Context, Dispositivo, Hop, Jurisprudencia
 from legal_radar.llm import CompletionParams, QuotaExhaustedError
 from legal_radar.router import Router
 from legal_radar.router_config import build_router, tier_max_context_tokens

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from legal_radar.domain import Confidence, Dispositivo, Jurisprudencia, Origin, RelationType
+from legal_radar.domain.model import Confidence, Dispositivo, Jurisprudencia, Origin, RelationType
 from legal_radar.enrichment import EXTRACTOR_VERSION
 from legal_radar.planalto import decode_html, parse_planalto
 from legal_radar.relations import extract_decision_relations, extract_relations

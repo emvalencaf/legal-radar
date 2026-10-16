@@ -5,7 +5,7 @@ from ingest_helpers import FIXTURES, MemoryStore
 
 from legal_radar.adapters.stf import StfFetcher
 from legal_radar.adapters.stj import StjFetcher
-from legal_radar.domain import Jurisprudencia
+from legal_radar.domain.model import Jurisprudencia
 from legal_radar.jurisprudencia import (
     JURISPRUDENCIA,
     JurisprudenciaSource,
@@ -188,7 +188,7 @@ def test_live_sources_return_the_seed_precedents():
 from legal_radar.adapters.fake_provider import FakeProvider  # noqa: E402
 from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore  # noqa: E402
 from legal_radar.concepts import Concept, Vocabulary  # noqa: E402
-from legal_radar.domain import EnrichmentStatus, RelationType  # noqa: E402
+from legal_radar.domain.model import EnrichmentStatus, RelationType  # noqa: E402
 from legal_radar.enricher import DECISION_TEMPLATE  # noqa: E402
 from legal_radar.enrichment import DECISION_PROMPT  # noqa: E402
 from legal_radar.ingest import EnrichConfig  # noqa: E402

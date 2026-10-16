@@ -2,7 +2,7 @@ import json
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.concepts import Concept, Vocabulary
-from legal_radar.domain import (
+from legal_radar.domain.model import (
     Confidence,
     Dispositivo,
     Jurisprudencia,

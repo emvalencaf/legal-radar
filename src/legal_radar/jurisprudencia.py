@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from legal_radar.domain import EnrichmentRecord, EnrichmentStatus, Jurisprudencia, Relation
+from legal_radar.domain.model import EnrichmentRecord, EnrichmentStatus, Jurisprudencia, Relation
 from legal_radar.enricher import decision_texts, enrich_decision
 from legal_radar.enrichment import DECISION_PROMPT, enrichment_key
 from legal_radar.ingest import EnrichConfig, EnrichmentCounts

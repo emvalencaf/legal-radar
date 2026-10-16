@@ -1,6 +1,6 @@
 """Rule-based complexity of a retrieved context: decides which tier of providers answers it."""
 
-from legal_radar.domain import Context
+from legal_radar.domain.model import Context
 
 SIMPLE = "simple"
 COMPLEX = "complex"

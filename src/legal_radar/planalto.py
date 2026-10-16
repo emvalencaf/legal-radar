@@ -9,7 +9,7 @@ from dataclasses import dataclass, field, replace
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 
-from legal_radar.domain import Dispositivo
+from legal_radar.domain.model import Dispositivo
 
 _ROMAN = r"[IVXLCDM]+"
 _HEADINGS: list[tuple[str, int, re.Pattern[str]]] = [

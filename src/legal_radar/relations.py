@@ -11,7 +11,7 @@ import re
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 
-from legal_radar.domain import (
+from legal_radar.domain.model import (
     Confidence,
     Dispositivo,
     Jurisprudencia,

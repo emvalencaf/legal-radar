@@ -22,7 +22,7 @@ from legal_radar.answer import (
     unsupported_mentions,
 )
 from legal_radar.assunto import cosine
-from legal_radar.domain import Dispositivo, Jurisprudencia
+from legal_radar.domain.model import Dispositivo, Jurisprudencia
 from legal_radar.enricher import STRUCTURAL_KINDS, ancestors_of
 from legal_radar.llm import AllProvidersFailedError, CompletionParams
 from legal_radar.ports import Provider

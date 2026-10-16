@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from legal_radar.domain import (
+from legal_radar.domain.model import (
     Context,
     Dispositivo,
     EnrichmentRecord,

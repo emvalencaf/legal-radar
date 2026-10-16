@@ -8,7 +8,7 @@ from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.answer import ANSWER_SCHEMA, CitationError, ask, parse_answer
 from legal_radar.assunto import AssuntoResolver
-from legal_radar.domain import Dispositivo, GraphBatch, Hop, Jurisprudencia, Lei
+from legal_radar.domain.model import Dispositivo, GraphBatch, Hop, Jurisprudencia, Lei
 from legal_radar.prompts import refresh
 
 ART_50 = f"{CC}#art50"

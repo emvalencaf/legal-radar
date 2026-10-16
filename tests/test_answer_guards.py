@@ -3,7 +3,7 @@ from ingest_helpers import CC, CDC
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.answer import render_context, unsupported_mentions
 from legal_radar.assunto import AssuntoResolver
-from legal_radar.domain import Context, Dispositivo
+from legal_radar.domain.model import Context, Dispositivo
 
 CLT = "urn:lex:br:federal:decreto.lei:1943-05-01;5452"
 RETRIEVED = [f"{CC}#art50", f"{CC}#art50_par1", f"{CDC}#art28"]

@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 
-from legal_radar.domain import Dispositivo
+from legal_radar.domain.model import Dispositivo
 from legal_radar.eval_comparison import METRICS, label, latest_runs
 from legal_radar.evaluation import Indirect, Outcome, indirect_metrics, read_run
 from legal_radar.prompts import PromptLock

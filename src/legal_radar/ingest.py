@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, replace
 
 from legal_radar.anchors import AnchorLei
 from legal_radar.concepts import Vocabulary
-from legal_radar.domain import (
+from legal_radar.domain.model import (
     Dispositivo,
     EnrichmentRecord,
     EnrichmentStatus,

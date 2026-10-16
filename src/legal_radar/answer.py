@@ -13,7 +13,7 @@ from langgraph.graph import END, START, StateGraph
 
 from legal_radar.assunto import Resolution
 from legal_radar.complexity import DEFAULT_MAX_CONTEXT_TOKENS, classify
-from legal_radar.domain import Context, Hop, Jurisprudencia
+from legal_radar.domain.model import Context, Hop, Jurisprudencia
 from legal_radar.lexml import FEDERAL_LEI
 from legal_radar.llm import CompletionParams, content_hash
 from legal_radar.ports import GraphReader, Provider

@@ -5,7 +5,7 @@ import json
 
 import jsonschema
 
-from legal_radar.domain import Conceito, ConceptLink, GraphBatch
+from legal_radar.domain.model import Conceito, ConceptLink, GraphBatch
 from legal_radar.llm import CompletionParams, content_hash
 from legal_radar.parser import parse_lei
 from legal_radar.ports import GraphStore, Provider

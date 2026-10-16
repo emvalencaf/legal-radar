@@ -1,5 +1,5 @@
 from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore
-from legal_radar.domain import EnrichmentRecord, EnrichmentStatus
+from legal_radar.domain.model import EnrichmentRecord, EnrichmentStatus
 
 LEI = "urn:lex:br:federal:lei:2002-01-10;10406"
 

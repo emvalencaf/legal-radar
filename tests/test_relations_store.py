@@ -3,7 +3,7 @@ from neo4j import GraphDatabase
 from testcontainers.neo4j import Neo4jContainer
 
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
-from legal_radar.domain import (
+from legal_radar.domain.model import (
     Confidence,
     Dispositivo,
     GraphBatch,

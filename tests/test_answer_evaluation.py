@@ -15,7 +15,7 @@ from legal_radar.answer_evaluation import (
     outcome_of,
     path_nodes,
 )
-from legal_radar.domain import Hop
+from legal_radar.domain.model import Hop
 from legal_radar.llm import Completion
 
 A, B, C, D = "lei#a", "lei#b", "lei#c", "STJ:d"

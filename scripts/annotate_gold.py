@@ -17,7 +17,7 @@ from pathlib import Path
 import yaml
 
 from legal_radar.concepts import load_vocabulary
-from legal_radar.domain import RelationType
+from legal_radar.domain.model import RelationType
 from legal_radar.enricher import CONCEPT_RELATIONS
 from legal_radar.evaluation import load_gold
 from legal_radar.gold_review import review_all

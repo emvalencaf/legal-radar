@@ -4,7 +4,7 @@ import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.concepts import Concept, Vocabulary
-from legal_radar.domain import Confidence, Dispositivo, Origin, Relation, RelationType
+from legal_radar.domain.model import Confidence, Dispositivo, Origin, Relation, RelationType
 from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE
 from legal_radar.evaluation import (
     GoldError,

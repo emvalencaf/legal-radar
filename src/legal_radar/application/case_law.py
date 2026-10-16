@@ -47,7 +47,7 @@ CASE_LAW: dict[str, CaseLawSource] = {
 @dataclass
 class CaseLawReport:
     ingested: int = 0
-    references: int = 0  # `rule` REFERENCES edges from decisions to the dispositivos they cite
+    references: int = 0  # `rule` REFERENCES edges from decisions to the provisions they cite
     unresolved: int = 0  # decisions with a citation no rule resolved (left for the LLM)
     failed: dict[str, str] = field(default_factory=dict)  # seed id or court -> reason
     enrichment: dict[str, EnrichmentCounts] = field(default_factory=dict)  # court -> LLM phase

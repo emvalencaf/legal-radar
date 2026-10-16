@@ -1,17 +1,17 @@
 """CLI: `legal-radar run [fixture]` runs the skeleton pipeline with a fake provider;
-`legal-radar ingest <assunto>` ingests the assunto's anchor leis from LexML/Planalto;
-`legal-radar ingest-jurisprudencia <assunto> [--enrich]` ingests the assunto's seed precedents and
-top STF/STJ hits and, with --enrich, links each to the assunto's concepts;
-`legal-radar run-all <assunto> [--enrich]` does it all in one go: ingests the leis and decisions,
+`legal-radar ingest <assunto>` ingests the subject's anchor statutes from LexML/Planalto;
+`legal-radar ingest-jurisprudencia <assunto> [--enrich]` ingests the subject's seed precedents and
+top STF/STJ hits and, with --enrich, links each to the subject's concepts;
+`legal-radar run-all <assunto> [--enrich]` does it all: ingests the statutes and decisions,
 exports the seed, answers a cited query, scores the question set and writes the report;
 `legal-radar draft-concepts <assunto>` has an LLM draft concept candidates from the graph's corpus;
-`legal-radar ask "<query>"` resolves the assunto, traverses the graph and prints a cited answer;
-`legal-radar eval <assunto>` answers the assunto's question set and scores grounding, citations,
+`legal-radar ask "<query>"` resolves the subject, traverses the graph and prints a cited answer;
+`legal-radar eval <assunto>` answers the subject's question set and scores grounding, citations,
 contradictions and graph paths under assayer (needs `uv sync --extra eval`);
 `legal-radar eval <assunto> --baseline rag-naive|rag-contextual [--k 5 15]` answers the same
 questions with a pure-RAG baseline (no graph) instead; `legal-radar index-rag <naive|contextual>`
 builds its vector index ahead of time; `legal-radar compare-evals [run.json ...]` tables the graph
-and the baselines per metric and per nivel;
+and the baselines per metric and per level;
 with `LANGSMITH_API_KEY` set, `ask` and `eval` trace the LangGraph run and the experiment there;
 `legal-radar refresh-prompts` re-snapshots the pinned LangSmith Hub prompts into prompts/lock.json;
 `legal-radar report [out]` writes the static HTML report (ingestion, evaluation, example answers)

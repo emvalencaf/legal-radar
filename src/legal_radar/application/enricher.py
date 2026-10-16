@@ -1,7 +1,7 @@
-"""LLM enricher: dispositivo → conceito edges and grounded references (ADR-0002, ADR-0007).
+"""LLM enricher: provision → concept edges and grounded references (ADR-0002, ADR-0007).
 
-`enrich` is a pure function of one dispositivo: one call to the provider, no persistence and no
-`pending` bookkeeping (issue #29). Every norm-bearing dispositivo is sent for concepts; only the
+`enrich` is a pure function of one provision: one call to the provider, no persistence and no
+`pending` bookkeeping (issue #29). Every norm-bearing provision is sent for concepts; only the
 unresolved citations the rules left behind are sent for reference resolution, and the LLM can only
 pick their target from a closed list of candidates. Confidence comes from provenance: every edge
 returned is MEDIUM and origin `llm`. Items that fail validation are dropped and counted.
@@ -53,7 +53,7 @@ DECISION_DEFINITIONS = {
     RelationType.RELATES_TO: "só se nenhuma outra couber e o conceito for central na decisão",
 }
 # Source of the Hub prompt `dispositivo-enrichment`. Everything before `## Dispositivo` is the
-# stable prefix shared by every call of an assunto, so providers can cache it.
+# stable prefix shared by every call of an subject, so providers can cache it.
 ENRICHMENT_TEMPLATE = """Você relaciona dispositivos legais a conceitos do assunto "{assunto}".
 
 ## Relações possíveis
@@ -127,7 +127,7 @@ class Enrichment:
     dropped: int = 0  # items discarded for failing validation
     out_of_vocabulary: list[str] = field(default_factory=list)  # proposed ids, for curation
     skipped: str | None = None  # why no call was made: revoked, structural, empty or too_long
-    failed: str | None = None  # the reply was not parseable; the dispositivo should stay pending
+    failed: str | None = None  # the reply was not parseable; the provision should stay pending
     tokens_in: int = 0
     tokens_out: int = 0
 
@@ -200,8 +200,8 @@ def enrich_decision(
     *,
     max_input_tokens: int = MAX_INPUT_TOKENS,
 ) -> Enrichment:
-    """Concept edges of a decision, read from its ementa and tese only (never the decisão). Only
-    `DECISION_RELATIONS` apply, and `evidence` is a literal slice of the ementa or of the tese."""
+    """Concept edges of a decision, read from its headnote and thesis only (never the ruling). Only
+    `DECISION_RELATIONS` apply, and `evidence` is a literal slice of the headnote or thesis."""
     if not j.headnote.strip():
         return Enrichment(skipped="empty")
     texts = decision_texts(j)

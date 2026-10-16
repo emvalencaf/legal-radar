@@ -234,7 +234,7 @@ def test_load_registered_rejects_unknown_and_mismatched_subjects(monkeypatch, tm
         concepts.load_registered("outro")
 
     path = tmp_path / "v.yml"
-    path.write_text(valid_yaml(), encoding="utf-8")  # declares assunto "a"
+    path.write_text(valid_yaml(), encoding="utf-8")  # declares subject "a"
     monkeypatch.setitem(concepts.VOCABULARY_PATHS, "b", path)
     with pytest.raises(VocabularyError, match="declares assunto 'a'"):
         concepts.load_registered("b")

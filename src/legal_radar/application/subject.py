@@ -24,7 +24,7 @@ def cosine(a: list[float], b: list[float]) -> float:
 
 
 class SubjectResolver:
-    """Embeds the anchor-assunto catalog once and matches queries by cosine similarity.
+    """Embeds the anchor-subject catalog once and matches queries by cosine similarity.
 
     The provider may fall back to another embedding model between calls; vectors from different
     models are not comparable, so the catalog is re-embedded whenever the query's model differs.
@@ -46,7 +46,7 @@ class SubjectResolver:
     def resolve(self, query: str) -> Resolution | None:
         """The best-matching assunto, or None when nothing reaches the threshold."""
         if not self._names or not any(c.isalpha() for c in query):
-            return None  # nothing to embed: `??` would still land near some assunto
+            return None  # nothing to embed: `??` would still land near some subject
         params = CompletionParams(pipeline_step=PIPELINE_STEP)
         query_embedding = self.provider.embed([query], params)
         if query_embedding.model != self._model:

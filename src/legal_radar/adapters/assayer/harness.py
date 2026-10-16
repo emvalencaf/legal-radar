@@ -53,7 +53,7 @@ class Report:
     grounding: dict = field(default_factory=dict)
     system: str = "graph"  # what answered: the graph, or a RAG baseline (`rag-naive`, ...)
     k: int | None = None  # the baseline's top-k; None for the graph
-    by_level: dict[str, dict[str, float | None]] = field(default_factory=dict)  # nivel -> scores
+    by_level: dict[str, dict[str, float | None]] = field(default_factory=dict)  # level -> scores
 
     def _persisted(self) -> dict:
         """The run file keeps the Portuguese key `by_nivel`, so earlier runs stay comparable."""

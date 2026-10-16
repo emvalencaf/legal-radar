@@ -1,4 +1,4 @@
-"""One run over an assunto: ingest the leis and decisions, (enrich), export the seed, answer a
+"""One run over an subject: ingest the statutes and decisions, (enrich), export the seed, answer a
 query, score the question set and write the report. The CLI and the top-seam test both call it."""
 
 from dataclasses import dataclass

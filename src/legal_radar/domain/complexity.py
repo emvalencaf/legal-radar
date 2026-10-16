@@ -9,7 +9,7 @@ DEFAULT_MAX_CONTEXT_TOKENS = 6000
 
 
 def classify(context: Context, max_tokens: int = DEFAULT_MAX_CONTEXT_TOKENS) -> str:
-    """`COMPLEX` when the context spans more than one lei, holds any jurisprudência, walks a
+    """`COMPLEX` when the context spans more than one statute, holds any case law, walks a
     REVOKES or LOW-confidence edge, or exceeds `max_tokens`; `SIMPLE` otherwise."""
     if len({d.statute_id for d in context.provisions}) > 1 or context.case_law:
         return COMPLEX

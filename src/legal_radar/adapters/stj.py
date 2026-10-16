@@ -1,4 +1,4 @@
-"""STJ jurisprudência: the SCON search is session-bound, so the form is submitted and the
+"""STJ case law: the SCON search is session-bound, so the form is submitted and the
 server-rendered result page parsed."""
 
 import re

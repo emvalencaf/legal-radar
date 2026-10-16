@@ -85,7 +85,7 @@ def render_comparison(runs: list[dict]) -> str:
         {n for r in runs for n in r.get("by_nivel", {})}
         | {q.get("nivel") or BASE_LEVEL for r in runs for q in r["questions"]}
     )
-    for metric in METRICS:  # every metric is also split by nivel
+    for metric in METRICS:  # every metric is also split by level
         out += ["", f"## {metric} per nivel", ""]
         rows = [
             (n, [_cell(r.get("by_nivel", {}).get(n, {}).get(metric)) for r in runs]) for n in niveis

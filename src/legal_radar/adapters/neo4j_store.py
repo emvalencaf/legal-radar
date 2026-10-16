@@ -33,7 +33,7 @@ MERGE (d:Dispositivo {id: $id})
 SET d.path = $path, d.text = $text, d.kind = $kind, d.revoked = $revoked,
     d.revocations = $revocations
 """
-# A lei only cited (or only revoking) is a stub keyed by its URN until it is ingested.
+# A statute only cited (or only revoking) is a stub keyed by its URN until it is ingested.
 MERGE_STUB_STATUTE = "MERGE (l:Lei {id: $id}) ON CREATE SET l.stub = true"
 COUNT_PROVISION = "MATCH (d:Dispositivo {id: $id}) RETURN count(d) AS n"
 MERGE_REFERENCE = """
@@ -206,7 +206,7 @@ class Neo4jGraphStore:
             tx.run(KEEP_UNRESOLVED_REFERENCE, id=r.source_id, citation=r.unresolved)
         elif tx.run(COUNT_PROVISION, id=r.target_id).single()["n"]:
             tx.run(MERGE_REFERENCE, source=r.source_id, target=r.target_id, **edge)
-        else:  # a dispositivo of a lei the graph lacks: point at the stub lei, keep where in it
+        else:  # a provision of a statute the graph lacks: point at the stub, keep where in it
             statute, _, locator = r.target_id.partition("#")
             tx.run(MERGE_STUB_STATUTE, id=statute)
             tx.run(

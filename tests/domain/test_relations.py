@@ -61,7 +61,9 @@ def test_locators_build_the_provision_path():
 def test_ranges_expand_to_one_edge_per_target():
     leading = extract_relations(provision("incisos I a III do art. 5º"))
     assert [r.target_id for r in leading.relations] == [STATUTE + "#art5"]
-    assert leading.needs_llm == ["incisos I a III do art. 5º"]  # the locator must follow the artigo
+    assert leading.needs_llm == [
+        "incisos I a III do art. 5º"
+    ]  # the locator must follow the article
     assert targets("art. 5º, incisos II a IV, do Código Civil") == [
         CC + "#art5_incII",
         CC + "#art5_incIII",

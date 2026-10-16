@@ -1,7 +1,7 @@
 """Idempotency key of an LLM-processed chunk (ADR-0003, ADR-0004).
 
 A chunk goes back to `pending` only when one ingredient of its key changes: its text, the
-extractor, the vocabulary of its assunto or the prompt that enriches it (`dispositivo-enrichment`).
+extractor, the vocabulary of its subject or the prompt that enriches it (`dispositivo-enrichment`).
 Rule-derived edges do not use it, so they are kept.
 """
 

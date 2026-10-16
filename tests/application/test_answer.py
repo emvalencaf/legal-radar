@@ -53,7 +53,7 @@ def d(statute: str, path: str, text: str, parent: str | None = None) -> Provisio
 
 @pytest.fixture
 def graph(driver):
-    """Two anchor leis, a third lei, and decisions citing dispositivos.
+    """Two anchor statutes, a third statute, and decisions citing provisions.
 
     The anchors are CC art. 50 and CDC art. 28 (art51 is outside them). art50 PARTS art50_par1;
     art28 REFERENCES CP art121 (one hop from a reached node); CP art121 REFERENCES CP art122 (a

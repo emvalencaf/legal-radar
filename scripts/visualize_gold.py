@@ -2,10 +2,10 @@
 
 Usage: visualize_gold.py [--out evaluation/gold.html] [FILE ...]
 
-Dispositivos sit in the left column, grouped by lei; the curated concepts in the right column,
+Provisions sit in the left column, grouped by statute; the curated concepts in the right column,
 grouped by category; an edge joins them, coloured by relation type. `REFERENCES` arcs stay on the
 left. Several files can be loaded and switched in the page (default: the proposal, the gold and
-the review progress, whichever exist). Click a dispositivo or a concept to isolate its edges; the
+the review progress, whichever exist). Click a provision or a concept to isolate its edges; the
 side panel shows the text and how each edge was reviewed. Concepts without any edge are greyed
 out, which is where vocabulary gaps and dead concepts show.
 """

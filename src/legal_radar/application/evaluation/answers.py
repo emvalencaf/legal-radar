@@ -196,7 +196,7 @@ class UsageMeter:
 def abstention(
     answer: str, expected: bool, states_insufficient: Callable[[str], bool]
 ) -> float | None:
-    """For a question the graph cannot answer: 1.0 when the answer is empty (no assunto, no
+    """For a question the graph cannot answer: 1.0 when the answer is empty (no subject, no
     sources) or the judge says it admits its sources fall short, else 0.0. None when the question
     is answerable."""
     if not expected:

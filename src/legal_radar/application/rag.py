@@ -1,7 +1,7 @@
-"""Pure-RAG baselines to measure the graph's value (#79): embed every dispositivo and decision,
+"""Pure-RAG baselines to measure the graph's value (#79): embed every provision and decision,
 retrieve the top-k by cosine similarity, answer with the same `cited-answer` prompt and schema.
 
-Two chunkings are compared with the graph run: `naive` (one chunk per dispositivo, its own text)
+Two chunkings are compared with the graph run: `naive` (one chunk per provision, its own text)
 and `contextual` (the text preceded by the non-structural ancestors the enricher also builds
 with `ancestors_of`). Neither uses an edge, a concept or a traversal."""
 
@@ -57,9 +57,9 @@ def _live(d: Provision) -> str:
 def build_chunks(
     provisions: list[Provision], case_law: list[CaseLaw], contextual: bool
 ) -> list[Chunk]:
-    """One chunk per live dispositivo and per decision, sorted by id. Revoked, empty and
-    structural dispositivos (and a text that is only an amendment mark) are left out. A
-    contextual chunk is the dispositivo's text after its live ancestors', farthest first."""
+    """One chunk per live provision and per decision, sorted by id. Revoked, empty and
+    structural provisions (and a text that is only an amendment mark) are left out. A
+    contextual chunk is the provision's text after its live ancestors', farthest first."""
     by_id = {d.id: d for d in provisions}
     chunks = []
     for d in provisions:

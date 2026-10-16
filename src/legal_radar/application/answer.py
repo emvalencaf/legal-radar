@@ -1,4 +1,4 @@
-"""Query-time LangGraph pipeline: resolve the assunto, traverse the knowledge graph, answer with
+"""Query-time LangGraph pipeline: resolve the subject, traverse the knowledge graph, answer with
 citations. The LangGraph only orchestrates these steps; the knowledge graph is read through
 `GraphReader`."""
 
@@ -63,14 +63,14 @@ class CitationError(ValueError):
 class Citation:
     id: str
     kind: str  # "Dispositivo" | "Jurisprudencia": the label of the graph node `id` resolves to
-    path: list[Hop]  # how the traversal reached it from the anchor lei
+    path: list[Hop]  # how the traversal reached it from the anchor statute
     text: str = ""  # the source text the answer was given, for grounding checks
 
 
 @dataclass(frozen=True)
 class CitedAnswer:
     query: str
-    subject: str | None  # None: the query matched no known assunto, so nothing was answered
+    subject: str | None  # None: the query matched no known subject, so nothing was answered
     answer: str | None
     citations: list[Citation]
     retrieved: list[str] = field(default_factory=list)  # every node id the traversal reached
@@ -132,8 +132,8 @@ def render_context(context: Context) -> str:
 
 
 def unsupported_mentions(answer: str, retrieved: list[str]) -> list[str]:
-    """The dispositivos the answer names that the sources it was given do not contain. A mention
-    that names no lei is not checked: it cannot be resolved."""
+    """The provisions the answer names that the sources it was given do not contain. A mention
+    that names no statute is not checked: it cannot be resolved."""
     mentions = extract_decision_relations(CaseLaw("", "", "", answer, ""))
     known = set(retrieved)
     return [r.target_id for r in mentions.relations if r.target_id and r.target_id not in known]
@@ -149,8 +149,8 @@ def parse_answer(text: str, schema: dict) -> tuple[str, list[str]]:
 
 
 def anchor_ids_of(resolution: Resolution, urns: list[str]) -> list[str]:
-    """The graph nodes the traversal starts from: for each anchor lei present in the graph (by
-    number and year), its anchor dispositivos, or the whole lei when it names none."""
+    """The graph nodes the traversal starts from: for each anchor statute present in the graph (by
+    number and year), its anchor provisions, or the whole statute when it names none."""
     found = []
     for urn in urns:
         m = FEDERAL_STATUTE.match(urn)

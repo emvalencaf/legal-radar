@@ -1,4 +1,4 @@
-"""Parse a Planalto lei page into the legal-document AST (see ADR-0001).
+"""Parse a Planalto statute page into the legal-document AST (see ADR-0001).
 
 Real Planalto pages have few usable anchors and carry struck-through superseded versions of
 amended provisions, so structure is recognised from the text of each block, not from the markup.
@@ -82,9 +82,9 @@ def parse_planalto(html: str, statute_id: str) -> list[Provision]:
 
     for live, struck in _lines(html):
         line, marks = _split_revocations(live, struck)
-        touched: _Node | None = None  # the dispositivo this line belongs to
+        touched: _Node | None = None  # the provision this line belongs to
         if not line:
-            touched = current  # a bare mark continues the dispositivo above it
+            touched = current  # a bare mark continues the provision above it
         elif _END.match(line) and article is not None:
             break
         elif heading := _match_heading(line):
@@ -138,7 +138,7 @@ def _finish(n: _Node) -> Provision:
 def _split_revocations(live: str, struck: str) -> tuple[str, list[str]]:
     """The line to parse and the `(Revogado …)` marks on it, struck or not.
 
-    A line whose only live content is marks, over struck text that opens a dispositivo, is a fully
+    A line whose only live content is marks, over struck text that opens a provision, is a fully
     revoked one: its struck text is kept. Any other struck text is a superseded version, dropped.
     """
     marks = [re.sub(r"\s+", " ", m[0]) for m in _REVOCATION.finditer(f"{live} {struck}")]

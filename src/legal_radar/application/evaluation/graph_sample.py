@@ -31,7 +31,7 @@ class GraphSampleError(ValueError):
 @dataclass(frozen=True)
 class SampledNode:
     id: str
-    label: str  # Lei, Dispositivo, Jurisprudencia or Conceito
+    label: str  # the Neo4j label: Lei, Dispositivo, Jurisprudencia or Conceito
     role: str  # cited, ancestor or neighbour
 
 

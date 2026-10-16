@@ -1,11 +1,11 @@
-"""Wizard: review the proposed enrichment gold set one dispositivo at a time (#67).
+"""Wizard: review the proposed enrichment gold set one provision at a time (#67).
 
 Usage: annotate_gold.py [--proposed evaluation/enrichment_gold.proposed.yml]
                         [--gold evaluation/enrichment_gold.yml]
 
-Shows each dispositivo with the relations Claude Code proposed and asks you to accept, correct or
-reject each one, then to add what it missed. There is no way to skip a dispositivo: an empty answer
-confirms a negative. Progress is saved after every dispositivo (re-run to resume); the gold file is
+Shows each provision with the relations Claude Code proposed and asks you to accept, correct or
+reject each one, then to add what it missed. There is no way to skip a provision: an empty answer
+confirms a negative. Progress is saved after every provision (re-run to resume); the gold file is
 written once all are reviewed, with how each edge came to be (accepted, corrected, added). The
 metrics measure agreement with a single annotator, not absolute truth.
 """
@@ -42,14 +42,14 @@ def show(edge: dict) -> str:
 def parse_edge(line: str, concepts: set[str]) -> dict | None:
     """`TYPE target` -> an edge, or `None` when it is not valid.
 
-    A concept relation targets a curated concept id, a `REFERENCES` a dispositivo id, and for a
-    `REVOKES` the `target` typed is the revoking act (the dispositivo itself is the target).
+    A concept relation targets a curated concept id, a `REFERENCES` a provision id, and for a
+    `REVOKES` the `target` typed is the revoking act (the provision itself is the target).
     """
     parts = line.split()
     if len(parts) != 2 or parts[0].upper() not in TYPES:
         return None
     type_, target = parts[0].upper(), parts[1]
-    if type_ == "REVOKES":  # the dispositivo is the target; the revoking act is the source
+    if type_ == "REVOKES":  # the provision is the target; the revoking act is the source
         return {"type": type_, "source": target}
     valid = target in concepts if type_ in CONCEPT_TYPES else "#" in target
     return {"type": type_, "target": target} if valid else None
@@ -75,7 +75,7 @@ def main(args: argparse.Namespace) -> int:
     def save(reviewed: list[dict]) -> None:
         progress.write_text(yaml.safe_dump(reviewed, allow_unicode=True, sort_keys=False), "utf-8")
 
-    added: list[dict] = []  # edges recorded for the dispositivo under review
+    added: list[dict] = []  # edges recorded for the provision under review
 
     def decide(entry: dict, edge: dict) -> dict | None:
         if edge:

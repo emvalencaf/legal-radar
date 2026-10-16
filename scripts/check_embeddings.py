@@ -1,4 +1,4 @@
-"""Live check of an embedding provider: one embed call, then assunto resolution scores.
+"""Live check of an embedding provider: one embed call, then subject resolution scores.
 
 Usage: check_embeddings.py [gemini|lmstudio] (default gemini). Gemini needs GEMINI_API_KEY;
 LM Studio reads LMSTUDIO_BASE_URL and needs its embedding model loaded.
@@ -20,7 +20,7 @@ RELATED = [
     "sócio responde com o patrimônio pessoal por dívidas da empresa",
     "confusão patrimonial entre sócio e sociedade",
 ]
-# Same legal register as the assunto, so only meaning (not vocabulary) can reject them.
+# Same legal register as the subject, so only meaning (not vocabulary) can reject them.
 UNRELATED = [
     "prescrição intercorrente na execução fiscal",
     "usucapião extraordinária de imóvel urbano",

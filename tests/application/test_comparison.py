@@ -48,7 +48,7 @@ def test_level_tables_split_each_metric():
 
     section = text.split("## citation_correctness per nivel")[1].split("##")[0]
     assert "| facil | 0.900 | 0.500 | 0.700 |" in section
-    assert "| dificil | n/a | n/a | n/a |" in section  # no score for that metric in that nivel
+    assert "| dificil | n/a | n/a | n/a |" in section  # no score for that metric in that level
 
 
 def test_a_run_from_before_the_baselines_is_the_graph(tmp_path):

@@ -5,9 +5,9 @@ Usage: eval_enrichment.py GOLD.yml [--provider groq|gemini|lmstudio] [--model NA
                           [--thresholds evaluation.yml]
 
 Runs the rules and the LLM over the Planalto excerpts under `tests/fixtures/planalto`, scores the
-dispositivos listed in the gold set per edge (split by origin and relation type), prints the
+provisions listed in the gold set per edge (split by origin and relation type), prints the
 indirect metrics and exits non-zero when a gate fails. Every input and output is written to a JSONL
-run file under `--persist` (default `eval-runs/`) as each dispositivo finishes, so a rate limit or a
+run file under `--persist` (default `eval-runs/`) as each provision finishes, so a rate limit or a
 crash loses nothing: `--resume RUNFILE` continues it (same provider, model and vocabulary). The
 gold set itself is annotated by a human (#67).
 """
@@ -71,9 +71,9 @@ def start_printer(already: int, grand_total: int):
 
 
 def progress_printer(started: float, already: int, grand_total: int, path: Path):
-    """One line per dispositivo: position, what it yielded and the time left at this pace.
+    """One line per provision: position, what it yielded and the time left at this pace.
 
-    Each finished dispositivo is also appended to the run file, so a failure loses nothing.
+    Each finished provision is also appended to the run file, so a failure loses nothing.
     """
 
     def show(done: int, total: int, outcome) -> None:

@@ -5,8 +5,8 @@ The unit scored is an edge `(type, source, target)`, not a span, so assayer's `N
 not apply. Scoring is split by origin (`rule` / `llm`) and by relation type, so one can tell whether
 the LLM adds value over the rules. Unresolved citations (no target) are not edges: they are
 measured by the target-resolved rate instead. The gold set (`Gold set de enriquecimento`) lists, per
-dispositivo, the edges it should yield; `edges: []` is a confirmed negative, a missing `edges` key
-is an error because an unannotated dispositivo is not a negative.
+provision, the edges it should yield; `edges: []` is a confirmed negative, a missing `edges` key
+is an error because an unannotated provision is not a negative.
 """
 
 import json
@@ -32,7 +32,7 @@ from legal_radar.domain.prompts import PromptLock
 from legal_radar.domain.relations import extract_relations
 
 ALL = "all"
-CONCEPT = "CONCEPT"  # aggregate of the dispositivo→conceito relation types
+CONCEPT = "CONCEPT"  # aggregate of the provision→concept relation types
 RULE_TYPES = (RelationType.REFERENCES, RelationType.REVOKES)  # `REVOKES` is never the LLM's
 LLM_TYPES = (RelationType.REFERENCES, *CONCEPT_RELATIONS)
 GATED_GROUPS = (("rule", ALL), ("llm", ALL), ("llm", CONCEPT), (ALL, ALL))
@@ -55,7 +55,7 @@ Gold = dict[str, frozenset[GoldEdge]]
 def load_gold(text: str, vocabulary: Vocabulary | None = None) -> Gold:
     """Parse the gold set YAML: `dispositivos: [{id, edges: [{type, source?, target?}]}]`.
 
-    The dispositivo is the default source of an edge, and the default target of a `REVOKES`. With a
+    The provision is the default source of an edge, and the default target of a `REVOKES`. With a
     `vocabulary`, the file must pin its `vocabulary_hash`: concept edges only mean something
     against the vocabulary they were annotated with.
     """
@@ -123,7 +123,7 @@ def enrich_provisions(
     on_start: Callable[[int, int, Provision], None] | None = None,
     on_progress: Callable[[int, int, Outcome], None] | None = None,
 ) -> list[Outcome]:
-    """Run the rules and then the LLM over each dispositivo, as ingestion will (#29).
+    """Run the rules and then the LLM over each provision, as ingestion will (#29).
 
     A citation the LLM grounds replaces the unresolved LOW edge the rules left for it. With `only`,
     just those ids are enriched (the others still serve as ancestors and reference candidates, so
@@ -198,7 +198,7 @@ def score_edges(outcomes: Sequence[Outcome], gold: Mapping[str, Collection[GoldE
     """Per-edge score keyed `(origin, type)`: origin is `rule`, `llm` or `all`; type is a
     `RelationType`, `CONCEPT` (the concept relations together) or `all`.
 
-    Only dispositivos in the gold set are scored. For an origin, recall counts the gold edges of
+    Only provisions in the gold set are scored. For an origin, recall counts the gold edges of
     the types it can produce, so `llm` REFERENCES recall is "how many gold references the LLM
     found".
     """

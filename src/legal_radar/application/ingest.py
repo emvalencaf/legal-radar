@@ -47,7 +47,7 @@ class EnrichConfig:
 @dataclass
 class EnrichmentCounts:
     processed: int = 0  # sent to the LLM and recorded `ok`
-    empty: int = 0  # recorded `ok` without a call: a decision with no ementa
+    empty: int = 0  # recorded `ok` without a call: a decision with no headnote
     too_long: int = 0  # recorded `ok` without a call: the prompt exceeds the input ceiling
     kept: int = 0  # `ok` with an unchanged key: not sent
     returned: int = 0  # `ok` before, back to pending because the key changed
@@ -56,7 +56,7 @@ class EnrichmentCounts:
 
 @dataclass
 class IngestionReport:
-    ingested: dict[str, int] = field(default_factory=dict)  # urn -> dispositivo count
+    ingested: dict[str, int] = field(default_factory=dict)  # urn -> provision count
     skipped: dict[str, list[str]] = field(default_factory=dict)  # urn -> non-Planalto hosts
     failed: dict[str, str] = field(default_factory=dict)  # keyword -> reason
     relations: dict[str, int] = field(default_factory=dict)  # urn -> edges extracted by rules
@@ -91,12 +91,12 @@ def ingest(
     resolver: UrnResolver | None = None,
     enrichment: EnrichConfig | None = None,
 ) -> IngestionReport:
-    """Parse every anchor lei, extract its relations, then load them.
+    """Parse every anchor statute, extract its relations, then load them.
 
-    Relations are extracted once all leis are parsed: a citation of a lei of this run is checked
-    against its dispositivos, and one of any other lei is a stub (LOW).
+    Relations are extracted once all statutes are parsed: a citation of a statute in this run is
+    checked against its provisions, and one of any other statute is a stub (LOW).
 
-    With `enrichment`, each lei is loaded with its rule-derived edges first; then the chunks the
+    With `enrichment`, each statute is loaded with its rule-derived edges first; then the chunks the
     rules left for the LLM that are `pending` are sent to it, one by one.
     """
     report = IngestionReport()

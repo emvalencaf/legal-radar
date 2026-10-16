@@ -1,4 +1,4 @@
-"""Vocabulário de conceitos: one flat, curated YAML vocabulary per assunto (ADR-0003).
+"""Vocabulário de concepts: one flat, curated YAML vocabulary per subject (ADR-0003).
 
 `load_vocabulary` validates a file and exposes `Vocabulary.hash`, the vocabulary part of the
 enrichment idempotency key. `draft_candidates` has an LLM propose candidates for a human to curate.
@@ -27,8 +27,8 @@ VOCABULARY_PATHS = {
     "desconsideração da personalidade jurídica": Settings().concepts_dir
     / "desconsideracao_personalidade.yml",
 }
-# Dispositivo roots the drafter reads (with their parágrafos, incisos and alíneas); every
-# jurisprudência in the graph is read too. CPC arts. 133-137 (ADR-0003) join once the CPC is
+# Provision roots the drafter reads (with their paragraphs, items and subitems); every
+# case law in the graph is read too. CPC arts. 133-137 (ADR-0003) join once the CPC is
 # ingested.
 CORPUS_ROOTS = (
     "urn:lex:br:federal:lei:2002-01-10;10406#art50",  # CC art. 50
@@ -57,7 +57,7 @@ class Concept:
     reviewed_on: str | None = None  # ISO date
     created_at: str | None = None  # ISO dates, maintained by hand or by `draft-concepts`
     updated_at: str | None = None
-    sources: tuple[str, ...] = ()  # lineage: ids of the Dispositivo/Jurisprudencia it came from
+    sources: tuple[str, ...] = ()  # lineage: ids of the Provision/Case law it came from
 
     @property
     def reviewed(self) -> bool:

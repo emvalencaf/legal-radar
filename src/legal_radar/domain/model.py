@@ -70,7 +70,7 @@ class Hop:
 @dataclass(frozen=True)
 class Context:
     """What a traversal retrieved: the nodes reached and, per node id, the hops that reached it;
-    `revocations` are the leis revoking a reached dispositivo, kept apart as they reach no node."""
+    `revocations` are the statutes revoking a reached provision, kept apart: they reach no node."""
 
     provisions: list[Provision]
     case_law: list[CaseLaw]
@@ -81,7 +81,7 @@ class Context:
 class RelationType(StrEnum):
     REFERENCES = "REFERENCES"
     REVOKES = "REVOKES"
-    # dispositivo → conceito, from the LLM enricher (ADR-0002)
+    # provision → concept, from the LLM enricher (ADR-0002)
     DEFINES = "DEFINES"
     APPLIES_TO = "APPLIES_TO"
     OBLIGES = "OBLIGES"
@@ -105,7 +105,7 @@ class Origin(StrEnum):
 
 @dataclass(frozen=True)
 class Relation:
-    """An edge `source -[type]-> target` extracted from the text of one dispositivo.
+    """An edge `source -[type]-> target` extracted from the text of one provision.
 
     An endpoint that could not be resolved to an id is `None`, and `unresolved` keeps the
     citation as written so it is not lost. `evidence` is a literal substring of the chunk.
@@ -131,7 +131,7 @@ class EnrichmentRecord:
     enriquecimento). Kept outside the graph; `key` is the whole idempotency key."""
 
     chunk_id: str
-    source_id: str  # the lei of a dispositivo, or the court of a decision: what groups records
+    source_id: str  # the statute of a provision, or the court of a decision: what groups records
     key: str
     status: EnrichmentStatus
     dropped: int = 0

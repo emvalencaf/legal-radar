@@ -35,19 +35,19 @@ class GraphStore(Protocol):
     def write(self, batch: GraphBatch) -> None:
         """Idempotently upsert the batch's nodes and edges.
 
-        A relation whose lei the graph lacks becomes an edge to a stub Lei node keyed by its URN;
+        A relation whose statute the graph lacks becomes an edge to a stub node keyed by its URN;
         one whose endpoint is unresolved is kept as an attribute of the node it starts from."""
 
     def write_case_law(self, items: list[CaseLaw], relations: list[Relation] = ()) -> None:
-        """Idempotently upsert the jurisprudência nodes and the `rule` edges starting at them
-        (`relations`, written like a dispositivo's: stub lei, unresolved citation kept)."""
+        """Idempotently upsert the case law nodes and the `rule` edges starting at them
+        (`relations`, written like a provision's: stub statute, unresolved citation kept)."""
 
     def replace_llm_relations(self, chunk_id: str, relations: list[Relation]) -> None:
-        """Atomically swap the `llm`-origin edges starting at one dispositivo for `relations`.
+        """Atomically swap the `llm`-origin edges starting at one provision for `relations`.
         `rule`-origin edges are never touched."""
 
     def resolve_citations(self, chunk_id: str, citations: list[str]) -> None:
-        """Forget the unresolved citations of one dispositivo that an `llm` edge now grounds.
+        """Forget the unresolved citations of one provision that an `llm` edge now grounds.
         Idempotent: the rules keep writing them on every ingestion."""
 
 
@@ -83,8 +83,8 @@ class GraphReader(Protocol):
         """Every dispositivo (with parent and revoked mark) and decision, sorted by id."""
 
     def traverse(self, anchor_ids: list[str]) -> Context:
-        """Walk `PARTS` down from the anchors (leis or dispositivos), then 1 hop of `REFERENCES`
-        (a dispositivo's outgoing ones, a jurisprudência's citations of reached dispositivos),
+        """Walk `PARTS` down from the anchors (statutes or provisions), then 1 hop of `REFERENCES`
+        (a provision's outgoing ones, a case law's citations of reached provisions),
         with no scoring or cap. Deterministic: same anchors, same context, sorted by id."""
 
 

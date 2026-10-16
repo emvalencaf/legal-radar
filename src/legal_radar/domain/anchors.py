@@ -5,12 +5,12 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class AnchorStatute:
-    keyword: str  # LexML keyword search that surfaces the lei
+    keyword: str  # LexML keyword search that surfaces the statute
     numero: str
     ano: int
     articles: tuple[
         str, ...
-    ] = ()  # dispositivo paths the traversal starts from; none: the whole lei
+    ] = ()  # provision paths the traversal starts from; none: the whole statute
 
 
 ANCHORS: dict[str, list[AnchorStatute]] = {

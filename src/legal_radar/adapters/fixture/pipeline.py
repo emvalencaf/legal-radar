@@ -35,7 +35,7 @@ class TaggingError(ValueError):
 
 def tag_schema(lock: PromptLock, concept_ids: list[str] | None) -> dict:
     """The pinned schema; the Hub stores it static, so the vocabulary's ids fill its enum here.
-    Without `conceito_ids` the enum is dropped and any non-empty id is accepted."""
+    Without `concept_ids` the enum is dropped and any non-empty id is accepted."""
     schema = lock.schema(TAG_PROMPT)
     if schema is None:
         raise PromptError(f"prompt {TAG_PROMPT!r} has no pinned schema: run `refresh-prompts`")

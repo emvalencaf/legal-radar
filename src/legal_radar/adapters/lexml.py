@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 def search_urn(
     pages: PageSource, keyword: str, numero: str, ano: int, retries: int = 3, backoff_s: float = 2.0
 ) -> str:
-    """Resolve the federal lei `numero`/`ano` to its URN from the keyword search results.
+    """Resolve the federal statute `numero`/`ano` to its URN from the keyword search results.
 
-    LexML's search is flaky (a good query sometimes comes back without the lei), so a miss is
+    LexML's search is flaky (a good query sometimes comes back without the statute), so a miss is
     retried `retries` times with exponential backoff, logging each one.
     """
     url = SEARCH_URL.format(keyword=quote_plus(keyword))

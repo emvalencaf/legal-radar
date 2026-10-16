@@ -39,7 +39,7 @@ ORDER BY d.id, l.id
 
 
 def _provision(node, parent_id: str | None = None) -> Provision:
-    # The Lei is the id's prefix: ids are `{lei_id}#{path}`.
+    # The Statute is the id's prefix: ids are `{lei_id}#{path}`.
     return Provision(
         id=node["id"],
         statute_id=node["id"].split("#", 1)[0],
@@ -74,7 +74,7 @@ class Neo4jGraphReader:
         return [r["id"] for r in self._rows(STATUTE_IDS)]
 
     def corpus(self) -> tuple[list[Provision], list[CaseLaw]]:
-        """Every dispositivo (with its parent and revoked mark) and every decision in the graph,
+        """Every provision (with its parent and revoked mark) and every decision in the graph,
         sorted by id: what a retrieval without the graph indexes."""
         return (
             [_provision(r["node"], r["parent_id"]) for r in self._rows(CORPUS_PROVISIONS)],
@@ -103,7 +103,7 @@ class Neo4jGraphReader:
             ]
 
         case_law: dict[str, CaseLaw] = {}
-        # only dispositivos reached by PARTS: a decision citing a REFERENCES target would be hop 2
+        # only provisions reached by PARTS: a decision citing a REFERENCES target would be hop 2
         for r in self._rows(CITING, ids=parts):
             node = r["node"]
             if node["id"] in case_law:

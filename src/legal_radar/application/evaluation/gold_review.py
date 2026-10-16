@@ -1,4 +1,4 @@
-"""Human review of a proposed gold set (#67): every dispositivo gets a decision, none is skipped.
+"""Human review of a proposed gold set (#67): every provision gets a decision, none is skipped.
 
 The proposal is an LLM's; the reviewer accepts, corrects or rejects each proposed edge and may add
 the ones it missed. Each kept edge records how it got there (`accepted`, `corrected` or `added`) so

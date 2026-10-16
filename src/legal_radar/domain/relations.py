@@ -1,7 +1,7 @@
-"""Rule-based extraction of REFERENCES and REVOKES edges from one dispositivo (ADR-0002).
+"""Rule-based extraction of REFERENCES and REVOKES edges from one provision (ADR-0002).
 
 Every edge comes from a regex match, so it is HIGH and origin `rule`, unless its target is a stub
-(a lei the graph does not hold, or a dispositivo missing from one it does) or unresolved: then LOW.
+(a statute the graph lacks, or a provision missing from one it holds) or unresolved: then LOW.
 Whatever looks like a citation but no rule resolved is returned in `Extraction.needs_llm` for the
 LLM enricher. `(Redação dada por …)` and other amendment marks are masked, never read as citations.
 """
@@ -116,8 +116,9 @@ def extract_relations(
 ) -> Extraction:
     """Extract the REFERENCES and REVOKES edges of `d`.
 
-    `ingested` maps each lei in the graph to its dispositivo ids: a target in a lei missing from it
-    is a stub, and one missing from its lei's ids does not exist, both LOW. `None` skips the check.
+    `ingested` maps each statute in the graph to its provision ids: a target in a statute missing
+    from it is a stub, and one missing from its statute's ids does not exist, both LOW. `None`
+    skips the check.
     """
     scan = _Scan(d, resolver, ingested)
     for pattern in (
@@ -137,9 +138,9 @@ def extract_decision_relations(
     resolver: UrnResolver | None = None,
     ingested: Mapping[str, Collection[str]] | None = None,
 ) -> Extraction:
-    """Extract the REFERENCES edges of a decision from its ementa and tese (never the decisão).
+    """Extract the REFERENCES edges of a decision from its headnote and thesis (never the ruling).
 
-    A decision has no home lei, so a citation that names none (`art. 50` alone) is unresolved, and
+    A decision has no home statute, so a citation naming none (`art. 50` alone) is unresolved, and
     `deste artigo` / `artigo anterior` mean nothing. Same confidence rules as `extract_relations`.
     """
     # court texts arrive wrapped mid-citation (`ART\n.\n50`): read each part on one line
@@ -159,7 +160,7 @@ _CONNECTORS = {
 
 def _unwrap(text: str) -> str:
     """A court text read by the citation rules: wraps joined, `ART .` closed up, and the words of
-    an all-capitals ementa put back in the case the rules expect (`ART. 50 DO CÓDIGO CIVIL`).
+    an all-capitals headnote put back in the case the rules expect (`ART. 50 DO CÓDIGO CIVIL`).
     Roman numerals and the codes' acronyms stay as they are."""
 
     def word(m: re.Match[str]) -> str:
@@ -178,7 +179,7 @@ class _Scan:
     d: Provision
     resolver: UrnResolver | None
     ingested: Mapping[str, Collection[str]] | None
-    leading: bool = False  # read a locator before the artigo (`§ 1º do art. 50`): decisions only
+    leading: bool = False  # read a locator before the article (`§ 1º do art. 50`): decisions only
     out: list[Relation] = field(default_factory=list)
     flags: list[str] = field(default_factory=list)
     covered: list[tuple[int, int]] = field(default_factory=list)
@@ -257,7 +258,7 @@ def _article_citations(s: _Scan) -> None:
             end = law.end()
         s.cover(start, end)
         if law is None and _UNKNOWN_LAW.match(s.masked, end):
-            s.flag(start)  # a law the table does not know: not the same lei, not guessable
+            s.flag(start)  # a law the table does not know: not the same statute, not guessable
             continue
         home = s.d.statute_id or None  # a decision has none
         urn, label = (home, "lei não informada") if law is None else _law(law, home, s.resolver)
@@ -372,9 +373,9 @@ def _paths(m: re.Match[str], loc: re.Match[str] | None) -> list[str] | None:
 
 
 def _expand(article: str, loc: re.Match[str] | None) -> list[str] | None:
-    """The paths a locator (`§ 2º`, `incisos I a III`) selects inside `artigo`, one per inciso.
+    """The paths a locator (`§ 2º`, `incisos I a III`) selects inside `artigo`, one per item.
 
-    `None` when the inciso range is unreadable (reversed or too wide).
+    `None` when the item range is unreadable (reversed or too wide).
     """
     base = article
     if loc and loc["par"]:

@@ -13,6 +13,7 @@ from legal_radar.adapters.http_providers import (
     Transport,
     urllib_transport,
 )
+from legal_radar.complexity import DEFAULT_MAX_CONTEXT_TOKENS
 from legal_radar.enricher import MAX_INPUT_TOKENS
 from legal_radar.ports import Provider
 from legal_radar.router import Router
@@ -56,6 +57,18 @@ def enrichment_max_input_tokens(config: dict) -> int:
     return value
 
 
+def tiers_enabled(config: dict) -> bool:
+    return bool((config.get("tiers") or {}).get("enabled", False))
+
+
+def tier_max_context_tokens(config: dict) -> int:
+    """The context size above which a query counts as complex (`tiers.max_context_tokens`)."""
+    value = (config.get("tiers") or {}).get("max_context_tokens", DEFAULT_MAX_CONTEXT_TOKENS)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"tiers.max_context_tokens must be a positive integer, got {value!r}")
+    return value
+
+
 def build_router(
     config: dict,
     env: Mapping[str, str] | None = None,
@@ -65,28 +78,40 @@ def build_router(
     models = {**DEFAULT_MODELS, **(config.get("models") or {})}
     embedding_models = {**DEFAULT_EMBEDDING_MODELS, **(config.get("embedding_models") or {})}
     priority = config.get("providers") or DEFAULT_PRIORITY
-    providers: list[Provider] = []
-    for name in priority:
-        if name == "groq":
-            providers.append(GroqProvider(models[name], env.get("GROQ_API_KEY", ""), transport))
-        elif name == "gemini":
-            providers.append(
-                GeminiProvider(
-                    models[name], env.get("GEMINI_API_KEY", ""), transport, embedding_models[name]
+
+    def build(names: list[str]) -> list[Provider]:
+        providers: list[Provider] = []
+        for name in names:
+            if name == "groq":
+                providers.append(GroqProvider(models[name], env.get("GROQ_API_KEY", ""), transport))
+            elif name == "gemini":
+                providers.append(
+                    GeminiProvider(
+                        models[name],
+                        env.get("GEMINI_API_KEY", ""),
+                        transport,
+                        embedding_models[name],
+                    )
                 )
-            )
-        elif name == "lmstudio":
-            base_url = env.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
-            providers.append(
-                LMStudioProvider(models[name], base_url, transport, embedding_models[name])
-            )
-        else:
-            raise ValueError(f"unknown provider {name!r} in router.yaml")
+            elif name == "lmstudio":
+                base_url = env.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+                providers.append(
+                    LMStudioProvider(models[name], base_url, transport, embedding_models[name])
+                )
+            else:
+                raise ValueError(f"unknown provider {name!r} in router.yaml")
+        return providers
+
+    complex_names = (config.get("tiers") or {}).get("complex") or []
+    complex_providers = build(complex_names) if tiers_enabled(config) else []
     logging_config = config.get("logging") or {}
     log = WideEventLog(
         logging_config.get("path", DEFAULT_LOG_PATH),
         log_full_content=bool(logging_config.get("log_full_content", False)),
     )
     return Router(
-        providers, log, daily_limits={**DEFAULT_DAILY_LIMITS, **(config.get("daily_limits") or {})}
+        build(priority),
+        log,
+        daily_limits={**DEFAULT_DAILY_LIMITS, **(config.get("daily_limits") or {})},
+        complex_providers=complex_providers,
     )

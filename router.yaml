@@ -20,6 +20,15 @@ embedding_models:
 daily_limits:
   gemini: 2000
 
+# Complexity tiers (off by default: every call follows `providers`). When enabled, a query whose
+# retrieved context is complex (more than one lei, any jurisprudência, a REVOKES or LOW-confidence
+# edge, or over `max_context_tokens`) tries the `complex` list first; if that list is exhausted
+# the call downgrades to `providers` and the wide event records `downgraded_from: complex`.
+tiers:
+  enabled: false
+  complex: [gemini, groq]
+  max_context_tokens: 6000
+
 # LLM enricher (ADR-0007): input-token ceiling per call. The farthest ancestors are trimmed first;
 # a dispositivo that does not fit even without ancestors is skipped.
 enrichment:

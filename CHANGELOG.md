@@ -14,6 +14,12 @@ heading when `development` is released to `master`.
   `ANCHORS`. `legal-radar ingest-jurisprudencia <assunto>` now requires the assunto, limited to the
   catalogue; `ingest_jurisprudencia` takes the source instead of reading module constants. The
   anchor assunto behaves as before.
+- Optional complexity tiers (#47), off by default: `legal_radar.complexity.classify` is a pure
+  rule over the retrieved context (more than one lei, any jurisprudência, a REVOKES or LOW-confidence
+  edge, or more than `tiers.max_context_tokens`). With `tiers.enabled: true` in `router.yaml`, a
+  complex answer tries the `tiers.complex` providers first; an exhausted list downgrades the call
+  to `providers` and the wide event records `complexity` and `downgraded_from`. `Hop` now carries
+  the edge's `confidence`.
 - Static report and GitHub Pages publish (#46): `legal-radar report` (`make report`) writes
   `report/index.html` from the latest runs in `eval-runs/`: ingestion statistics (target-resolved,
   valid-evidence and drop rates, out-of-vocabulary terms), evaluation metrics per system, example

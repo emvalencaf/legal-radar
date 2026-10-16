@@ -12,6 +12,7 @@ import jsonschema
 from langgraph.graph import END, START, StateGraph
 
 from legal_radar.assunto import Resolution
+from legal_radar.complexity import DEFAULT_MAX_CONTEXT_TOKENS, classify
 from legal_radar.domain import Context, Hop, Jurisprudencia
 from legal_radar.lexml import FEDERAL_LEI
 from legal_radar.llm import CompletionParams, content_hash
@@ -160,7 +161,11 @@ def anchor_ids_of(resolution: Resolution, urns: list[str]) -> list[str]:
 
 
 def answer_from(
-    query: str, texts: dict[str, str], provider: Provider, lock: PromptLock
+    query: str,
+    texts: dict[str, str],
+    provider: Provider,
+    lock: PromptLock,
+    complexity: str | None = None,
 ) -> tuple[str | None, list[str]]:
     """The cited answer to `query` from the sources `texts` (id -> text) alone, with the ids it
     cites; `(None, [])` when there are none. Shared by the graph pipeline and the RAG baselines."""
@@ -169,6 +174,7 @@ def answer_from(
     schema = answer_schema(lock, list(texts))
     params = CompletionParams(
         pipeline_step="answer",
+        complexity=complexity,
         response_schema=schema,
         prompt_snapshot=content_hash({"prompt": lock.prompt_hash(ANSWER_PROMPT), "schema": schema}),
     )
@@ -176,7 +182,13 @@ def answer_from(
     return parse_answer(provider.complete(prompt, params).text, schema)
 
 
-def build_graph(resolve, reader: GraphReader, provider: Provider, lock: PromptLock):
+def build_graph(
+    resolve,
+    reader: GraphReader,
+    provider: Provider,
+    lock: PromptLock,
+    max_context_tokens: int = DEFAULT_MAX_CONTEXT_TOKENS,
+):
     """Compile the pipeline; `resolve(query) -> Resolution | None` is the assunto resolver."""
 
     def resolve_assunto(state: State) -> State:
@@ -187,7 +199,11 @@ def build_graph(resolve, reader: GraphReader, provider: Provider, lock: PromptLo
         return {"context": reader.traverse(leis)}
 
     def generate(state: State) -> State:
-        answer, cited = answer_from(state["query"], source_texts(state["context"]), provider, lock)
+        context = state["context"]
+        complexity = classify(context, max_context_tokens)
+        answer, cited = answer_from(
+            state["query"], source_texts(context), provider, lock, complexity
+        )
         return {"answer": answer, "cited": cited}
 
     graph = StateGraph(State)
@@ -207,9 +223,11 @@ def ask(
     reader: GraphReader,
     provider: Provider,
     lock: PromptLock | None = None,
+    max_context_tokens: int = DEFAULT_MAX_CONTEXT_TOKENS,
 ) -> CitedAnswer:
     """Answers `query` from the knowledge graph, citing the dispositivos and jurisprudência used."""
-    state = build_graph(resolve, reader, provider, lock or default_lock()).invoke({"query": query})
+    graph = build_graph(resolve, reader, provider, lock or default_lock(), max_context_tokens)
+    state = graph.invoke({"query": query})
     resolution = state["resolution"]
     if resolution is None:
         return CitedAnswer(query, None, None, [])

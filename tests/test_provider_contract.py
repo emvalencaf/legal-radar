@@ -149,7 +149,7 @@ def test_router_yaml_in_repo_sets_priority_and_models():
         ("gemini", "gemini-3.1-flash-lite"),
         ("groq", "openai/gpt-oss-20b"),
     ]
-    assert router.daily_limits == {"gemini": 500}
+    assert router.daily_limits == {"gemini": 2000}
 
 
 EMBEDDING_ADAPTERS = {

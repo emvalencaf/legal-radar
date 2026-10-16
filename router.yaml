@@ -18,7 +18,7 @@ embedding_models:
 
 # Daily request caps counted from the wide-event log. LM Studio has no quota.
 daily_limits:
-  gemini: 500
+  gemini: 2000
 
 # LLM enricher (ADR-0007): input-token ceiling per call. The farthest ancestors are trimmed first;
 # a dispositivo that does not fit even without ancestors is skipped.

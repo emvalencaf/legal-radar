@@ -11,8 +11,10 @@ from pathlib import Path
 
 from legal_radar.answer import CitedAnswer
 from legal_radar.answer_evaluation import (
+    Checkpoint,
     Outcome,
     Question,
+    System,
     UsageMeter,
     abstention,
     citation_correctness,
@@ -20,6 +22,7 @@ from legal_radar.answer_evaluation import (
     graph_path,
     outcome_of,
 )
+from legal_radar.llm import content_hash
 
 RUNS_DIR = Path(__file__).resolve().parents[2] / "eval-runs"
 CITATIONS, PATH, CONTRADICTIONS = "citation_check", "path", "contradiction_check"
@@ -45,9 +48,13 @@ class Report:
     cost_usd: float
     prompt_snapshot: str | None = None
     grounding: dict = field(default_factory=dict)
+    system: str = "graph"  # what answered: the graph, or a RAG baseline (`rag-naive`, ...)
+    k: int | None = None  # the baseline's top-k; None for the graph
+    by_nivel: dict[str, dict[str, float | None]] = field(default_factory=dict)  # nivel -> scores
 
     def render(self) -> str:
-        lines = [f"experiment {self.experiment}: {len(self.questions)} questions"]
+        label = System(self.system, self.k).label
+        lines = [f"experiment {self.experiment} [{label}]: {len(self.questions)} questions"]
         for name, value in {**self.scores, **self.grounding}.items():
             shown = f"{value:.3f}" if isinstance(value, float) else value
             lines.append(f"  {name}: {'n/a' if value is None else shown}")
@@ -173,7 +180,7 @@ def ragas_faithfulness(rows: list[dict], llm) -> list[float]:
     return [score for score in scores if score == score]  # RAGAS reports a failed judge as nan
 
 
-def aggregate(runs) -> dict[str, float | None]:
+def aggregate(runs, graph_paths: bool = True) -> dict[str, float | None]:
     """Mean per metric over the questions it applies to: the evaluator's score (F1 for the set
     metrics), its precision and recall, and the fabricated citations per question."""
     values: dict[str, list[float]] = {}
@@ -190,7 +197,36 @@ def aggregate(runs) -> dict[str, float | None]:
     scores: dict[str, float | None] = {k: sum(v) / len(v) for k, v in values.items()}
     scores.setdefault("contradiction_surfaced", None)  # no question labeled a contradiction
     scores.setdefault("abstention", None)  # no question the graph cannot answer
+    if not graph_paths:
+        scores["graph_path"] = None  # not applicable: there is no graph to walk
     return scores
+
+
+CHECKPOINT_DIR = RUNS_DIR / "checkpoints"
+
+
+def checkpoint_for(
+    system: System, questions: list[Question], prompt_snapshot: str | None
+) -> Checkpoint:
+    """The checkpoint of the run of `system` over `questions`: one file per system, valid only
+    while the questions and the pinned prompts are the same."""
+    fingerprint = content_hash(
+        {"prompts": prompt_snapshot, "questions": [(q.id, q.query) for q in questions]}
+    )
+    return Checkpoint(CHECKPOINT_DIR / f"{system.slug}.json", fingerprint)
+
+
+BASE_NIVEL = "base"  # the questions that carry no `nivel`
+
+
+def aggregate_by_nivel(
+    runs, nivel_of: dict[str, str | None], graph_paths: bool = True
+) -> dict[str, dict]:
+    """`aggregate` over the questions of each `nivel` (`nivel_of` maps a question id to it)."""
+    groups: dict[str, list] = {}
+    for run in runs:
+        groups.setdefault(nivel_of.get(run.input) or BASE_NIVEL, []).append(run)
+    return {nivel: aggregate(group, graph_paths) for nivel, group in sorted(groups.items())}
 
 
 def run_evaluation(
@@ -204,18 +240,33 @@ def run_evaluation(
     grounding_llm=None,
     prompt_snapshot: str | None = None,
     experiment: str | None = None,
+    system: System | None = None,
+    checkpoint: Checkpoint | None = None,
 ) -> Report:
-    """Answers every question through `ask` (whose model calls go through `meter`) and scores it."""
+    """Answers every question through `ask` (whose model calls go through `meter`) and scores it.
+    A `checkpoint` keeps each answer as it arrives, so a run that dies resumes without asking
+    again (the caller discards it once the report is written). A system with no graph (a RAG
+    baseline) leaves `graph_path` unscored: n/a."""
     from assayer.runner.pipeline import EvaluationPipeline
     from assayer.runner.pricing import PricingConfig
 
     price = pricing or Pricing()
+    system = system or System()
 
     by_id = {q.id: q for q in questions}
 
     def target(question_id: str) -> Outcome:
+        if (
+            checkpoint and question_id in checkpoint.done
+        ):  # answered before a crash: not asked again
+            answer, usage = checkpoint.done[question_id]
+            meter.total_input += usage[0]
+            meter.total_output += usage[1]
+            return outcome_of(answer, usage)
         meter.reset()
         answer = ask(by_id[question_id].query)
+        if checkpoint:
+            checkpoint.save(question_id, answer, meter.usage)
         return outcome_of(answer, meter.usage)
 
     dataset = [
@@ -223,7 +274,7 @@ def run_evaluation(
             "input": q.id,
             "expected_output": {
                 CITATIONS: {"expected": list(q.citations), "also_ok": list(q.also_ok)},
-                PATH: list(q.nodes),
+                **({PATH: list(q.nodes)} if system.has_graph else {}),
                 CONTRADICTIONS: [list(pair) for pair in q.contradictions],
                 ABSTENTION: q.abstain,
                 MENTIONS: [],
@@ -238,7 +289,7 @@ def run_evaluation(
         dataset=dataset,
         field_evaluators={
             CITATIONS: ["citation_correctness"],
-            PATH: ["graph_path"],
+            **({PATH: ["graph_path"]} if system.has_graph else {}),
             CONTRADICTIONS: ["contradiction_surfaced"],
             ABSTENTION: ["abstention"],
             MENTIONS: ["grounded_mentions"],
@@ -264,12 +315,14 @@ def run_evaluation(
         faithfulness = ragas_faithfulness(rows, grounding_llm)
         grounding["faithfulness"] = sum(faithfulness) / len(faithfulness) if faithfulness else None
         grounding["faithfulness_scored"] = f"{len(faithfulness)}/{len(rows)}"
+    nivel_of = {q.id: q.nivel for q in questions}
     return Report(
         name,
-        aggregate(result.runs),
+        aggregate(result.runs, system.has_graph),
         [
             {
                 "id": run.input,
+                "nivel": nivel_of.get(run.input),
                 "answer": run.output["answer"],
                 "citations": run.output["citations"],
                 "scores": {
@@ -287,6 +340,9 @@ def run_evaluation(
         (meter.total_input * price.input + meter.total_output * price.output) / 1e6,
         prompt_snapshot,
         grounding,
+        system.name,
+        system.k,
+        aggregate_by_nivel(result.runs, nivel_of, system.has_graph),
     )
 
 

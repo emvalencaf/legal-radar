@@ -211,3 +211,12 @@ def test_the_cli_loads_env_without_overriding_the_environment(tmp_path, monkeypa
         "from-env",
         "x y",
     )
+
+
+def test_corpus_lists_every_node_with_its_parent(graph):
+    dispositivos, jurisprudencias = graph.corpus()
+
+    by_id = {d.id: d for d in dispositivos}
+    assert len(dispositivos) == 6 and by_id[ART_51].parent_id is None
+    assert by_id[ART_50_1].parent_id == ART_50 and not by_id[ART_50].revoked
+    assert [j.id for j in jurisprudencias] == sorted([TEMA, OTHER])

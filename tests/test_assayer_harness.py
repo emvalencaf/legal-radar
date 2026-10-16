@@ -4,7 +4,7 @@ import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.answer import Citation, CitedAnswer
-from legal_radar.answer_evaluation import Question, UsageMeter
+from legal_radar.answer_evaluation import Question, System, UsageMeter
 from legal_radar.domain import Hop
 from legal_radar.llm import Completion
 
@@ -138,3 +138,115 @@ def test_an_answer_naming_an_article_outside_its_sources_scores_zero_on_grounded
 
     assert [q["scores"]["grounded_mentions"] for q in report.questions] == [1.0, 0.0]
     assert report.scores["grounded_mentions"] == 0.5
+
+
+def test_a_baseline_without_graph_paths_reports_n_a_and_scores_per_nivel():
+    meter = UsageMeter(FakeProvider())
+
+    def ask(query: str) -> CitedAnswer:
+        cited = [Citation(A, "Dispositivo", [], "t")] if query == "right" else []
+        return CitedAnswer(query, "rag-naive", "ok", cited, [A])
+
+    questions = [
+        Question("one", "right", (A,), (A,), nivel="facil"),
+        Question("two", "wrong", (A,), (A,), nivel="medio"),
+        Question("three", "right", (A,), (A,)),
+    ]
+    report = run_evaluation(
+        questions,
+        ask,
+        meter,
+        lambda answer: False,
+        experiment="t",
+        system=System("rag-naive", 5),
+    )
+
+    assert report.scores["graph_path"] is None and "graph_path" not in report.questions[0]["scores"]
+    assert (report.system, report.k) == ("rag-naive", 5)
+    assert {n: s["citation_correctness"] for n, s in report.by_nivel.items()} == {
+        "base": 1.0,
+        "facil": 1.0,
+        "medio": 0.0,
+    }
+    assert [q["nivel"] for q in report.questions] == ["facil", "medio", None]
+    assert "rag-naive@5" in report.render()
+
+
+def _resumable(tmp_path, fingerprint="f1"):
+    from legal_radar.answer_evaluation import Checkpoint
+
+    return Checkpoint(tmp_path / "ck.json", fingerprint)
+
+
+QUESTIONS = [Question("one", "q1", (A,), (A,)), Question("two", "q2", (A,), (A,))]
+
+
+def test_a_run_that_dies_resumes_without_asking_the_answered_questions_again(tmp_path):
+    meter = UsageMeter(FakeProvider())
+    asked = []
+
+    def ask(query: str) -> CitedAnswer:
+        asked.append(query)
+        meter.complete(query)
+        if query == "q2" and asked.count("q2") == 1:
+            raise RuntimeError("network down")
+        return CitedAnswer(
+            query, "x", "ok", [Citation(A, "Dispositivo", [Hop("PARTS", "l", A)], "t")], [A]
+        )
+
+    with pytest.raises(RuntimeError, match="network down"):
+        run_evaluation(QUESTIONS, ask, meter, lambda a: False, checkpoint=_resumable(tmp_path))
+
+    report = run_evaluation(
+        QUESTIONS, ask, UsageMeter(FakeProvider()), lambda a: False, checkpoint=_resumable(tmp_path)
+    )
+
+    assert asked == ["q1", "q2", "q2"]  # q1 was not asked on the second run
+    assert report.scores["citation_correctness"] == 1.0
+    assert report.scores["graph_path"] is not None  # the cached answer kept its path
+    assert report.input_tokens > 0  # the answered question's tokens still count
+
+
+def test_a_checkpoint_of_other_questions_or_prompts_is_discarded(tmp_path):
+    first = _resumable(tmp_path)
+    first.save("one", CitedAnswer("q1", "x", "stale", [], []), (1, 1))
+
+    assert _resumable(tmp_path).done.keys() == {"one"}
+    assert _resumable(tmp_path, "f2").done == {}  # another fingerprint starts over
+    assert _resumable(tmp_path, "f2").path.read_text().count("\n") == 1  # only the header is left
+
+
+def test_a_checkpoint_line_cut_short_by_a_crash_is_ignored(tmp_path):
+    first = _resumable(tmp_path)
+    first.save("one", CitedAnswer("q1", "x", "ok", [], []), (1, 1))
+    with first.path.open("a") as file:
+        file.write('{"id": "two", "ans')
+
+    assert _resumable(tmp_path).done.keys() == {"one"}
+
+
+def test_checkpoint_for_resumes_the_same_run_and_drops_it_when_questions_or_prompts_change(
+    tmp_path, monkeypatch
+):
+    from legal_radar import assayer_harness
+
+    monkeypatch.setattr(assayer_harness, "CHECKPOINT_DIR", tmp_path)
+    questions = [Question("one", "q1", (A,), (A,))]
+    answer = CitedAnswer("q1", "x", "ok", [], [])
+
+    assayer_harness.checkpoint_for(System("rag-naive", 5), questions, "p1").save(
+        "one", answer, (1, 1)
+    )
+
+    assert assayer_harness.checkpoint_for(System("rag-naive", 5), questions, "p1").done.keys() == {
+        "one"
+    }
+    assert (
+        assayer_harness.checkpoint_for(System("rag-naive", 15), questions, "p1").done == {}
+    )  # own file
+    changed = [Question("one", "other wording", (A,), (A,))]
+    assert assayer_harness.checkpoint_for(System("rag-naive", 5), changed, "p1").done == {}
+    assayer_harness.checkpoint_for(System("rag-naive", 5), questions, "p1").save(
+        "one", answer, (1, 1)
+    )
+    assert assayer_harness.checkpoint_for(System("rag-naive", 5), questions, "p2").done == {}

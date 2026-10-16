@@ -6,12 +6,13 @@ grounding metrics from RAGAS, under the `assayer` harness."""
 
 import json
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import yaml
 
 from legal_radar.answer import Citation, CitedAnswer
+from legal_radar.domain import Hop
 from legal_radar.llm import Completion, CompletionParams, Embedding
 from legal_radar.ports import Provider
 
@@ -30,6 +31,30 @@ class Question:
     contradictions: tuple[tuple[str, str], ...] = ()  # cited sources that disagree: flag it
     abstain: bool = False  # the graph cannot answer it: a good answer says so, citing nothing
     also_ok: tuple[str, ...] = ()  # sources a good answer may cite too: not required, not an error
+    nivel: str | None = None  # facil | medio | dificil | armadilha; None for the base questions
+
+
+@dataclass(frozen=True)
+class System:
+    """What answers the questions: the graph, or a RAG baseline (`rag-naive`, ...) at a top-k."""
+
+    name: str = "graph"
+    k: int | None = None  # the baseline's top-k; None for the graph
+
+    @property
+    def has_graph(self) -> bool:
+        """Whether a graph path can be scored: a baseline walks no graph."""
+        return self.name == "graph"
+
+    @property
+    def slug(self) -> str:
+        """For file and experiment names: `rag-naive-k5`."""
+        return self.name if self.k is None else f"{self.name}-k{self.k}"
+
+    @property
+    def label(self) -> str:
+        """For reports: `rag-naive@5`."""
+        return self.name if self.k is None else f"{self.name}@{self.k}"
 
 
 @dataclass(frozen=True)
@@ -59,6 +84,7 @@ def load_questions(path: Path) -> list[Question]:
             tuple((a, b) for a, b in q.get("contradictions", [])),
             bool(q.get("abstain", False)),
             tuple(q.get("also_ok", ())),
+            q.get("nivel"),
         )
         for q in raw["questions"]
     ]
@@ -173,6 +199,58 @@ def abstention(
     if not expected:
         return None
     return 1.0 if not answer.strip() or states_insufficient(answer) else 0.0
+
+
+def answer_to_json(answer: CitedAnswer) -> dict:
+    return asdict(answer)
+
+
+def answer_from_json(raw: dict) -> CitedAnswer:
+    """The inverse of `answer_to_json`."""
+    citations = [
+        Citation(c["id"], c["kind"], [Hop(**h) for h in c["path"]], c["text"])
+        for c in raw["citations"]
+    ]
+    return CitedAnswer(
+        raw["query"],
+        raw["assunto"],
+        raw["answer"],
+        citations,
+        raw["retrieved"],
+        raw["unsupported"],
+    )
+
+
+class Checkpoint:
+    """The answers of a run in progress, one JSON line each after a header holding the run's
+    `fingerprint`. A run that dies resumes from them; a file whose fingerprint differs (other
+    prompts, questions or system) is discarded, so a stale answer is never replayed."""
+
+    def __init__(self, path: Path, fingerprint: str):
+        self.path, self.fingerprint = path, fingerprint
+        self.done: dict[str, tuple[CitedAnswer, tuple[int, int]]] = {}
+        lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+        if lines and json.loads(lines[0]).get("fingerprint") == fingerprint:
+            for line in lines[1:]:
+                try:
+                    entry = json.loads(line)
+                except ValueError:  # a line cut short by the crash
+                    break
+                self.done[entry["id"]] = (
+                    answer_from_json(entry["answer"]),
+                    tuple(entry["usage"]),
+                )
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({"fingerprint": fingerprint}) + "\n", encoding="utf-8")
+
+    def save(self, question_id: str, answer: CitedAnswer, usage: tuple[int, int]) -> None:
+        entry = {"id": question_id, "answer": answer_to_json(answer), "usage": list(usage)}
+        with self.path.open("a", encoding="utf-8") as file:
+            file.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    def discard(self) -> None:
+        self.path.unlink(missing_ok=True)
 
 
 class Outcome(dict):

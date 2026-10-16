@@ -9,6 +9,20 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Pure-RAG baselines (#79): `legal_radar.rag` embeds every live dispositivo and decision of the
+  graph (revoked, empty and structural ones and the amendment marks left out) and keeps the vectors
+  in SQLite per chunking: `naive` (the dispositivo's text) and `contextual` (after its ancestors').
+  It answers with the same `cited-answer` prompt over the top-k by cosine. Building an index waits
+  out a throttled provider and resumes from the batches already saved.
+- `legal-radar eval --baseline rag-naive|rag-contextual --k 5 15` scores a baseline with the same
+  harness (`graph_path` is n/a), `index-rag` builds an index ahead and `compare-evals` tables the
+  graph and the baselines per metric and per `nivel`. `GraphReader.corpus()` reads the whole graph.
+- Reports carry `system`, `k` and per-`nivel` scores, and `Question` reads `nivel` (the questions
+  without one are grouped as `base`). `compare-evals` splits every metric by `nivel` and shows the
+  mean input tokens per question, overall and per `nivel`.
+- An interrupted `eval` resumes by default from the answers saved in `eval-runs/checkpoints/`,
+  valid while the questions and pinned prompts are the same; `--fresh` discards them.
+
 - Answer guards and evaluation (#44): `unsupported_mentions` flags the articles an answer names that
   were not retrieved, scored as `grounded_mentions`; a query with no letter resolves to no assunto;
   court texts are read unwrapped and in the case the rules expect; the context shown to the model
@@ -64,6 +78,10 @@ heading when `development` is released to `master`.
 
 ### Changed
 
+- The cited-answer generation is shared (`answer_from`, `render_sources`, `strip_amendments`,
+  `jurisprudencia_text` in `legal_radar.answer`) so the graph and the baselines answer alike.
+- `router.yaml`: the local daily cap for Gemini goes from 500 to 2000 requests; embedding a
+  whole-corpus index needs hundreds of calls a day, and the Google quota is the real limit.
 - Vocabulary `desconsideracao_personalidade`: `personalidade_juridica` merged into `pessoa_juridica`
   (39 concepts) and every `instructions` rewritten with when to use it, when not to and invented
   example wordings, citing no dispositivo so the evaluation slice does not leak into the prompt.

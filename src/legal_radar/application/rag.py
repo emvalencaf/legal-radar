@@ -15,15 +15,15 @@ from legal_radar.application.answer import (
     Citation,
     CitedAnswer,
     answer_from,
-    jurisprudencia_text,
+    case_law_text,
     strip_amendments,
     unsupported_mentions,
 )
-from legal_radar.application.assunto import cosine
 from legal_radar.application.enricher import STRUCTURAL_KINDS, ancestors_of
 from legal_radar.application.ports import Provider, VectorStore
+from legal_radar.application.subject import cosine
 from legal_radar.domain.llm import AllProvidersFailedError, CompletionParams
-from legal_radar.domain.model import Dispositivo, Jurisprudencia, StoredVector
+from legal_radar.domain.model import CaseLaw, Provision, StoredVector
 from legal_radar.domain.prompts import PromptLock
 from legal_radar.settings import Settings
 
@@ -49,20 +49,20 @@ class Chunk:
     text: str  # what is embedded and what the model is shown
 
 
-def _live(d: Dispositivo) -> str:
+def _live(d: Provision) -> str:
     """The cleaned text of `d`, or "" when it is revoked, structural or says nothing."""
     return "" if d.revoked or d.kind in STRUCTURAL_KINDS else strip_amendments(d.text)
 
 
 def build_chunks(
-    dispositivos: list[Dispositivo], jurisprudencias: list[Jurisprudencia], contextual: bool
+    provisions: list[Provision], case_law: list[CaseLaw], contextual: bool
 ) -> list[Chunk]:
     """One chunk per live dispositivo and per decision, sorted by id. Revoked, empty and
     structural dispositivos (and a text that is only an amendment mark) are left out. A
     contextual chunk is the dispositivo's text after its live ancestors', farthest first."""
-    by_id = {d.id: d for d in dispositivos}
+    by_id = {d.id: d for d in provisions}
     chunks = []
-    for d in dispositivos:
+    for d in provisions:
         text = _live(d)
         if not text:
             continue
@@ -70,7 +70,7 @@ def build_chunks(
             parents = (_live(a) for a in ancestors_of(d, by_id))
             text = "\n".join([*(p for p in parents if p), text])
         chunks.append(Chunk(d.id, "Dispositivo", text))
-    chunks += [Chunk(j.id, "Jurisprudencia", jurisprudencia_text(j)) for j in jurisprudencias]
+    chunks += [Chunk(j.id, "Jurisprudencia", case_law_text(j)) for j in case_law]
     return sorted(chunks, key=lambda c: c.id)
 
 

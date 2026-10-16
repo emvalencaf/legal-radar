@@ -32,7 +32,7 @@ def connect_store(settings: Settings) -> Neo4jGraphStore:
     return Neo4jGraphStore.connect(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password)
 
 
-def enrich_config(settings: Settings, assunto: str, prompt: str = ENRICHMENT_PROMPT):
+def enrich_config(settings: Settings, subject: str, prompt: str = ENRICHMENT_PROMPT):
     """The LLM phase of `ingest --enrich` and `ingest-jurisprudencia --enrich`, with the pinned
     `prompt` the phase needs; a missing vocabulary or provider is an error."""
     from legal_radar.adapters.prompt_lock import default_lock
@@ -52,7 +52,7 @@ def enrich_config(settings: Settings, assunto: str, prompt: str = ENRICHMENT_PRO
     lock = default_lock()
     try:
         lock.prompt_hash(prompt)
-        vocabulary = load_registered(assunto)
+        vocabulary = load_registered(subject)
         config = load_config("router.yaml")
         missing = providers_without_credentials(config)
         priority = config.get("providers") or DEFAULT_PRIORITY
@@ -81,8 +81,8 @@ def rag_index(settings: Settings, chunking: str, reader, provider):
     from legal_radar.adapters.sqlite_vectors import SqliteVectorStore
     from legal_radar.application.rag import build_chunks, build_index, index_path
 
-    dispositivos, jurisprudencias = reader.corpus()
-    chunks = build_chunks(dispositivos, jurisprudencias, contextual=chunking == "contextual")
+    provisions, case_law = reader.corpus()
+    chunks = build_chunks(provisions, case_law, contextual=chunking == "contextual")
     store = SqliteVectorStore(index_path(chunking, settings.index_dir))
     try:
         return build_index(chunks, provider, store)

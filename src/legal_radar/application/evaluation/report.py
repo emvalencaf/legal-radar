@@ -17,7 +17,7 @@ from legal_radar.application.evaluation.enrichment_gold import (
     indirect_metrics,
     read_run,
 )
-from legal_radar.domain.model import Dispositivo
+from legal_radar.domain.model import Provision
 from legal_radar.domain.prompts import PromptLock
 
 EXAMPLES = 3
@@ -104,10 +104,10 @@ def latest_enrichment_run(directory: Path) -> Path | None:
 def load_enrichment_run(path: Path) -> tuple[dict, list[Outcome]]:
     """The header and the outcomes of an enrichment run file, rebuilt from what it recorded."""
     lines = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
-    dispositivos = {}
+    provisions = {}
     for line in lines[1:]:
         i = line["input"]
-        dispositivos[i["id"]] = Dispositivo(
+        provisions[i["id"]] = Provision(
             i["id"],
             i["lei_id"],
             i["path"],
@@ -115,7 +115,7 @@ def load_enrichment_run(path: Path) -> tuple[dict, list[Outcome]]:
             kind=i["kind"],
             revocations=tuple(i.get("revocations", ())),
         )
-    return read_run(path, dispositivos)
+    return read_run(path, provisions)
 
 
 def _rate(value: float | None) -> str:

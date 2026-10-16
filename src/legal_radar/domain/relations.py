@@ -12,10 +12,10 @@ from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 
 from legal_radar.domain.model import (
+    CaseLaw,
     Confidence,
-    Dispositivo,
-    Jurisprudencia,
     Origin,
+    Provision,
     Relation,
     RelationType,
 )
@@ -61,7 +61,7 @@ _PAR = r"(?:§\s*(?P<par>\d+)\s*[º°]?|(?P<unico>[Pp]arágrafo único))"
 _INC = rf"incisos?\s+(?P<i1>{_ROMAN})(?:\s+(?:a|ao)\s+(?P<i2>{_ROMAN}))?"
 _NAMES = "|".join(re.escape(n) for n in sorted(_NAME_URN, key=len, reverse=True))
 
-_ARTIGO = re.compile(
+_ARTICLE = re.compile(
     rf"(?:\b[Aa]rts?\.|\b[Aa]rtigos?)\s*(?P<n>{_NUM})[º°]?(?:\s*-\s*(?P<sfx>[A-Z])\b)?"
     rf"(?:\s+(?:a|ao)\s+(?P<n2>{_NUM})[º°]?)?"
 )
@@ -75,8 +75,8 @@ _LAW = re.compile(
     r"|(?P<other>Código(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú]\w*)+)))"
 )
 _UNKNOWN_LAW = re.compile(r"\s*,?\s*d[oa]s?\s+[A-ZÀ-Ú]")
-_THIS_ARTIGO = re.compile(rf"(?:{_INC}\s*(?:d[oa]\s+)?)?(?:{_PAR}\s*)?(?:deste|neste)\s+artigo\b")
-_PREVIOUS_ARTIGO = re.compile(r"\b[Aa]rt(?:\.|igo)\s+anterior\b")
+_THIS_ARTICLE = re.compile(rf"(?:{_INC}\s*(?:d[oa]\s+)?)?(?:{_PAR}\s*)?(?:deste|neste)\s+artigo\b")
+_PREVIOUS_ARTICLE = re.compile(r"\b[Aa]rt(?:\.|igo)\s+anterior\b")
 _ACT_MENTION = re.compile(_ACT)
 _REVOKED = re.compile(rf"\((?i:Revogad[oa]s?\s+(?:pel[ao]s?\s+)?){_ACT}[^)]*\)")
 _AMENDMENT = re.compile(
@@ -86,7 +86,7 @@ _CITATION_MARK = re.compile(
     rf"(?:\b[Aa]rts?\.|\b[Aa]rtigos?)\s*\d|§\s*\d|\b{_INC}|\b[Pp]arágrafo único\b"
 )
 _ART_DOT = re.compile(r"\b([Aa]rts?)\s+\.")  # `ART .` once the wraps are joined
-_OWN_ARTIGO = re.compile(r"^art\d+[A-Z]?$")
+_OWN_ARTICLE = re.compile(r"^art\d+[A-Z]?$")
 _MAX_EXPANSION = 50
 _PRE_WINDOW = 60  # how far back a locator before `art.` is looked for
 _SNIPPET = 80
@@ -110,7 +110,7 @@ class Extraction:
 
 
 def extract_relations(
-    d: Dispositivo,
+    d: Provision,
     resolver: UrnResolver | None = None,
     ingested: Mapping[str, Collection[str]] | None = None,
 ) -> Extraction:
@@ -122,9 +122,9 @@ def extract_relations(
     scan = _Scan(d, resolver, ingested)
     for pattern in (
         _revocations,
-        _artigo_citations,
-        _this_artigo,
-        _previous_artigo,
+        _article_citations,
+        _this_article,
+        _previous_article,
         _act_mentions,
         _leftover_marks,
     ):
@@ -133,7 +133,7 @@ def extract_relations(
 
 
 def extract_decision_relations(
-    j: Jurisprudencia,
+    j: CaseLaw,
     resolver: UrnResolver | None = None,
     ingested: Mapping[str, Collection[str]] | None = None,
 ) -> Extraction:
@@ -143,10 +143,10 @@ def extract_decision_relations(
     `deste artigo` / `artigo anterior` mean nothing. Same confidence rules as `extract_relations`.
     """
     # court texts arrive wrapped mid-citation (`ART\n.\n50`): read each part on one line
-    parts = (_unwrap(t) for t in (j.ementa, j.tese) if t and t.strip())
+    parts = (_unwrap(t) for t in (j.headnote, j.thesis) if t and t.strip())
     text = "\n\n".join(parts)
-    scan = _Scan(Dispositivo(j.id, "", "", text), resolver, ingested, leading=True)
-    for pattern in (_artigo_citations, _act_mentions, _leftover_marks):
+    scan = _Scan(Provision(j.id, "", "", text), resolver, ingested, leading=True)
+    for pattern in (_article_citations, _act_mentions, _leftover_marks):
         pattern(scan)
     return scan.result()
 
@@ -175,7 +175,7 @@ def _unwrap(text: str) -> str:
 class _Scan:
     """The state one pass over a dispositivo shares between the pattern functions."""
 
-    d: Dispositivo
+    d: Provision
     resolver: UrnResolver | None
     ingested: Mapping[str, Collection[str]] | None
     leading: bool = False  # read a locator before the artigo (`§ 1º do art. 50`): decisions only
@@ -186,7 +186,7 @@ class _Scan:
     def __post_init__(self) -> None:
         self.text = self.d.text
         self.masked = _AMENDMENT.sub(lambda m: " " * len(m[0]), self.text)  # same offsets as text
-        self.own = next((s for s in self.d.path.split("_") if _OWN_ARTIGO.match(s)), None)
+        self.own = next((s for s in self.d.path.split("_") if _OWN_ARTICLE.match(s)), None)
 
     def edge(
         self,
@@ -207,7 +207,7 @@ class _Scan:
         self.edge(RelationType.REFERENCES, self.d.id, f"{urn}#{path}", evidence)
 
     def reference(self, target: str, evidence: str) -> None:
-        self.edge(RelationType.REFERENCES, self.d.id, f"{self.d.lei_id}#{target}", evidence)
+        self.edge(RelationType.REFERENCES, self.d.id, f"{self.d.statute_id}#{target}", evidence)
 
     def cover(self, start: int, end: int) -> None:
         self.covered.append((start, end))
@@ -242,9 +242,9 @@ def _revocations(s: _Scan) -> None:
             s.edge(RelationType.REVOKES, urn, s.d.id, m[0], label if urn is None else None)
 
 
-def _artigo_citations(s: _Scan) -> None:
+def _article_citations(s: _Scan) -> None:
     """`art. 5º, § 2º, incisos I a III, do Código Civil`, including artigo ranges."""
-    for m in _ARTIGO.finditer(s.masked):
+    for m in _ARTICLE.finditer(s.masked):
         loc = _LOCATOR.match(s.masked, m.end())
         end = loc.end() if loc else m.end()
         start = m.start()
@@ -259,7 +259,7 @@ def _artigo_citations(s: _Scan) -> None:
         if law is None and _UNKNOWN_LAW.match(s.masked, end):
             s.flag(start)  # a law the table does not know: not the same lei, not guessable
             continue
-        home = s.d.lei_id or None  # a decision has none
+        home = s.d.statute_id or None  # a decision has none
         urn, label = (home, "lei não informada") if law is None else _law(law, home, s.resolver)
         paths = _paths(m, loc)
         if paths is None:
@@ -278,9 +278,9 @@ def _artigo_citations(s: _Scan) -> None:
                 s.reference_in(urn, path, s.text[start:end])
 
 
-def _this_artigo(s: _Scan) -> None:
+def _this_article(s: _Scan) -> None:
     """`deste artigo`, optionally prefixed by `§ 2º` or `incisos I a III`."""
-    for m in _THIS_ARTIGO.finditer(s.masked):
+    for m in _THIS_ARTICLE.finditer(s.masked):
         s.cover(m.start(), m.end())
         paths = _expand(s.own, m) if s.own else None
         if paths is None:
@@ -290,9 +290,9 @@ def _this_artigo(s: _Scan) -> None:
             s.reference(path, m[0])
 
 
-def _previous_artigo(s: _Scan) -> None:
+def _previous_article(s: _Scan) -> None:
     """`o artigo anterior`: only for an artigo numbered above 1 and without a letter suffix."""
-    for m in _PREVIOUS_ARTIGO.finditer(s.masked):
+    for m in _PREVIOUS_ARTICLE.finditer(s.masked):
         s.cover(m.start(), m.end())
         previous = _previous(s.own)
         if previous is None:
@@ -307,7 +307,7 @@ def _act_mentions(s: _Scan) -> None:
         if s.is_covered(m.start()):
             continue
         urn, label = _act(m, s.resolver)
-        if urn != s.d.lei_id:
+        if urn != s.d.statute_id:
             s.edge(RelationType.REFERENCES, s.d.id, urn, m[0], label if urn is None else None)
 
 
@@ -321,8 +321,8 @@ def _leftover_marks(s: _Scan) -> None:
 def _exists(node_id: str | None, ingested: Mapping[str, Collection[str]] | None) -> bool:
     if ingested is None or node_id is None:
         return True
-    lei = node_id.split("#", 1)[0]
-    return lei in ingested and ("#" not in node_id or node_id in ingested[lei])
+    statute = node_id.split("#", 1)[0]
+    return statute in ingested and ("#" not in node_id or node_id in ingested[statute])
 
 
 def _act(m: re.Match[str], resolver: UrnResolver | None) -> tuple[str | None, str]:
@@ -332,10 +332,10 @@ def _act(m: re.Match[str], resolver: UrnResolver | None) -> tuple[str | None, st
 
 
 def _law(
-    m: re.Match[str], this_lei: str | None, resolver: UrnResolver | None
+    m: re.Match[str], this_statute: str | None, resolver: UrnResolver | None
 ) -> tuple[str | None, str]:
     if m["same"]:
-        return this_lei, m["same"]
+        return this_statute, m["same"]
     if m["name"]:
         return _NAME_URN[m["name"]], m["name"]
     if m["kind"]:
@@ -343,17 +343,17 @@ def _law(
     return None, m["other"]
 
 
-def _own_artigo(d: Dispositivo) -> str | None:
-    return next((s for s in d.path.split("_") if _OWN_ARTIGO.match(s)), None)
+def _own_article(d: Provision) -> str | None:
+    return next((s for s in d.path.split("_") if _OWN_ARTICLE.match(s)), None)
 
 
-def _previous(artigo: str | None) -> str | None:
-    if artigo and (m := re.fullmatch(r"art(\d+)", artigo)) and int(m[1]) > 1:
+def _previous(article: str | None) -> str | None:
+    if article and (m := re.fullmatch(r"art(\d+)", article)) and int(m[1]) > 1:
         return f"art{int(m[1]) - 1}"
     return None
 
 
-def _artigo_range(m: re.Match[str]) -> list[str] | None:
+def _article_range(m: re.Match[str]) -> list[str] | None:
     first = int(m["n"].replace(".", ""))
     if not m["n2"]:
         return [f"art{first}{m['sfx'] or ''}"]
@@ -364,19 +364,19 @@ def _artigo_range(m: re.Match[str]) -> list[str] | None:
 
 
 def _paths(m: re.Match[str], loc: re.Match[str] | None) -> list[str] | None:
-    artigos = _artigo_range(m)
-    if artigos is None:
+    articles = _article_range(m)
+    if articles is None:
         return None
-    expanded = [_expand(a, loc) for a in artigos]
+    expanded = [_expand(a, loc) for a in articles]
     return None if None in expanded else [p for paths in expanded for p in paths or []]
 
 
-def _expand(artigo: str, loc: re.Match[str] | None) -> list[str] | None:
+def _expand(article: str, loc: re.Match[str] | None) -> list[str] | None:
     """The paths a locator (`§ 2º`, `incisos I a III`) selects inside `artigo`, one per inciso.
 
     `None` when the inciso range is unreadable (reversed or too wide).
     """
-    base = artigo
+    base = article
     if loc and loc["par"]:
         base += f"_par{loc['par']}"
     elif loc and loc["unico"]:

@@ -24,7 +24,7 @@ from legal_radar.domain.model import CONCEPT_RELATIONS, RelationType
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"
-LEIS = (
+STATUTES = (
     ("l10406_excerpt.htm", "urn:lex:br:federal:lei:2002-01-10;10406"),
     ("l8078_excerpt.htm", "urn:lex:br:federal:lei:1990-09-11;8078"),
 )
@@ -57,12 +57,12 @@ def parse_edge(line: str, concepts: set[str]) -> dict | None:
 
 def main(args: argparse.Namespace) -> int:
     vocabulary = load_vocabulary(ROOT / "concepts" / "desconsideracao_personalidade.yml")
-    concepts = {c.id for c in vocabulary.conceitos}
-    labels = {c.id: f"   ({c.category}: {c.label})" for c in vocabulary.conceitos}
-    dispositivos = {
+    concepts = {c.id for c in vocabulary.concepts}
+    labels = {c.id: f"   ({c.category}: {c.label})" for c in vocabulary.concepts}
+    provisions = {
         d.id: d
-        for filename, lei_id in LEIS
-        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), lei_id)
+        for filename, statute_id in STATUTES
+        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), statute_id)
     }
     proposed = yaml.safe_load(args.proposed.read_text(encoding="utf-8"))
     if proposed.get("vocabulary_hash") != vocabulary.hash:
@@ -112,7 +112,7 @@ def main(args: argparse.Namespace) -> int:
     for index, entry in enumerate(proposed["dispositivos"], 1):
         if entry["id"] in {e["id"] for e in done}:
             continue  # reviewed in an earlier run
-        d = dispositivos[entry["id"]]
+        d = provisions[entry["id"]]
         print(f"\n{BOLD}[{index}/{total}] {d.id.split('#')[1]}{RESET}  ({d.kind})\n\n  {d.text}")
         if entry.get("note"):
             print(f"  {DIM}note: {entry['note']}{RESET}")

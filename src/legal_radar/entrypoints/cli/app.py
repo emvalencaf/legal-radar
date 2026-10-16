@@ -27,11 +27,11 @@ from pathlib import Path
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.fixture.pipeline import run
 from legal_radar.adapters.tracing import configure_tracing, publisher_if_enabled
+from legal_radar.application.case_law import CASE_LAW
 from legal_radar.application.concepts import VOCABULARY_PATHS
 from legal_radar.application.enrichment import DECISION_PROMPT
 from legal_radar.application.evaluation.answers import QUESTION_PATHS
 from legal_radar.application.ingest import ingest
-from legal_radar.application.jurisprudencia import JURISPRUDENCIA
 from legal_radar.application.rag import BASELINES, CHUNKINGS
 from legal_radar.bootstrap import connect_store, enrich_config, load_settings, rag_index
 from legal_radar.domain.anchors import ANCHORS
@@ -55,9 +55,9 @@ def build_parser(defaults: Settings) -> argparse.ArgumentParser:
         action="store_true",
         help="also send the chunks the rules left to the LLM; re-running resumes the pending ones",
     )
-    jurisprudencia_cmd = commands.add_parser("ingest-jurisprudencia")
-    jurisprudencia_cmd.add_argument("assunto", choices=sorted(JURISPRUDENCIA))
-    jurisprudencia_cmd.add_argument(
+    case_law_cmd = commands.add_parser("ingest-jurisprudencia")
+    case_law_cmd.add_argument("assunto", choices=sorted(CASE_LAW))
+    case_law_cmd.add_argument(
         "--enrich",
         action="store_true",
         help="also link each decision to the assunto's concepts; re-running resumes the pending",
@@ -167,23 +167,23 @@ def ask_command(args: argparse.Namespace, settings: Settings, store) -> None:
         tier_max_context_tokens,
     )
     from legal_radar.application.answer import ask
-    from legal_radar.application.assunto import AssuntoResolver
+    from legal_radar.application.subject import SubjectResolver
 
     configure_tracing()
     config = load_config("router.yaml")
     router = build_router(config)
     result = ask(
         args.query,
-        AssuntoResolver(router).resolve,
+        SubjectResolver(router).resolve,
         Neo4jGraphReader(store.driver),
         router,
         default_lock(),
         max_context_tokens=tier_max_context_tokens(config),
     )
-    if result.assunto is None:
+    if result.subject is None:
         print(f"no known assunto matches {args.query!r}")
     elif result.answer is None:
-        print(f"assunto {result.assunto!r} resolved, but the graph has none of its leis")
+        print(f"assunto {result.subject!r} resolved, but the graph has none of its leis")
     else:
         print(result.answer)
     print_citations(result.citations)
@@ -213,8 +213,8 @@ def evaluate(args: argparse.Namespace, settings: Settings, store) -> None:
         tier_max_context_tokens,
     )
     from legal_radar.application.answer import ask
-    from legal_radar.application.assunto import AssuntoResolver
     from legal_radar.application.evaluation.answers import System, UsageMeter, load_questions
+    from legal_radar.application.subject import SubjectResolver
 
     publisher = publisher_if_enabled()  # also switches the LangGraph tracing on or off
     config = load_config("router.yaml")
@@ -232,7 +232,7 @@ def evaluate(args: argparse.Namespace, settings: Settings, store) -> None:
             for k in args.k
         ]
     else:
-        resolve = AssuntoResolver(meter).resolve
+        resolve = SubjectResolver(meter).resolve
         systems = [
             (
                 System(),
@@ -248,7 +248,7 @@ def evaluate(args: argparse.Namespace, settings: Settings, store) -> None:
         ]
     run_systems(
         systems,
-        load_questions(QUESTION_PATHS[args.assunto]),
+        load_questions(QUESTION_PATHS[args.subject]),
         meter,
         lock,
         pricing=Pricing(args.price_in, args.price_out),
@@ -272,15 +272,15 @@ def run_all(args: argparse.Namespace, settings: Settings, store) -> None:
     from legal_radar.entrypoints.end_to_end import run_end_to_end
 
     configure_tracing()
-    lei_config = enrich_config(settings, args.assunto) if args.enrich else None
+    statute_config = enrich_config(settings, args.subject) if args.enrich else None
     decision_config = (
-        enrich_config(settings, args.assunto, DECISION_PROMPT) if args.enrich else None
+        enrich_config(settings, args.subject, DECISION_PROMPT) if args.enrich else None
     )
     browser = BrowserPageSource()
     chrome = BrowserPageSource(channel="chrome")  # STJ's Cloudflare rejects Chromium
     try:
         result = run_end_to_end(
-            args.assunto,
+            args.subject,
             locator=LexmlLocator(browser),
             texts=PlanaltoTextSource(browser),
             fetchers={"STF": StfFetcher(chrome), "STJ": StjFetcher(chrome)},
@@ -288,18 +288,18 @@ def run_all(args: argparse.Namespace, settings: Settings, store) -> None:
             provider=build_router(load_config("router.yaml")),
             report_out=settings.report_path,
             seed_out=settings.seed_path,
-            lei_enrichment=lei_config,
+            statute_enrichment=statute_config,
             decision_enrichment=decision_config,
         )
     finally:
         browser.close()
         chrome.close()
-        for config in (lei_config, decision_config):
+        for config in (statute_config, decision_config):
             if config:
                 config.metadata.close()
     print(result.ingestion.render())
-    print(result.jurisprudencia.render())
-    print(result.answer.answer or f"no answer for {args.assunto!r}")
+    print(result.case_law.render())
+    print(result.answer.answer or f"no answer for {args.subject!r}")
     print_citations(result.answer.citations)
     for evaluation in result.evaluations:
         print(evaluation.render())
@@ -310,30 +310,30 @@ def draft_concepts(args: argparse.Namespace, settings: Settings, store) -> None:
     from legal_radar.adapters.neo4j_corpus import graph_corpus
     from legal_radar.adapters.prompt_lock import default_lock
     from legal_radar.adapters.router_config import build_router, load_config
-    from legal_radar.application.concepts import corpus_ids, draft_candidates, with_assunto
+    from legal_radar.application.concepts import corpus_ids, draft_candidates, with_subject
 
     router = build_router(load_config("router.yaml"))
     corpus = graph_corpus(store.driver)
-    drafted = draft_candidates(args.assunto, corpus, router, default_lock())
-    draft, error = with_assunto(args.assunto, drafted, corpus_ids(corpus))
-    target = VOCABULARY_PATHS[args.assunto].with_suffix(".draft.yml")
+    drafted = draft_candidates(args.subject, corpus, router, default_lock())
+    draft, error = with_subject(args.subject, drafted, corpus_ids(corpus))
+    target = VOCABULARY_PATHS[args.subject].with_suffix(".draft.yml")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(draft, encoding="utf-8")
     if error:
         print(f"warning: the draft does not load yet: {error}")
-    print(f"wrote {target}; curate it into {VOCABULARY_PATHS[args.assunto]}")
+    print(f"wrote {target}; curate it into {VOCABULARY_PATHS[args.subject]}")
 
 
-def ingest_leis(args: argparse.Namespace, settings: Settings, store) -> None:
+def ingest_statutes(args: argparse.Namespace, settings: Settings, store) -> None:
     from legal_radar.adapters.lexml import LexmlLocator
     from legal_radar.adapters.pages import BrowserPageSource
     from legal_radar.adapters.planalto import PlanaltoTextSource
 
-    config = enrich_config(settings, args.assunto) if args.enrich else None
+    config = enrich_config(settings, args.subject) if args.enrich else None
     browser = BrowserPageSource()
     try:
         ingested = ingest(
-            ANCHORS[args.assunto],
+            ANCHORS[args.subject],
             LexmlLocator(browser),
             PlanaltoTextSource(browser),
             store,
@@ -350,16 +350,14 @@ def ingest_decisions(args: argparse.Namespace, settings: Settings, store) -> Non
     from legal_radar.adapters.pages import BrowserPageSource
     from legal_radar.adapters.stf import StfFetcher
     from legal_radar.adapters.stj import StjFetcher
-    from legal_radar.application.jurisprudencia import ingest_jurisprudencia
+    from legal_radar.application.case_law import ingest_case_law
 
-    config = enrich_config(settings, args.assunto, DECISION_PROMPT) if args.enrich else None
+    config = enrich_config(settings, args.subject, DECISION_PROMPT) if args.enrich else None
 
     browser = BrowserPageSource(channel="chrome")  # STJ's Cloudflare rejects bundled Chromium
     try:
         fetchers = {"STF": StfFetcher(browser), "STJ": StjFetcher(browser)}
-        result = ingest_jurisprudencia(
-            fetchers, store, JURISPRUDENCIA[args.assunto], enrichment=config
-        )
+        result = ingest_case_law(fetchers, store, CASE_LAW[args.subject], enrichment=config)
         print(result.render())
         if result.failed:
             raise SystemExit(1)
@@ -371,11 +369,11 @@ def ingest_decisions(args: argparse.Namespace, settings: Settings, store) -> Non
 
 def run_skeleton(args: argparse.Namespace, settings: Settings, store):
     ids = None
-    if args.assunto:
+    if args.subject:
         from legal_radar.application.concepts import load_registered
 
-        ids = [c.id for c in load_registered(args.assunto).conceitos]
-    return run(args.fixture.read_text(encoding="utf-8"), FakeProvider(), store, conceito_ids=ids)
+        ids = [c.id for c in load_registered(args.subject).concepts]
+    return run(args.fixture.read_text(encoding="utf-8"), FakeProvider(), store, concept_ids=ids)
 
 
 # Commands that need no graph store.
@@ -393,7 +391,7 @@ ONLINE = {
     "eval": evaluate,
     "run-all": run_all,
     "draft-concepts": draft_concepts,
-    "ingest": ingest_leis,
+    "ingest": ingest_statutes,
     "ingest-jurisprudencia": ingest_decisions,
 }
 
@@ -417,6 +415,6 @@ def main(argv: list[str] | None = None) -> None:
     finally:
         store.close()
     print(
-        f"wrote {batch.lei.id}: {len(batch.dispositivos)} dispositivos, "
-        f"{len(batch.conceitos)} conceitos"
+        f"wrote {batch.statute.id}: {len(batch.provisions)} dispositivos, "
+        f"{len(batch.concepts)} conceitos"
     )

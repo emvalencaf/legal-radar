@@ -9,7 +9,7 @@ from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.fixture.pipeline import run
 from legal_radar.adapters.neo4j_seed import export_seed, load_seed
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
-from legal_radar.domain.model import Jurisprudencia
+from legal_radar.domain.model import CaseLaw
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "mini_lei.txt"
 
@@ -31,9 +31,7 @@ def driver(neo4j):
 def populate(driver) -> None:
     store = Neo4jGraphStore(driver)
     run(FIXTURE.read_text(encoding="utf-8"), FakeProvider(), store)
-    store.write_jurisprudencia(
-        [Jurisprudencia("STJ:1", "STJ", "REsp 1 / SP", "ementa ç", "acórdão", None)]
-    )
+    store.write_case_law([CaseLaw("STJ:1", "STJ", "REsp 1 / SP", "ementa ç", "acórdão", None)])
 
 
 def test_export_is_deterministic_text(driver):

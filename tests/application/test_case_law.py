@@ -5,13 +5,13 @@ from ingest_helpers import FIXTURES, MemoryStore
 
 from legal_radar.adapters.stf import StfFetcher
 from legal_radar.adapters.stj import StjFetcher
-from legal_radar.application.jurisprudencia import (
-    JURISPRUDENCIA,
-    JurisprudenciaSource,
+from legal_radar.application.case_law import (
+    CASE_LAW,
+    CaseLawSource,
     Seed,
-    ingest_jurisprudencia,
+    ingest_case_law,
 )
-from legal_radar.domain.model import Jurisprudencia
+from legal_radar.domain.model import CaseLaw
 
 STF_SEED = "sjur550030"
 STJ_SEED = "202001090402"
@@ -54,18 +54,18 @@ def stj() -> StjFetcher:
     return StjFetcher(FakeForm(fixture("stj_search.html")))
 
 
-def test_stf_hits_carry_ementa_tese_and_decisao_keyed_by_the_native_id():
+def test_stf_hits_carry_headnote_thesis_and_ruling_keyed_by_the_native_id():
     hits = {j.id: j for j in stf().search('titulo:"RE 1387795"', 10)}
 
     tema_1232 = hits[f"STF:{STF_SEED}"]
     assert tema_1232.number == "RE 1387795"
-    assert tema_1232.ementa.startswith("Recurso extraordinário com repercussão geral")
-    assert "grupo econômico" in tema_1232.tese
-    assert tema_1232.decisao.startswith("Após o voto do Ministro Dias Toffoli")
-    assert hits["STF:repercussao-geral12823"].tese is None
+    assert tema_1232.headnote.startswith("Recurso extraordinário com repercussão geral")
+    assert "grupo econômico" in tema_1232.thesis
+    assert tema_1232.ruling.startswith("Após o voto do Ministro Dias Toffoli")
+    assert hits["STF:repercussao-geral12823"].thesis is None
 
 
-def test_stf_restricts_the_search_to_acordaos_and_the_requested_size():
+def test_stf_restricts_the_search_to_rulings_and_the_requested_size():
     api = FakeJsonApi({"assunto": fixture("stf_search.json")})
 
     StfFetcher(api).search("assunto", 5)
@@ -86,10 +86,10 @@ def test_stj_documents_are_parsed_from_the_result_page_and_deduplicated():
     assert [j.id for j in hits] == ["STJ:202001090402", "STJ:202001068480", "STJ:202601342504"]
     tema_1210 = hits[0]
     assert tema_1210.number == "REsp 1873811 / SP"
-    assert tema_1210.tese.startswith('"Nas relações jurídicas de direito civil e empresarial')
-    assert tema_1210.ementa.startswith("DIREITO CIVIL. RECURSO ESPECIAL REPETITIVO")
-    assert tema_1210.decisao.startswith("Vistos e relatados")
-    assert hits[2].tese is None
+    assert tema_1210.thesis.startswith('"Nas relações jurídicas de direito civil e empresarial')
+    assert tema_1210.headnote.startswith("DIREITO CIVIL. RECURSO ESPECIAL REPETITIVO")
+    assert tema_1210.ruling.startswith("Vistos e relatados")
+    assert hits[2].thesis is None
 
 
 def test_stj_search_honours_the_limit():
@@ -101,14 +101,14 @@ def test_both_courts_look_the_same_to_the_pipeline_and_the_seeds_are_loaded_firs
     fetchers = {"STF": stf(), "STJ": stj()}
     seeds = [Seed("STF", STF_SEED, 'titulo:"RE 1387795"'), Seed("STJ", STJ_SEED, "REsp 1873811")]
 
-    source = JurisprudenciaSource(tuple(seeds), {"STF": "assunto", "STJ": "x"})
-    report = ingest_jurisprudencia(fetchers, store, source)
+    source = CaseLawSource(tuple(seeds), {"STF": "assunto", "STJ": "x"})
+    report = ingest_case_law(fetchers, store, source)
 
-    (items,) = store.jurisprudencia
+    (items,) = store.case_law
     ids = [j.id for j in items]
     assert ids[:2] == [f"STF:{STF_SEED}", f"STJ:{STJ_SEED}"]
     assert len(ids) == len(set(ids)) == 2 + 5 + 2  # seeds, STF top hits, STJ hits left after dedup
-    assert all(isinstance(j, Jurisprudencia) and j.ementa and j.decisao for j in items)
+    assert all(isinstance(j, CaseLaw) and j.headnote and j.ruling for j in items)
     assert report.failed == {}
     assert report.ingested == len(items)
 
@@ -117,35 +117,33 @@ def test_a_seed_missing_from_its_court_results_is_reported_and_the_rest_still_lo
     store = MemoryStore()
     seeds = [Seed("STF", "sjur0", 'titulo:"RE 1387795"'), Seed("STJ", STJ_SEED, "REsp 1873811")]
 
-    report = ingest_jurisprudencia(
-        {"STF": stf(), "STJ": stj()}, store, JurisprudenciaSource(tuple(seeds))
-    )
+    report = ingest_case_law({"STF": stf(), "STJ": stj()}, store, CaseLawSource(tuple(seeds)))
 
     assert list(report.failed) == ["STF:sjur0"]
-    assert [j.id for j in store.jurisprudencia[0]] == [f"STJ:{STJ_SEED}"]
+    assert [j.id for j in store.case_law[0]] == [f"STJ:{STJ_SEED}"]
     assert "failed" in report.render()
 
 
-def test_the_catalogue_has_exactly_the_assuntos_of_the_anchors_and_the_vocabularies():
+def test_the_catalogue_has_exactly_the_subjects_of_the_anchors_and_the_vocabularies():
     from legal_radar.application.concepts import VOCABULARY_PATHS
     from legal_radar.domain.anchors import ANCHORS
 
-    assert set(JURISPRUDENCIA) == set(ANCHORS) == set(VOCABULARY_PATHS)
+    assert set(CASE_LAW) == set(ANCHORS) == set(VOCABULARY_PATHS)
 
 
 def test_with_zero_top_hits_only_the_seeds_are_ingested():
     store = MemoryStore()
-    source = JurisprudenciaSource(
+    source = CaseLawSource(
         (Seed("STJ", STJ_SEED, "REsp 1873811"),), {"STJ": "x", "STF": "y"}, top_hits=0
     )
 
-    report = ingest_jurisprudencia({"STF": stf(), "STJ": stj()}, store, source)
+    report = ingest_case_law({"STF": stf(), "STJ": stj()}, store, source)
 
-    assert [j.id for j in store.jurisprudencia[0]] == [f"STJ:{STJ_SEED}"]
+    assert [j.id for j in store.case_law[0]] == [f"STJ:{STJ_SEED}"]
     assert report.failed == {}
 
 
-def test_the_cli_requires_a_known_assunto(capsys):
+def test_the_cli_requires_a_known_subject(capsys):
     from legal_radar.entrypoints.cli.app import main
 
     for argv in (["ingest-jurisprudencia"], ["ingest-jurisprudencia", "nope"]):
@@ -156,7 +154,7 @@ def test_the_cli_requires_a_known_assunto(capsys):
 
 
 def test_the_pinned_manifest_has_tema_1210_core_and_tema_1232_tangential():
-    seeds = JURISPRUDENCIA["desconsideração da personalidade jurídica"].seeds
+    seeds = CASE_LAW["desconsideração da personalidade jurídica"].seeds
     assert {(s.court, s.native_id) for s in seeds} == {("STJ", STJ_SEED), ("STF", STF_SEED)}
 
 
@@ -171,15 +169,15 @@ def test_live_sources_return_the_seed_precedents():
     browser = BrowserPageSource(channel="chrome")
     try:
         store = MemoryStore()
-        report = ingest_jurisprudencia(
+        report = ingest_case_law(
             {"STF": StfFetcher(browser), "STJ": StjFetcher(browser)},
             store,
-            JURISPRUDENCIA["desconsideração da personalidade jurídica"],
+            CASE_LAW["desconsideração da personalidade jurídica"],
         )
     finally:
         browser.close()
     assert report.failed == {}
-    ids = {j.id for j in store.jurisprudencia[0]}
+    ids = {j.id for j in store.case_law[0]}
     assert {f"STF:{STF_SEED}", f"STJ:{STJ_SEED}"} <= ids
 
 
@@ -198,7 +196,7 @@ from legal_radar.domain.model import EnrichmentStatus, RelationType  # noqa: E40
 VOCAB = Vocabulary(
     "desconsideração", (Concept("abuso", "Abuso", (), "Quando há abuso.", "REQUISITO"),)
 )
-SEEDS_ONLY = JurisprudenciaSource((Seed("STJ", STJ_SEED, "REsp 1873811"),))
+SEEDS_ONLY = CaseLawSource((Seed("STJ", STJ_SEED, "REsp 1873811"),))
 NO_CONCEPTS = Completion('{"conceitos": []}')
 
 
@@ -215,7 +213,7 @@ def enrich_run(metadata, provider, store=None):
     store = store or MemoryStore()
     lock = refresh({DECISION_PROMPT: "c1"}, lambda name, commit: (DECISION_TEMPLATE, None))
     config = EnrichConfig(VOCAB, provider, metadata, lock)
-    report = ingest_jurisprudencia({"STJ": stj()}, store, SEEDS_ONLY, enrichment=config)
+    report = ingest_case_law({"STJ": stj()}, store, SEEDS_ONLY, enrichment=config)
     return report, store
 
 
@@ -235,7 +233,7 @@ def test_enrich_writes_llm_concept_edges_with_the_decisions_own_evidence():
     store = MemoryStore()
     hit = next(h for h in stj().search("REsp 1873811", 10) if h.id == f"STJ:{STJ_SEED}")
     phrase = "a desconsideração da personalidade jurídica requer a efetiva comprovação"
-    assert phrase in hit.tese
+    assert phrase in hit.thesis
     reply = {"conceito_id": "abuso", "relacao": "APPLIES_TO", "evidence": phrase}
     provider = Scripted(script=[Completion(json.dumps({"conceitos": [reply]}))])
 
@@ -260,7 +258,7 @@ def test_an_exhausted_provider_leaves_the_decision_pending():
 
 
 def test_without_enrich_no_provider_is_called_and_the_report_has_no_enrichment_line():
-    report = ingest_jurisprudencia({"STJ": stj()}, MemoryStore(), SEEDS_ONLY)
+    report = ingest_case_law({"STJ": stj()}, MemoryStore(), SEEDS_ONLY)
 
     assert report.enrichment == {} and "enriched" not in report.render()
 
@@ -283,7 +281,7 @@ def test_changing_the_vocabulary_or_the_prompt_enriches_the_decision_again():
     def run_with(vocabulary, template):
         lock = refresh({DECISION_PROMPT: "c2"}, lambda name, commit: (template, None))
         config = EnrichConfig(vocabulary, provider, metadata, lock)
-        return ingest_jurisprudencia({"STJ": stj()}, MemoryStore(), SEEDS_ONLY, enrichment=config)
+        return ingest_case_law({"STJ": stj()}, MemoryStore(), SEEDS_ONLY, enrichment=config)
 
     assert run_with(other, DECISION_TEMPLATE).enrichment["STJ"].returned == 1
     assert run_with(other, DECISION_TEMPLATE + " ").enrichment["STJ"].returned == 1
@@ -304,16 +302,16 @@ def test_the_report_counts_dropped_items_and_lists_out_of_vocabulary_ids():
     assert "out of vocabulary STJ: inventado" in report.render()
 
 
-def test_ingestion_links_each_decision_to_the_dispositivos_it_cites():
+def test_ingestion_links_each_decision_to_the_provisions_it_cites():
     store = MemoryStore()
 
-    report = ingest_jurisprudencia(
+    report = ingest_case_law(
         {"STF": stf(), "STJ": stj()},
         store,
-        JURISPRUDENCIA["desconsideração da personalidade jurídica"],
+        CASE_LAW["desconsideração da personalidade jurídica"],
     )
 
     sources = {r.source_id for r in store.decision_relations}
-    assert sources <= {j.id for j in store.jurisprudencia[0]}
+    assert sources <= {j.id for j in store.case_law[0]}
     assert report.references == len(store.decision_relations) > 0
     assert any(r.target_id and r.target_id.endswith("#art50") for r in store.decision_relations)

@@ -22,7 +22,7 @@ QUESTION_PATHS = {
     "desconsideração da personalidade jurídica": QUESTIONS_DIR / "desconsideracao_personalidade.yml"
 }
 
-BASE_NIVEL = "base"  # the questions that carry no `nivel`
+BASE_LEVEL = "base"  # the questions that carry no `nivel`
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ class Question:
     contradictions: tuple[tuple[str, str], ...] = ()  # cited sources that disagree: flag it
     abstain: bool = False  # the graph cannot answer it: a good answer says so, citing nothing
     also_ok: tuple[str, ...] = ()  # sources a good answer may cite too: not required, not an error
-    nivel: str | None = None  # facil | medio | dificil | armadilha; None for the base questions
+    level: str | None = None  # facil | medio | dificil | armadilha; None for the base questions
 
 
 @dataclass(frozen=True)
@@ -205,7 +205,10 @@ def abstention(
 
 
 def answer_to_json(answer: CitedAnswer) -> dict:
-    return asdict(answer)
+    """Persisted with the Portuguese key `assunto`, so earlier runs and checkpoints load."""
+    raw = asdict(answer)
+    raw["assunto"] = raw.pop("subject")
+    return raw
 
 
 def answer_from_json(raw: dict) -> CitedAnswer:

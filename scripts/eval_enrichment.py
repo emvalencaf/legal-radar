@@ -30,7 +30,7 @@ from legal_radar.application.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPL
 from legal_radar.application.evaluation.enrichment_gold import (
     append_outcome,
     check_gates,
-    enrich_dispositivos,
+    enrich_provisions,
     indirect_metrics,
     load_gold,
     load_thresholds,
@@ -43,7 +43,7 @@ from legal_radar.domain.llm import AllProvidersFailedError
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"
-LEIS = (
+STATUTES = (
     ("l10406_excerpt.htm", "urn:lex:br:federal:lei:2002-01-10;10406"),
     ("l8078_excerpt.htm", "urn:lex:br:federal:lei:1990-09-11;8078"),
 )
@@ -84,7 +84,7 @@ def progress_printer(started: float, already: int, grand_total: int, path: Path)
         tokens = outcome.tokens_in + outcome.tokens_out
         print(
             f"[{already + done:>{len(str(grand_total))}}/{grand_total}] "
-            f"{outcome.dispositivo.id.split('#')[1]:<20} "
+            f"{outcome.provision.id.split('#')[1]:<20} "
             f"{len(outcome.relations):>2} relations  {tokens:>6} tok"
             f"  elapsed {clock(elapsed)}  eta {clock(eta)}" + (f"  [{note}]" if note else ""),
             file=sys.stderr,
@@ -108,12 +108,12 @@ def main(args: argparse.Namespace) -> int:
     lock = refresh({ENRICHMENT_PROMPT: "local"}, lambda name, commit: (ENRICHMENT_TEMPLATE, None))
     gold = load_gold(args.gold.read_text(encoding="utf-8"), vocabulary)
 
-    dispositivos = [
+    provisions = [
         d
-        for filename, lei_id in LEIS
-        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), lei_id)
+        for filename, statute_id in STATUTES
+        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), statute_id)
     ]
-    missing = set(gold) - {d.id for d in dispositivos}
+    missing = set(gold) - {d.id for d in provisions}
     if missing:
         print(f"gold dispositivos not in the slice: {sorted(missing)}", file=sys.stderr)
         return 2
@@ -125,7 +125,7 @@ def main(args: argparse.Namespace) -> int:
     }
     done: list = []
     if args.resume:
-        previous, done = read_run(args.resume, {d.id: d for d in dispositivos})
+        previous, done = read_run(args.resume, {d.id: d for d in provisions})
         stale = [k for k in ("provider", "model", "vocabulary") if previous.get(k) != header[k]]
         if stale:
             print(f"cannot resume: {', '.join(stale)} changed since that run", file=sys.stderr)
@@ -135,11 +135,11 @@ def main(args: argparse.Namespace) -> int:
     else:
         path = start_run(args.persist, header)
         print(f"writing {path}", file=sys.stderr)
-    todo = set(gold) - {o.dispositivo.id for o in done}
+    todo = set(gold) - {o.provision.id for o in done}
     started = time.monotonic()
     try:
-        outcomes = done + enrich_dispositivos(
-            dispositivos,
+        outcomes = done + enrich_provisions(
+            provisions,
             vocabulary,
             router,
             lock,
@@ -157,7 +157,7 @@ def main(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 3
-    scored = [o for o in outcomes if o.dispositivo.id in gold]
+    scored = [o for o in outcomes if o.provision.id in gold]
     scores, indirect = score_edges(scored, gold), indirect_metrics(scored)
     failures = check_gates(scores, indirect, load_thresholds(args.thresholds))
 

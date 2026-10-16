@@ -9,8 +9,8 @@ from urllib.parse import quote_plus, urlparse
 from bs4 import BeautifulSoup
 
 from legal_radar.application.ports import PageSource
-from legal_radar.domain.anchors import AnchorLei
-from legal_radar.domain.urn import FEDERAL_LEI, LexmlError, UrnPage
+from legal_radar.domain.anchors import AnchorStatute
+from legal_radar.domain.urn import FEDERAL_STATUTE, LexmlError, UrnPage
 
 SEARCH_URL = "https://www.lexml.gov.br/busca/search?keyword={keyword}"
 URN_URL = "https://www.lexml.gov.br/urn/{urn}"
@@ -47,7 +47,7 @@ def _find_urn(html: str, numero: str, ano: int) -> str | None:
         if not href.startswith("/urn/"):
             continue
         urn = href.removeprefix("/urn/")
-        if (m := FEDERAL_LEI.match(urn)) and m[2] == numero and int(m[1]) == ano:
+        if (m := FEDERAL_STATUTE.match(urn)) and m[2] == numero and int(m[1]) == ano:
             return urn
     return None
 
@@ -76,7 +76,7 @@ class LexmlLocator:
     def __init__(self, pages: PageSource):
         self.pages = pages
 
-    def locate(self, anchor: AnchorLei) -> UrnPage:
+    def locate(self, anchor: AnchorStatute) -> UrnPage:
         urn = search_urn(self.pages, anchor.keyword, anchor.numero, anchor.ano)
         return resolve_urn(self.pages, urn)
 

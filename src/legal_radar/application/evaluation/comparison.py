@@ -4,7 +4,7 @@ and per `nivel`. Reads the JSON that `Report.write` leaves in `eval-runs/`."""
 import json
 from pathlib import Path
 
-from legal_radar.application.evaluation.answers import BASE_NIVEL, System
+from legal_radar.application.evaluation.answers import BASE_LEVEL, System
 
 METRICS = (
     "citation_correctness",
@@ -49,12 +49,12 @@ def _cell(value) -> str:
     return "n/a" if value is None else f"{value:.3f}"
 
 
-def _mean_tokens(run: dict, nivel: str | None = None) -> float | None:
+def _mean_tokens(run: dict, level: str | None = None) -> float | None:
     """Mean input tokens per question (the answer only, not the judges), of one nivel or all."""
     tokens = [
         q["input_tokens"]
         for q in run["questions"]
-        if "input_tokens" in q and (nivel is None or (q.get("nivel") or BASE_NIVEL) == nivel)
+        if "input_tokens" in q and (level is None or (q.get("nivel") or BASE_LEVEL) == level)
     ]
     return sum(tokens) / len(tokens) if tokens else None
 
@@ -83,7 +83,7 @@ def render_comparison(runs: list[dict]) -> str:
     out += _table("metric", columns, rows)
     niveis = sorted(
         {n for r in runs for n in r.get("by_nivel", {})}
-        | {q.get("nivel") or BASE_NIVEL for r in runs for q in r["questions"]}
+        | {q.get("nivel") or BASE_LEVEL for r in runs for q in r["questions"]}
     )
     for metric in METRICS:  # every metric is also split by nivel
         out += ["", f"## {metric} per nivel", ""]

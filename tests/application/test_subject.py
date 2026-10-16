@@ -1,21 +1,21 @@
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.application.assunto import AssuntoResolver
+from legal_radar.application.subject import SubjectResolver
 from legal_radar.domain.anchors import ANCHORS
 from legal_radar.domain.llm import Embedding
 
 DESCONSIDERACAO = "desconsideração da personalidade jurídica"
 
 
-def test_paraphrase_resolves_to_anchor_assunto_and_its_leis():
-    resolution = AssuntoResolver(FakeProvider()).resolve(
+def test_paraphrase_resolves_to_anchor_subject_and_its_statutes():
+    resolution = SubjectResolver(FakeProvider()).resolve(
         "pedido de desconsiderar a personalidade da pessoa jurídica"
     )
 
-    assert resolution.assunto == DESCONSIDERACAO
+    assert resolution.subject == DESCONSIDERACAO
     assert resolution.anchors == ANCHORS[DESCONSIDERACAO]
-    assert {lei.numero for lei in resolution.anchors} == {"10406", "8078"}
+    assert {statute.numero for statute in resolution.anchors} == {"10406", "8078"}
 
 
 @pytest.mark.parametrize(
@@ -29,12 +29,12 @@ def test_paraphrase_resolves_to_anchor_assunto_and_its_leis():
     ],
 )
 def test_unrelated_query_does_not_resolve(query):
-    assert AssuntoResolver(FakeProvider()).resolve(query) is None
+    assert SubjectResolver(FakeProvider()).resolve(query) is None
 
 
 def test_catalog_is_embedded_once_across_queries():
     provider = FakeProvider()
-    resolver = AssuntoResolver(provider)
+    resolver = SubjectResolver(provider)
 
     resolver.resolve("desconsideração da personalidade")
     resolver.resolve("personalidade jurídica desconsiderada")
@@ -44,7 +44,7 @@ def test_catalog_is_embedded_once_across_queries():
 
 def test_catalog_is_re_embedded_when_the_provider_falls_back_to_another_model():
     provider = FakeProvider()
-    resolver = AssuntoResolver(provider)
+    resolver = SubjectResolver(provider)
     resolver.resolve("desconsideração da personalidade")
     provider.embedding_model = "other-model"
 
@@ -57,4 +57,4 @@ def test_no_match_when_the_model_changes_between_query_and_catalog():
         script=[Embedding([[1.0, 0.0]], model="a"), Embedding([[1.0, 0.0]], model="b")]
     )
 
-    assert AssuntoResolver(provider).resolve("x") is None
+    assert SubjectResolver(provider).resolve("x") is None

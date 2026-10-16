@@ -66,18 +66,18 @@ class Concept:
 
 @dataclass(frozen=True)
 class Vocabulary:
-    assunto: str
-    conceitos: tuple[Concept, ...]
+    subject: str
+    concepts: tuple[Concept, ...]
     status: str = "draft"
 
     @property
     def hash(self) -> str:
         """Depends on the concepts' content only, not on file order or formatting."""
         entries = sorted(
-            (_content(c) for c in self.conceitos),
+            (_content(c) for c in self.concepts),
             key=lambda entry: entry["id"],
         )
-        return content_hash({"assunto": self.assunto, "conceitos": entries})
+        return content_hash({"assunto": self.subject, "conceitos": entries})
 
 
 def _content(concept: Concept) -> dict:
@@ -100,23 +100,23 @@ def load_vocabulary(path: Path | str) -> Vocabulary:
     return parse_vocabulary(Path(path).read_text(encoding="utf-8"))
 
 
-def load_registered(assunto: str) -> Vocabulary:
+def load_registered(subject: str) -> Vocabulary:
     """The committed vocabulary of a registered assunto; its file must declare that assunto."""
-    if assunto not in VOCABULARY_PATHS:
-        raise VocabularyError(f"no vocabulary registered for assunto {assunto!r}")
-    vocabulary = load_vocabulary(VOCABULARY_PATHS[assunto])
-    if vocabulary.assunto != assunto:
+    if subject not in VOCABULARY_PATHS:
+        raise VocabularyError(f"no vocabulary registered for assunto {subject!r}")
+    vocabulary = load_vocabulary(VOCABULARY_PATHS[subject])
+    if vocabulary.subject != subject:
         raise VocabularyError(
-            f"{VOCABULARY_PATHS[assunto].name} declares assunto {vocabulary.assunto!r}, "
-            f"registered as {assunto!r}"
+            f"{VOCABULARY_PATHS[subject].name} declares assunto {vocabulary.subject!r}, "
+            f"registered as {subject!r}"
         )
     if vocabulary.status == "draft":
-        unreviewed = sum(not c.reviewed for c in vocabulary.conceitos)
+        unreviewed = sum(not c.reviewed for c in vocabulary.concepts)
         logger.warning(
             "vocabulary %r is a draft: %d of %d concepts not reviewed",
-            assunto,
+            subject,
             unreviewed,
-            len(vocabulary.conceitos),
+            len(vocabulary.concepts),
         )
     return vocabulary
 
@@ -128,8 +128,8 @@ def parse_vocabulary(text: str) -> Vocabulary:
         raise VocabularyError(f"invalid YAML: {error}") from error
     if not isinstance(document, dict):
         raise VocabularyError("expected a mapping with `assunto` and `conceitos`")
-    assunto = document.get("assunto")
-    if not isinstance(assunto, str) or not assunto.strip():
+    subject = document.get("assunto")
+    if not isinstance(subject, str) or not subject.strip():
         raise VocabularyError("`assunto` must be a non-empty string")
     entries = document.get("conceitos")
     if not isinstance(entries, list) or not entries:
@@ -142,7 +142,7 @@ def parse_vocabulary(text: str) -> Vocabulary:
         raise VocabularyError(f"`status` must be one of {STATUSES}")
     if status == "curated" and not all(c.reviewed for c in concepts):
         raise VocabularyError("a curated vocabulary needs every concept reviewed")
-    return Vocabulary(assunto, concepts, status)
+    return Vocabulary(subject, concepts, status)
 
 
 def _concept(entry) -> Concept:
@@ -234,7 +234,7 @@ def extract_schema(lock: PromptLock, source_ids: list[str]) -> dict:
 
 @dataclass(frozen=True)
 class Draft:
-    conceitos: list[dict]
+    concepts: list[dict]
     model: str  # `provider/model` that answered the extraction, after any fallback
     expected: int | None = None  # how many concepts the counting step found
 
@@ -253,14 +253,14 @@ def _answer(
 
 
 def draft_candidates(
-    assunto: str, corpus: list[str], provider: Provider, lock: PromptLock
+    subject: str, corpus: list[str], provider: Provider, lock: PromptLock
 ) -> Draft:
     """LLM-drafted candidates in two structured steps (count, then extract that many); a human
     curates them into the vocabulary."""
     text = "\n\n---\n\n".join(corpus)
     quantidade, _ = _answer(
         provider,
-        lock.render("concepts-count", assunto=assunto, corpus=text),
+        lock.render("concepts-count", assunto=subject, corpus=text),
         COUNT_STEP,
         lock.schema("concepts-count"),
         "quantidade",
@@ -268,34 +268,34 @@ def draft_candidates(
     )
     if isinstance(quantidade, bool) or not isinstance(quantidade, int) or quantidade < 1:
         raise VocabularyError(f"the LLM counted {quantidade!r} concepts")
-    conceitos, completion = _answer(
+    concepts, completion = _answer(
         provider,
-        lock.render("concepts-extract", assunto=assunto, quantidade=quantidade, corpus=text),
+        lock.render("concepts-extract", assunto=subject, quantidade=quantidade, corpus=text),
         PIPELINE_STEP,
         extract_schema(lock, sorted(corpus_ids(corpus))),
         "conceitos",
         lock.prompt_hash("concepts-extract"),
     )
-    if not isinstance(conceitos, list):
+    if not isinstance(concepts, list):
         raise VocabularyError("the LLM did not answer the extract schema: not a list")
     model = f"{completion.provider or provider.name}/{completion.model or provider.model}"
-    return Draft(conceitos, model, quantidade)
+    return Draft(concepts, model, quantidade)
 
 
-def with_assunto(
-    assunto: str, draft: Draft, corpus_ids: set[str] | None = None
+def with_subject(
+    subject: str, draft: Draft, corpus_ids: set[str] | None = None
 ) -> tuple[str, str | None]:
     """The draft as vocabulary YAML: a draft of its `assunto`, every concept marked as created now
     by the LLM that drafted it. Returns the text and any error from loading it; with `corpus_ids`,
     sources that are not in the corpus are reported too.
     """
     today = date.today().isoformat()
-    conceitos = [
+    concepts = [
         {**entry, "origin": "llm", "model": draft.model, "created_at": today}
-        for entry in draft.conceitos
+        for entry in draft.concepts
     ]
     body = yaml.safe_dump(
-        {"assunto": assunto, "status": "draft", "conceitos": conceitos},
+        {"assunto": subject, "status": "draft", "conceitos": concepts},
         allow_unicode=True,
         sort_keys=False,
     )
@@ -303,10 +303,10 @@ def with_assunto(
         vocabulary = parse_vocabulary(body)
     except VocabularyError as error:
         return body, str(error)
-    if draft.expected is not None and len(conceitos) != draft.expected:
-        return body, f"the LLM counted {draft.expected} concepts but extracted {len(conceitos)}"
+    if draft.expected is not None and len(concepts) != draft.expected:
+        return body, f"the LLM counted {draft.expected} concepts but extracted {len(concepts)}"
     if corpus_ids is not None:
-        unknown = sorted({s for c in vocabulary.conceitos for s in c.sources} - corpus_ids)
+        unknown = sorted({s for c in vocabulary.concepts for s in c.sources} - corpus_ids)
         if unknown:
             return body, f"sources not in the corpus: {', '.join(unknown)}"
     return body, None

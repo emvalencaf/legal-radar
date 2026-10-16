@@ -17,12 +17,12 @@ from legal_radar.adapters import lexml
 from legal_radar.adapters.lexml import LexmlLocator, resolve_urn, search_urn
 from legal_radar.adapters.planalto import PlanaltoTextSource
 from legal_radar.application.ingest import ingest
-from legal_radar.domain.anchors import AnchorLei
-from legal_radar.domain.model import Dispositivo
+from legal_radar.domain.anchors import AnchorStatute
+from legal_radar.domain.model import Provision
 from legal_radar.domain.urn import LexmlError
 
 
-def test_search_resolves_the_urn_of_the_requested_lei():
+def test_search_resolves_the_urn_of_the_requested_statute():
     assert search_urn(lexml_pages(), "lei 10406 2002 código civil", "10406", 2002) == CC
 
 
@@ -31,7 +31,7 @@ def no_backoff(monkeypatch):
     monkeypatch.setattr(lexml.time, "sleep", lambda _: None)
 
 
-def test_search_fails_after_retrying_when_the_lei_is_not_in_the_results(caplog):
+def test_search_fails_after_retrying_when_the_statute_is_not_in_the_results(caplog):
     pages = lexml_pages()
 
     with caplog.at_level(logging.WARNING, logger=lexml.logger.name), pytest.raises(LexmlError):
@@ -41,7 +41,7 @@ def test_search_fails_after_retrying_when_the_lei_is_not_in_the_results(caplog):
     assert [r.levelname for r in caplog.records] == ["WARNING"] * 3 + ["ERROR"]
 
 
-def test_search_retries_when_a_result_page_misses_the_lei(caplog):
+def test_search_retries_when_a_result_page_misses_the_statute(caplog):
     pages = lexml_pages()
     url = "https://www.lexml.gov.br/busca/search?keyword=lei+10406+2002+c%C3%B3digo+civil"
     good = pages.pages[url]
@@ -61,12 +61,12 @@ def test_urn_page_yields_the_planalto_link_and_title():
     assert page.title == "Lei nº 10.406, de 10 de Janeiro de 2002 - Código Civil"
 
 
-def test_ingest_loads_the_lei_following_the_urn_page_link():
+def test_ingest_loads_the_statute_following_the_urn_page_link():
     store = MemoryStore()
     planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
 
     report = ingest(
-        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)],
+        [AnchorStatute("lei 10406 2002 código civil", "10406", 2002)],
         LexmlLocator(lexml_pages()),
         PlanaltoTextSource(planalto),
         store,
@@ -74,9 +74,9 @@ def test_ingest_loads_the_lei_following_the_urn_page_link():
 
     assert planalto.requested == [CC_AGENT]  # the link off the URN page, never a guessed filename
     (batch,) = store.batches
-    assert batch.lei.id == CC
-    assert f"{CC}#art50" in {d.id for d in batch.dispositivos}
-    assert report.ingested == {CC: len(batch.dispositivos)}
+    assert batch.statute.id == CC
+    assert f"{CC}#art50" in {d.id for d in batch.provisions}
+    assert report.ingested == {CC: len(batch.provisions)}
 
 
 def test_non_planalto_destinations_are_skipped_and_reported():
@@ -86,7 +86,7 @@ def test_non_planalto_destinations_are_skipped_and_reported():
     store = MemoryStore()
 
     report = ingest(
-        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)],
+        [AnchorStatute("lei 10406 2002 código civil", "10406", 2002)],
         LexmlLocator(lexml),
         PlanaltoTextSource(FakePages({})),
         store,
@@ -97,9 +97,9 @@ def test_non_planalto_destinations_are_skipped_and_reported():
     assert "skipped" in report.render()
 
 
-def test_unresolvable_lei_is_reported_as_failed():
+def test_unresolvable_statute_is_reported_as_failed():
     report = ingest(
-        [AnchorLei("lei 10406 2002 código civil", "1", 1)],
+        [AnchorStatute("lei 10406 2002 código civil", "1", 1)],
         LexmlLocator(lexml_pages()),
         PlanaltoTextSource(FakePages({})),
         MemoryStore(),
@@ -113,7 +113,7 @@ def test_ingest_extracts_relations_and_reports_them():
     planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
 
     report = ingest(
-        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)],
+        [AnchorStatute("lei 10406 2002 código civil", "10406", 2002)],
         LexmlLocator(lexml_pages()),
         PlanaltoTextSource(planalto),
         store,
@@ -139,7 +139,7 @@ from legal_radar.application.ingest import EnrichConfig  # noqa: E402
 from legal_radar.domain.llm import AllProvidersFailedError, Completion  # noqa: E402
 from legal_radar.domain.model import EnrichmentStatus  # noqa: E402
 
-ANCHOR = [AnchorLei("lei 10406 2002 código civil", "10406", 2002)]
+ANCHOR = [AnchorStatute("lei 10406 2002 código civil", "10406", 2002)]
 VOCAB = Vocabulary(
     "direito_civil", (Concept("abuso", "Abuso", (), "Quando há abuso.", "REQUISITO"),)
 )
@@ -160,7 +160,7 @@ class EndlessProvider(FakeProvider):
 
 
 def chunks(*texts):
-    return [Dispositivo(f"{CC}#art{i}", CC, f"art{i}", t) for i, t in enumerate(texts, 1)]
+    return [Provision(f"{CC}#art{i}", CC, f"art{i}", t) for i, t in enumerate(texts, 1)]
 
 
 TEXTS = [  # each one has a citation the rules cannot ground
@@ -219,7 +219,7 @@ def test_changed_vocabulary_or_prompt_returns_the_chunks_to_pending():
     metadata = SqliteMetadataStore()
     first, _ = run_enrich(metadata, EndlessProvider())
     n = first.enrichment[CC].processed
-    other_vocab = Vocabulary("direito_civil", (replace(VOCAB.conceitos[0], label="Outro"),))
+    other_vocab = Vocabulary("direito_civil", (replace(VOCAB.concepts[0], label="Outro"),))
     for vocabulary, prompts in ((other_vocab, None), (VOCAB, lock(ENRICHMENT_TEMPLATE + " "))):
         provider = EndlessProvider()
 
@@ -243,7 +243,7 @@ def test_unreadable_reply_leaves_only_that_chunk_pending_and_continues():
     assert len(store.replaced) == counts.processed  # the failed chunk kept its old edges
 
 
-def test_exhausted_provider_stops_the_calls_but_the_lei_is_loaded():
+def test_exhausted_provider_stops_the_calls_but_the_statute_is_loaded():
     metadata = SqliteMetadataStore()
     provider = EndlessProvider(script=[AllProvidersFailedError("none left")])
 

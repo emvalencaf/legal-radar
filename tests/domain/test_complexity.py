@@ -9,42 +9,47 @@ from legal_radar.adapters.router_config import build_router, tier_max_context_to
 from legal_radar.adapters.wide_events import WideEventLog
 from legal_radar.domain.complexity import COMPLEX, DEFAULT_MAX_CONTEXT_TOKENS, SIMPLE, classify
 from legal_radar.domain.llm import CompletionParams, QuotaExhaustedError
-from legal_radar.domain.model import Context, Dispositivo, Hop, Jurisprudencia
+from legal_radar.domain.model import CaseLaw, Context, Hop, Provision
 
-LEI_A = "urn:lex:br:federal:lei:2002-01-10;10406"
-LEI_B = "urn:lex:br:federal:lei:1990-09-11;8078"
-
-
-def disp(lei: str, path: str, text: str = "texto") -> Dispositivo:
-    return Dispositivo(f"{lei}#{path}", lei, path, text)
+STATUTE_A = "urn:lex:br:federal:lei:2002-01-10;10406"
+STATUTE_B = "urn:lex:br:federal:lei:1990-09-11;8078"
 
 
-def decision() -> Jurisprudencia:
-    return Jurisprudencia("STJ:1", "STJ", "1", "ementa", "decisao", "tese")
+def disp(statute: str, path: str, text: str = "texto") -> Provision:
+    return Provision(f"{statute}#{path}", statute, path, text)
+
+
+def decision() -> CaseLaw:
+    return CaseLaw("STJ:1", "STJ", "1", "ementa", "decisao", "tese")
 
 
 CASES = [
-    ("one lei, no decision", Context([disp(LEI_A, "art1")], [], {}), 1000, SIMPLE),
+    ("one lei, no decision", Context([disp(STATUTE_A, "art1")], [], {}), 1000, SIMPLE),
     ("empty context", Context([], [], {}), 1000, SIMPLE),
     (
         "two leis",
-        Context([disp(LEI_A, "art1"), disp(LEI_B, "art2")], [], {}),
+        Context([disp(STATUTE_A, "art1"), disp(STATUTE_B, "art2")], [], {}),
         1000,
         COMPLEX,
     ),
-    ("any jurisprudencia", Context([disp(LEI_A, "art1")], [decision()], {}), 1000, COMPLEX),
+    ("any jurisprudencia", Context([disp(STATUTE_A, "art1")], [decision()], {}), 1000, COMPLEX),
     (
         "a revocation of a reached dispositivo",
-        Context([disp(LEI_A, "art1")], [], {}, [Hop("REVOKES", LEI_B, f"{LEI_A}#art1", "HIGH")]),
+        Context(
+            [disp(STATUTE_A, "art1")],
+            [],
+            {},
+            [Hop("REVOKES", STATUTE_B, f"{STATUTE_A}#art1", "HIGH")],
+        ),
         1000,
         COMPLEX,
     ),
     (
         "a LOW-confidence hop",
         Context(
-            [disp(LEI_A, "art1")],
+            [disp(STATUTE_A, "art1")],
             [],
-            {"x": [Hop("REFERENCES", f"{LEI_A}#art1", f"{LEI_A}#art2", "LOW")]},
+            {"x": [Hop("REFERENCES", f"{STATUTE_A}#art1", f"{STATUTE_A}#art2", "LOW")]},
         ),
         1000,
         COMPLEX,
@@ -52,15 +57,25 @@ CASES = [
     (
         "a HIGH-confidence reference",
         Context(
-            [disp(LEI_A, "art1")],
+            [disp(STATUTE_A, "art1")],
             [],
-            {"x": [Hop("REFERENCES", f"{LEI_A}#art1", f"{LEI_A}#art2", "HIGH")]},
+            {"x": [Hop("REFERENCES", f"{STATUTE_A}#art1", f"{STATUTE_A}#art2", "HIGH")]},
         ),
         1000,
         SIMPLE,
     ),
-    ("over the token threshold", Context([disp(LEI_A, "art1", "x" * 4001)], [], {}), 1000, COMPLEX),
-    ("at the token threshold", Context([disp(LEI_A, "art1", "x" * 4000)], [], {}), 1000, SIMPLE),
+    (
+        "over the token threshold",
+        Context([disp(STATUTE_A, "art1", "x" * 4001)], [], {}),
+        1000,
+        COMPLEX,
+    ),
+    (
+        "at the token threshold",
+        Context([disp(STATUTE_A, "art1", "x" * 4000)], [], {}),
+        1000,
+        SIMPLE,
+    ),
 ]
 
 

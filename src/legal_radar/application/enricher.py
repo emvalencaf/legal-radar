@@ -20,10 +20,10 @@ from legal_radar.application.ports import Provider
 from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.domain.model import (
     CONCEPT_RELATIONS,
+    CaseLaw,
     Confidence,
-    Dispositivo,
-    Jurisprudencia,
     Origin,
+    Provision,
     Relation,
     RelationType,
 )
@@ -133,12 +133,12 @@ class Enrichment:
 
 
 def enrich(
-    d: Dispositivo,
+    d: Provision,
     vocabulary: Vocabulary,
     provider: Provider,
     lock: PromptLock,
     *,
-    ancestors: Sequence[Dispositivo] = (),
+    ancestors: Sequence[Provision] = (),
     unresolved: Sequence[Relation] = (),
     candidates: Sequence[str] = (),
     max_input_tokens: int = MAX_INPUT_TOKENS,
@@ -187,13 +187,13 @@ def enrich(
     )
 
 
-def decision_texts(j: Jurisprudencia) -> tuple[str, ...]:
+def decision_texts(j: CaseLaw) -> tuple[str, ...]:
     """The parts of a decision the LLM reads and evidence may point at: ementa, then tese."""
-    return tuple(t for t in (j.ementa, j.tese) if t and t.strip())
+    return tuple(t for t in (j.headnote, j.thesis) if t and t.strip())
 
 
 def enrich_decision(
-    j: Jurisprudencia,
+    j: CaseLaw,
     vocabulary: Vocabulary,
     provider: Provider,
     lock: PromptLock,
@@ -202,18 +202,18 @@ def enrich_decision(
 ) -> Enrichment:
     """Concept edges of a decision, read from its ementa and tese only (never the decisão). Only
     `DECISION_RELATIONS` apply, and `evidence` is a literal slice of the ementa or of the tese."""
-    if not j.ementa.strip():
+    if not j.headnote.strip():
         return Enrichment(skipped="empty")
     texts = decision_texts(j)
     prompt = lock.render(
         DECISION_PROMPT,
-        assunto=vocabulary.assunto,
+        assunto=vocabulary.subject,
         relacoes="\n".join(f"- {t.value}: {text}" for t, text in DECISION_DEFINITIONS.items()),
         vocabulario=_vocabulary_block(vocabulary),
         tribunal=j.court,
         numero=j.number,
-        ementa=j.ementa or "(sem ementa)",
-        tese=j.tese or "(sem tese)",
+        ementa=j.headnote or "(sem ementa)",
+        tese=j.thesis or "(sem tese)",
     )
     if _tokens(prompt) > max_input_tokens:
         return Enrichment(skipped="too_long")
@@ -242,7 +242,7 @@ def enrich_decision(
     return Enrichment(result.relations, [], result.dropped, result.out_of_vocabulary, **usage)
 
 
-def ancestors_of(d: Dispositivo, by_id: dict[str, Dispositivo]) -> list[Dispositivo]:
+def ancestors_of(d: Provision, by_id: dict[str, Provision]) -> list[Provision]:
     """The parents of `d` from the farthest to the nearest."""
     ancestors, parent = [], by_id.get(d.parent_id or "")
     while parent:
@@ -251,12 +251,12 @@ def ancestors_of(d: Dispositivo, by_id: dict[str, Dispositivo]) -> list[Disposit
     return ancestors
 
 
-def candidate_targets(lei_dispositivos: Sequence[Dispositivo]) -> list[str]:
+def candidate_targets(statute_provisions: Sequence[Provision]) -> list[str]:
     """The closed list of reference targets: dispositivos of the same lei and the curated codes."""
-    return [*(d.id for d in lei_dispositivos), *CURATED_CODES]
+    return [*(d.id for d in statute_provisions), *CURATED_CODES]
 
 
-def triage(d: Dispositivo) -> str | None:
+def triage(d: Provision) -> str | None:
     """Why `d` is never sent to the LLM (revoked, structural or empty), or None."""
     if d.revoked:
         return "revoked"
@@ -276,7 +276,7 @@ def _vocabulary_block(vocabulary: Vocabulary) -> str:
         f"- {c.id} ({c.category}): {c.label}"
         + (f"; também: {', '.join(c.aliases)}" if c.aliases else "")
         + f". {c.instructions}"
-        for c in sorted(vocabulary.conceitos, key=lambda c: c.id)
+        for c in sorted(vocabulary.concepts, key=lambda c: c.id)
     )
 
 
@@ -284,10 +284,10 @@ def _prompt(d, ancestors, vocabulary, citations, candidates, lock) -> str:
     concepts = _vocabulary_block(vocabulary)
     return lock.render(
         ENRICHMENT_PROMPT,
-        assunto=vocabulary.assunto,
+        assunto=vocabulary.subject,
         relacoes="\n".join(f"- {t.value}: {text}" for t, text in RELATION_DEFINITIONS.items()),
         vocabulario=concepts,
-        lei=d.lei_id,
+        lei=d.statute_id,
         caminho=d.path,
         ancestrais="\n".join(f"[{a.path}] {a.text}" for a in ancestors) or "(nenhum)",
         texto=d.text,
@@ -301,7 +301,7 @@ def _schema(
 ) -> dict:
     schema = copy.deepcopy(ENRICHMENT_SCHEMA)
     concept = schema["properties"]["conceitos"]["items"]["properties"]
-    concept["conceito_id"]["enum"] = sorted(c.id for c in vocabulary.conceitos)
+    concept["conceito_id"]["enum"] = sorted(c.id for c in vocabulary.concepts)
     concept["relacao"]["enum"] = [t.value for t in CONCEPT_RELATIONS]
     references = schema["properties"]["referencias"]
     unresolved = sorted({c.unresolved for c in citations})
@@ -317,7 +317,7 @@ def _schema(
 def _decision_schema(vocabulary: Vocabulary) -> dict:
     schema = copy.deepcopy(DECISION_SCHEMA)
     concept = schema["properties"]["conceitos"]["items"]["properties"]
-    concept["conceito_id"]["enum"] = sorted(c.id for c in vocabulary.conceitos)
+    concept["conceito_id"]["enum"] = sorted(c.id for c in vocabulary.concepts)
     concept["relacao"]["enum"] = [t.value for t in DECISION_RELATIONS]
     return schema
 
@@ -373,7 +373,7 @@ class _Result:
         self.texts = texts
         self.headings = headings  # whether evidence in capitals (a heading) is accepted
         self.allowed = {t.value for t in relations}
-        self.ids = {c.id for c in vocabulary.conceitos}
+        self.ids = {c.id for c in vocabulary.concepts}
         self.citations = {c.unresolved: c for c in citations}
         self.candidates = candidates
         self.relations: list[Relation] = []

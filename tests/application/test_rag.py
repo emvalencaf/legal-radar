@@ -5,14 +5,20 @@ from legal_radar.adapters.prompt_lock import refresh
 from legal_radar.application.answer import ANSWER_SCHEMA
 from legal_radar.application.rag import RagBaseline, RagError, build_chunks, build_index
 from legal_radar.domain.llm import AllProvidersFailedError, Completion, Embedding
-from legal_radar.domain.model import Dispositivo, Jurisprudencia
+from legal_radar.domain.model import CaseLaw, Provision
 
-LEI = "urn:lex:br:federal:lei:1940-12-07;2848"
+STATUTE = "urn:lex:br:federal:lei:1940-12-07;2848"
 
 
 def d(path, text, parent=None, kind="artigo", revoked=False):
-    return Dispositivo(
-        f"{LEI}#{path}", LEI, path, text, f"{LEI}#{parent}" if parent else None, kind, revoked
+    return Provision(
+        f"{STATUTE}#{path}",
+        STATUTE,
+        path,
+        text,
+        f"{STATUTE}#{parent}" if parent else None,
+        kind,
+        revoked,
     )
 
 
@@ -25,7 +31,7 @@ CORPUS = [
     d("art5", "   ", None),
     d("art6", "Vale tudo. (Redação dada pela Lei nº 3)"),
 ]
-DECISION = Jurisprudencia("STJ:1", "STJ", "REsp 1", "Ementa sobre abuso.", "Provido", "Tese X")
+DECISION = CaseLaw("STJ:1", "STJ", "REsp 1", "Ementa sobre abuso.", "Provido", "Tese X")
 
 
 def by_id(chunks):
@@ -35,19 +41,19 @@ def by_id(chunks):
 def test_naive_chunks_keep_the_raw_text_and_drop_noise():
     chunks = by_id(build_chunks(CORPUS, [DECISION], contextual=False))
 
-    assert chunks[f"{LEI}#art4_incI"] == "os maiores de dezesseis e menores de dezoito anos;"
-    assert chunks[f"{LEI}#art6"] == "Vale tudo."  # the amendment mark is not indexed
-    assert set(chunks) == {f"{LEI}#{p}" for p in ("art4", "art4_incI", "art6")} | {"STJ:1"}
+    assert chunks[f"{STATUTE}#art4_incI"] == "os maiores de dezesseis e menores de dezoito anos;"
+    assert chunks[f"{STATUTE}#art6"] == "Vale tudo."  # the amendment mark is not indexed
+    assert set(chunks) == {f"{STATUTE}#{p}" for p in ("art4", "art4_incI", "art6")} | {"STJ:1"}
     assert chunks["STJ:1"] == "REsp 1. Tese: Tese X. Ementa: Ementa sobre abuso."
 
 
 def test_contextual_chunk_carries_its_ancestors_but_not_structural_ones():
     chunks = by_id(build_chunks(CORPUS, [DECISION], contextual=True))
 
-    assert chunks[f"{LEI}#art4_incI"] == (
+    assert chunks[f"{STATUTE}#art4_incI"] == (
         "São penalmente inimputáveis:\nos maiores de dezesseis e menores de dezoito anos;"
     )
-    assert chunks[f"{LEI}#art4"] == "São penalmente inimputáveis:"  # no capítulo above it
+    assert chunks[f"{STATUTE}#art4"] == "São penalmente inimputáveis:"  # no capítulo above it
     assert chunks["STJ:1"].startswith("REsp 1.")  # a decision has no ancestors
 
 
@@ -134,13 +140,13 @@ def test_retrieves_the_top_k_by_similarity(tmp_path, lock):
 
     answer = rag.ask("inimputáveis maiores de dezesseis anos")
 
-    assert answer.retrieved == [f"{LEI}#art4_incI", f"{LEI}#art4"]
+    assert answer.retrieved == [f"{STATUTE}#art4_incI", f"{STATUTE}#art4"]
 
 
 def test_answers_with_citations_that_have_no_graph_path(tmp_path, lock):
     answer = baseline(tmp_path, lock, k=3).ask("abuso na ementa")
 
-    assert answer.answer and answer.assunto == "rag-contextual"
+    assert answer.answer and answer.subject == "rag-contextual"
     assert {c.id for c in answer.citations} == set(answer.retrieved)  # the fake cites all it sees
     assert all(c.path == [] for c in answer.citations)
     assert {c.id: c.kind for c in answer.citations}["STJ:1"] == "Jurisprudencia"

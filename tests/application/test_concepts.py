@@ -45,9 +45,9 @@ def valid_yaml(**overrides) -> str:
 def test_loads_a_valid_vocabulary():
     vocabulary = parse_vocabulary(valid_yaml())
 
-    assert vocabulary.assunto == "a"
-    assert [c.id for c in vocabulary.conceitos] == ["abuso_da_personalidade"]
-    assert vocabulary.conceitos[0].aliases == ("desvio",)
+    assert vocabulary.subject == "a"
+    assert [c.id for c in vocabulary.concepts] == ["abuso_da_personalidade"]
+    assert vocabulary.concepts[0].aliases == ("desvio",)
     assert "REQUISITO" in CATEGORIES
 
 
@@ -145,7 +145,7 @@ def test_draft_candidates_counts_then_extracts_that_many():
 
     draft = draft_candidates("desconsideração", corpus, provider, default_lock())
 
-    assert [c["id"] for c in draft.conceitos] == ["x"]
+    assert [c["id"] for c in draft.concepts] == ["x"]
     assert (draft.model, draft.expected) == ("g/m", 7)
     count_prompt, extract_prompt = provider.calls
     assert "Tema 1210" in count_prompt and "Tema 1210" in extract_prompt
@@ -210,24 +210,24 @@ def test_draft_candidates_rejects_an_answer_off_the_schema(script):
         draft_candidates("a", ["[x]\nt"], provider, default_lock())
 
 
-def test_with_assunto_reports_a_count_mismatch():
-    from legal_radar.application.concepts import Draft, with_assunto
+def test_with_subject_reports_a_count_mismatch():
+    from legal_radar.application.concepts import Draft, with_subject
 
-    entry = draft_of().conceitos
-    assert with_assunto("a", Draft(entry, "fake/m", expected=1))[1] is None
-    assert "counted 3 concepts but extracted 1" in with_assunto("a", Draft(entry, "f/m", 3))[1]
+    entry = draft_of().concepts
+    assert with_subject("a", Draft(entry, "fake/m", expected=1))[1] is None
+    assert "counted 3 concepts but extracted 1" in with_subject("a", Draft(entry, "f/m", 3))[1]
 
 
-def test_every_anchor_assunto_has_a_valid_registered_vocabulary():
+def test_every_anchor_subject_has_a_valid_registered_vocabulary():
     from legal_radar.application.concepts import VOCABULARY_PATHS, load_registered
     from legal_radar.domain.anchors import ANCHORS
 
     assert set(ANCHORS) == set(VOCABULARY_PATHS)
-    for assunto in VOCABULARY_PATHS:
-        assert 25 <= len(load_registered(assunto).conceitos) <= 40
+    for subject in VOCABULARY_PATHS:
+        assert 25 <= len(load_registered(subject).concepts) <= 40
 
 
-def test_load_registered_rejects_unknown_and_mismatched_assuntos(monkeypatch, tmp_path):
+def test_load_registered_rejects_unknown_and_mismatched_subjects(monkeypatch, tmp_path):
     from legal_radar.application import concepts
 
     with pytest.raises(VocabularyError, match="no vocabulary registered"):
@@ -240,7 +240,7 @@ def test_load_registered_rejects_unknown_and_mismatched_assuntos(monkeypatch, tm
         concepts.load_registered("b")
 
 
-def test_graph_corpus_reads_the_seed_dispositivos_and_all_jurisprudencia(driver):
+def test_graph_corpus_reads_the_seed_provisions_and_all_case_law(driver):
     from legal_radar.adapters.neo4j_corpus import graph_corpus
     from legal_radar.application.concepts import CORPUS_ROOTS
 
@@ -280,13 +280,13 @@ def draft_of(**overrides):
     return Draft([entry], "fake/m")
 
 
-def test_with_assunto_builds_a_loadable_draft_and_reports_when_it_does_not():
-    from legal_radar.application.concepts import Draft, with_assunto
+def test_with_subject_builds_a_loadable_draft_and_reports_when_it_does_not():
+    from legal_radar.application.concepts import Draft, with_subject
 
-    text, error = with_assunto("a b", draft_of())
+    text, error = with_subject("a b", draft_of())
     assert text.startswith("assunto: a b\n") and error is None
 
-    _, error = with_assunto("a b", Draft([], "fake/m"))
+    _, error = with_subject("a b", Draft([], "fake/m"))
     assert "non-empty list" in error
 
 
@@ -306,13 +306,13 @@ def test_provenance_is_loaded_but_never_changes_the_hash():
         provenance_yaml(origin="llm", model="g/m", reviewed_by="Edson", reviewed_on="2026-10-11")
     )
 
-    concept = reviewed.conceitos[0]
+    concept = reviewed.concepts[0]
     assert (concept.origin, concept.reviewed_by, concept.reviewed_on) == (
         "llm",
         "Edson",
         "2026-10-11",
     )
-    assert concept.reviewed and not plain.conceitos[0].reviewed
+    assert concept.reviewed and not plain.concepts[0].reviewed
     assert reviewed.hash == plain.hash
 
 
@@ -359,24 +359,24 @@ def test_the_committed_vocabulary_is_curated_and_loads_without_a_warning(caplog)
     from legal_radar.application.concepts import VOCABULARY_PATHS, load_registered
 
     with caplog.at_level("WARNING"):
-        for assunto in VOCABULARY_PATHS:
-            vocabulary = load_registered(assunto)
+        for subject in VOCABULARY_PATHS:
+            vocabulary = load_registered(subject)
             assert vocabulary.status == "curated"
-            assert all(c.reviewed for c in vocabulary.conceitos)
+            assert all(c.reviewed for c in vocabulary.concepts)
 
     assert "is a draft" not in caplog.text
 
 
-def test_with_assunto_marks_the_draft_as_llm_origin():
+def test_with_subject_marks_the_draft_as_llm_origin():
     from datetime import date
 
-    from legal_radar.application.concepts import with_assunto
+    from legal_radar.application.concepts import with_subject
 
-    text, error = with_assunto("a", draft_of())
+    text, error = with_subject("a", draft_of())
 
     assert error is None
     vocabulary = parse_vocabulary(text)
-    concept = vocabulary.conceitos[0]
+    concept = vocabulary.concepts[0]
     assert vocabulary.status == "draft" and concept.origin == "llm"
     assert concept.model == "fake/m"
     assert concept.created_at == date.today().isoformat()
@@ -386,28 +386,28 @@ def test_sources_are_loaded_but_never_change_the_hash():
     plain = parse_vocabulary(provenance_yaml())
     cited = parse_vocabulary(provenance_yaml(sources=["STJ:1", "lei#art50"]))
 
-    assert cited.conceitos[0].sources == ("STJ:1", "lei#art50")
+    assert cited.concepts[0].sources == ("STJ:1", "lei#art50")
     assert cited.hash == plain.hash
     for bad in ("STJ:1", [""], [1]):
         with pytest.raises(VocabularyError):
             parse_vocabulary(provenance_yaml(sources=bad))
 
 
-def test_with_assunto_reports_sources_missing_from_the_corpus():
-    from legal_radar.application.concepts import corpus_ids, with_assunto
+def test_with_subject_reports_sources_missing_from_the_corpus():
+    from legal_radar.application.concepts import corpus_ids, with_subject
 
     ids = corpus_ids(["[STJ:1]\nementa", "[lei#art50]\ntexto"])
     assert ids == {"STJ:1", "lei#art50"}
 
-    assert with_assunto("a", draft_of(sources=["STJ:1"]), ids)[1] is None
-    assert "STF:9" in with_assunto("a", draft_of(sources=["STJ:1", "STF:9"]), ids)[1]
+    assert with_subject("a", draft_of(sources=["STJ:1"]), ids)[1] is None
+    assert "STF:9" in with_subject("a", draft_of(sources=["STJ:1", "STF:9"]), ids)[1]
 
 
 def test_timestamps_are_loaded_validated_and_outside_the_hash():
     plain = parse_vocabulary(provenance_yaml())
     stamped = parse_vocabulary(provenance_yaml(created_at="2026-10-11", updated_at="2026-10-12"))
 
-    assert (stamped.conceitos[0].created_at, stamped.conceitos[0].updated_at) == (
+    assert (stamped.concepts[0].created_at, stamped.concepts[0].updated_at) == (
         "2026-10-11",
         "2026-10-12",
     )
@@ -439,5 +439,5 @@ def test_model_is_provenance_outside_the_hash():
     plain = parse_vocabulary(provenance_yaml())
     drafted = parse_vocabulary(provenance_yaml(origin="llm", model="gemini/flash"))
 
-    assert drafted.conceitos[0].model == "gemini/flash"
+    assert drafted.concepts[0].model == "gemini/flash"
     assert drafted.hash == plain.hash

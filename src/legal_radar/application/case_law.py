@@ -5,9 +5,9 @@ from dataclasses import dataclass, field
 from legal_radar.application.enricher import decision_texts, enrich_decision
 from legal_radar.application.enrichment import DECISION_PROMPT, enrichment_key
 from legal_radar.application.ingest import EnrichConfig, EnrichmentCounts
-from legal_radar.application.ports import GraphStore, JurisprudenciaFetcher
+from legal_radar.application.ports import CaseLawFetcher, GraphStore
 from legal_radar.domain.llm import ProviderError
-from legal_radar.domain.model import EnrichmentRecord, EnrichmentStatus, Jurisprudencia, Relation
+from legal_radar.domain.model import CaseLaw, EnrichmentRecord, EnrichmentStatus, Relation
 from legal_radar.domain.relations import UrnResolver, extract_decision_relations
 
 TOP_HITS = 5  # default number of top hits per court
@@ -22,7 +22,7 @@ class Seed:
 
 
 @dataclass(frozen=True)
-class JurisprudenciaSource:
+class CaseLawSource:
     """Where an assunto's decisions come from: pinned seeds plus a search per court."""
 
     seeds: tuple[Seed, ...] = ()
@@ -30,8 +30,8 @@ class JurisprudenciaSource:
     top_hits: int = TOP_HITS  # per court; 0 ingests only the seeds
 
 
-JURISPRUDENCIA: dict[str, JurisprudenciaSource] = {
-    "desconsideração da personalidade jurídica": JurisprudenciaSource(
+CASE_LAW: dict[str, CaseLawSource] = {
+    "desconsideração da personalidade jurídica": CaseLawSource(
         seeds=(
             Seed("STJ", "202001090402", "REsp 1873811"),  # Tema Repetitivo 1210, core (CC art. 50)
             Seed("STF", "sjur550030", 'titulo:"RE 1387795"'),  # Tema 1232, tangential
@@ -45,7 +45,7 @@ JURISPRUDENCIA: dict[str, JurisprudenciaSource] = {
 
 
 @dataclass
-class JurisprudenciaReport:
+class CaseLawReport:
     ingested: int = 0
     references: int = 0  # `rule` REFERENCES edges from decisions to the dispositivos they cite
     unresolved: int = 0  # decisions with a citation no rule resolved (left for the LLM)
@@ -74,15 +74,15 @@ class JurisprudenciaReport:
         return "\n".join(lines)
 
 
-def ingest_jurisprudencia(
-    fetchers: dict[str, JurisprudenciaFetcher],
+def ingest_case_law(
+    fetchers: dict[str, CaseLawFetcher],
     store: GraphStore,
-    source: JurisprudenciaSource,
+    source: CaseLawSource,
     enrichment: EnrichConfig | None = None,
     resolver: UrnResolver | None = None,
-) -> JurisprudenciaReport:
-    report = JurisprudenciaReport()
-    items: dict[str, Jurisprudencia] = {}
+) -> CaseLawReport:
+    report = CaseLawReport()
+    items: dict[str, CaseLaw] = {}
     for seed in source.seeds:
         key = f"{seed.court}:{seed.native_id}"
         try:
@@ -106,7 +106,7 @@ def ingest_jurisprudencia(
             extraction = extract_decision_relations(j, resolver)
             relations += extraction.relations
             report.unresolved += extraction.needs_enrichment
-        store.write_jurisprudencia(list(items.values()), relations)
+        store.write_case_law(list(items.values()), relations)
         report.references = len(relations)
     report.ingested = len(items)
     if enrichment:
@@ -115,10 +115,10 @@ def ingest_jurisprudencia(
 
 
 def _enrich(
-    items: list[Jurisprudencia],
+    items: list[CaseLaw],
     store: GraphStore,
     config: EnrichConfig,
-    report: JurisprudenciaReport,
+    report: CaseLawReport,
 ) -> None:
     """Send each pending decision to `enrich_decision`, record the outcome and replace its `llm`
     edges. The records are grouped by court. A reply that cannot be read leaves that decision

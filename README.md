@@ -156,8 +156,8 @@ and a provider in `router.yaml`). Each chunk it sends gets a record in `data/ing
 whose text, vocabulary, `dispositivo-enrichment` prompt or extractor version changed.
 
 Ingest an assunto's seed precedents (for the anchor assunto: STJ Tema 1210, STF Tema 1232) and the
-top hits of each court's search. The sources are catalogued per assunto in `JURISPRUDENCIA`
-(`legal_radar.application.jurisprudencia`): the seeds, one search per court and the number of top hits (default
+top hits of each court's search. The sources are catalogued per assunto in `CASE_LAW`
+(`legal_radar.application.case_law`): the seeds, one search per court and the number of top hits (default
 5; 0 ingests only the seeds). STJ's Cloudflare check rejects bundled Chromium, so this needs Google
 Chrome installed:
 

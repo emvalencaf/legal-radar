@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 
 from legal_radar.application.ports import Provider
-from legal_radar.domain.anchors import ANCHORS, AnchorLei
+from legal_radar.domain.anchors import ANCHORS, AnchorStatute
 from legal_radar.domain.llm import CompletionParams
 
 DEFAULT_THRESHOLD = 0.5
@@ -13,8 +13,8 @@ PIPELINE_STEP = "assunto_resolution"
 
 @dataclass(frozen=True)
 class Resolution:
-    assunto: str
-    anchors: list[AnchorLei]
+    subject: str
+    anchors: list[AnchorStatute]
     score: float
 
 
@@ -23,7 +23,7 @@ def cosine(a: list[float], b: list[float]) -> float:
     return sum(x * y for x, y in zip(a, b, strict=True)) / norm if norm else 0.0
 
 
-class AssuntoResolver:
+class SubjectResolver:
     """Embeds the anchor-assunto catalog once and matches queries by cosine similarity.
 
     The provider may fall back to another embedding model between calls; vectors from different
@@ -33,7 +33,7 @@ class AssuntoResolver:
     def __init__(
         self,
         provider: Provider,
-        catalog: dict[str, list[AnchorLei]] | None = None,
+        catalog: dict[str, list[AnchorStatute]] | None = None,
         threshold: float = DEFAULT_THRESHOLD,
     ):
         self.provider = provider

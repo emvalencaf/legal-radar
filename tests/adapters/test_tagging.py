@@ -17,8 +17,8 @@ def lock(schema=TAG_SCHEMA):
     return refresh({"dispositivo-concept": "c1"}, lambda n, c: ("Tag:\n{text}", schema))
 
 
-def answer(conceito_id):
-    return Completion(json.dumps({"conceito_id": conceito_id}))
+def answer(concept_id):
+    return Completion(json.dumps({"conceito_id": concept_id}))
 
 
 def test_pipeline_sends_the_pinned_schema_with_the_vocabulary_ids_as_enum():
@@ -32,7 +32,7 @@ def test_pipeline_sends_the_pinned_schema_with_the_vocabulary_ids_as_enum():
         provider,
         RecordingStore(),
         lock(),
-        conceito_ids=["decisao_judicial", "abuso_da_personalidade"],
+        concept_ids=["decisao_judicial", "abuso_da_personalidade"],
     )
 
     enum = seen[0].response_schema["properties"]["conceito_id"]["enum"]
@@ -40,10 +40,10 @@ def test_pipeline_sends_the_pinned_schema_with_the_vocabulary_ids_as_enum():
     assert TAG_SCHEMA["properties"]["conceito_id"]["enum"] == ["placeholder"]
 
 
-def test_pipeline_parses_the_structured_reply_into_the_conceito_id():
+def test_pipeline_parses_the_structured_reply_into_the_concept_id():
     store = RecordingStore()
     run(RAW, FakeProvider(), store, lock())
-    assert {link.conceito_id for link in store.batch.links} == {
+    assert {link.concept_id for link in store.batch.links} == {
         "abuso_da_personalidade",
         "decisao_judicial",
     }
@@ -63,7 +63,7 @@ def test_pipeline_parses_the_structured_reply_into_the_conceito_id():
 def test_an_answer_outside_the_schema_fails_loudly_and_writes_nothing(reply):
     store = RecordingStore()
     with pytest.raises(TaggingError):
-        run(RAW, FakeProvider(script=[reply]), store, lock(), conceito_ids=["decisao_judicial"])
+        run(RAW, FakeProvider(script=[reply]), store, lock(), concept_ids=["decisao_judicial"])
     assert not hasattr(store, "batch")
 
 
@@ -80,10 +80,10 @@ def test_a_reply_with_extra_fields_fails_the_schema():
 
 def test_an_empty_vocabulary_is_refused():
     with pytest.raises(ValueError):
-        run(RAW, FakeProvider(), RecordingStore(), lock(), conceito_ids=[])
+        run(RAW, FakeProvider(), RecordingStore(), lock(), concept_ids=[])
 
 
-def test_a_pinned_schema_without_conceito_id_is_refused():
+def test_a_pinned_schema_without_concept_id_is_refused():
     with pytest.raises(PromptError):
         run(RAW, FakeProvider(), RecordingStore(), lock({"type": "object"}))
 
@@ -99,14 +99,14 @@ def test_the_snapshot_covers_the_schema_actually_sent():
         provider,
         RecordingStore(),
         lock(),
-        conceito_ids=["abuso_da_personalidade", "decisao_judicial"],
+        concept_ids=["abuso_da_personalidade", "decisao_judicial"],
     )
     run(
         RAW,
         provider,
         RecordingStore(),
         lock(),
-        conceito_ids=["abuso_da_personalidade", "decisao_judicial", "x"],
+        concept_ids=["abuso_da_personalidade", "decisao_judicial", "x"],
     )
 
     assert seen[0].prompt_snapshot != seen[-1].prompt_snapshot

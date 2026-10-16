@@ -12,7 +12,7 @@ from legal_radar.application.evaluation.enrichment_gold import (
     Thresholds,
     append_outcome,
     check_gates,
-    enrich_dispositivos,
+    enrich_provisions,
     indirect_metrics,
     load_gold,
     load_thresholds,
@@ -22,22 +22,24 @@ from legal_radar.application.evaluation.enrichment_gold import (
     start_run,
 )
 from legal_radar.domain.llm import Completion
-from legal_radar.domain.model import Confidence, Dispositivo, Origin, Relation, RelationType
+from legal_radar.domain.model import Confidence, Origin, Provision, Relation, RelationType
 
-LEI = "urn:lex:br:federal:lei:2002-01-10;10406"
+STATUTE = "urn:lex:br:federal:lei:2002-01-10;10406"
 VOCABULARY = Vocabulary(
     "desconsideração da personalidade jurídica",
     (Concept("abuso", "Abuso", (), "Quando há abuso.", "REQUISITO"),),
 )
 LOCK = refresh({ENRICHMENT_PROMPT: "c1"}, lambda name, commit: (ENRICHMENT_TEMPLATE, None))
-ART50 = Dispositivo(f"{LEI}#art50", LEI, "art50", "Em caso de abuso, aplica-se o art. 3 desta Lei.")
-ART3 = Dispositivo(f"{LEI}#art3", LEI, "art3", "Texto qualquer sobre abuso.")
+ART50 = Provision(
+    f"{STATUTE}#art50", STATUTE, "art50", "Em caso de abuso, aplica-se o art. 3 desta Lei."
+)
+ART3 = Provision(f"{STATUTE}#art3", STATUTE, "art3", "Texto qualquer sobre abuso.")
 
 GOLD = f"""
 dispositivos:
   - id: {ART50.id}
     edges:
-      - {{type: REFERENCES, target: "{LEI}#art3"}}
+      - {{type: REFERENCES, target: "{STATUTE}#art3"}}
       - {{type: APPLIES_TO, target: abuso}}
   - id: {ART3.id}
     edges: []
@@ -53,17 +55,17 @@ def outcome(d, *relations, dropped=0):
     return Outcome(d, list(relations), dropped)
 
 
-def test_gold_defaults_the_dispositivo_end_and_keeps_confirmed_negatives():
+def test_gold_defaults_the_provision_end_and_keeps_confirmed_negatives():
     gold = load_gold(GOLD)
 
     assert gold[ART3.id] == frozenset()
     assert {(e.type, e.source_id, e.target_id) for e in gold[ART50.id]} == {
-        (RelationType.REFERENCES, ART50.id, f"{LEI}#art3"),
+        (RelationType.REFERENCES, ART50.id, f"{STATUTE}#art3"),
         (RelationType.APPLIES_TO, ART50.id, "abuso"),
     }
 
 
-def test_gold_revokes_defaults_the_target_to_the_dispositivo():
+def test_gold_revokes_defaults_the_target_to_the_provision():
     gold = load_gold(
         f"dispositivos:\n  - id: {ART3.id}\n    edges:\n"
         "      - {type: REVOKES, source: 'urn:lex:br:federal:lei:2020-01-01;1'}\n"
@@ -104,7 +106,7 @@ def test_scores_per_edge_split_by_origin_and_type():
     outcomes = [
         outcome(
             ART50,
-            edge(RelationType.REFERENCES, ART50.id, f"{LEI}#art3", Origin.RULE),
+            edge(RelationType.REFERENCES, ART50.id, f"{STATUTE}#art3", Origin.RULE),
             edge(RelationType.APPLIES_TO, ART50.id, "abuso", Origin.LLM),
             edge(RelationType.DEFINES, ART50.id, "abuso", Origin.LLM),  # not in gold
         ),
@@ -124,11 +126,13 @@ def test_scores_per_edge_split_by_origin_and_type():
     assert (everything.tp, everything.fp, everything.fn) == (2, 2, 0)
 
 
-def test_only_gold_dispositivos_are_scored_and_unresolved_edges_are_not_edges():
+def test_only_gold_provisions_are_scored_and_unresolved_edges_are_not_edges():
     gold = load_gold(GOLD)
-    stranger = Dispositivo(f"{LEI}#art9", LEI, "art9", "x")
+    stranger = Provision(f"{STATUTE}#art9", STATUTE, "art9", "x")
     outcomes = [
-        outcome(stranger, edge(RelationType.REFERENCES, stranger.id, f"{LEI}#art1", Origin.RULE)),
+        outcome(
+            stranger, edge(RelationType.REFERENCES, stranger.id, f"{STATUTE}#art1", Origin.RULE)
+        ),
         outcome(ART50, edge(RelationType.REFERENCES, ART50.id, None, Origin.RULE, unresolved="x")),
     ]
 
@@ -148,11 +152,11 @@ def test_a_missed_gold_edge_counts_against_recall_of_each_origin():
 
 
 def test_indirect_metrics_need_no_gold():
-    d = Dispositivo(f"{LEI}#art1", LEI, "art1", "veja o art. 3 e o artigo mencionado")
+    d = Provision(f"{STATUTE}#art1", STATUTE, "art1", "veja o art. 3 e o artigo mencionado")
     outcomes = [
         outcome(
             d,
-            edge(RelationType.REFERENCES, d.id, f"{LEI}#art3", Origin.RULE, "art. 3"),
+            edge(RelationType.REFERENCES, d.id, f"{STATUTE}#art3", Origin.RULE, "art. 3"),
             edge(RelationType.REFERENCES, d.id, None, Origin.RULE, "o artigo mencionado", "x"),
             edge(RelationType.DEFINES, d.id, "abuso", Origin.LLM, "texto inventado"),
             dropped=1,
@@ -177,7 +181,7 @@ def test_indirect_metrics_are_undefined_without_edges():
 def run_gates(thresholds=None, llm_edges=True):
     thresholds = thresholds or Thresholds()
     gold = load_gold(GOLD)
-    relations = [edge(RelationType.REFERENCES, ART50.id, f"{LEI}#art3", Origin.RULE, "art. 3")]
+    relations = [edge(RelationType.REFERENCES, ART50.id, f"{STATUTE}#art3", Origin.RULE, "art. 3")]
     if llm_edges:
         relations.append(edge(RelationType.APPLIES_TO, ART50.id, "abuso", Origin.LLM, "abuso"))
     outcomes = [outcome(ART50, *relations), outcome(ART3)]
@@ -205,7 +209,7 @@ def test_indirect_thresholds_are_gated():
     failures = run_gates(Thresholds(min_valid_evidence=1.0, max_drop_rate=0.0))
     assert failures == []
 
-    d = Dispositivo(f"{LEI}#art1", LEI, "art1", "texto")
+    d = Provision(f"{STATUTE}#art1", STATUTE, "art1", "texto")
     bad = [outcome(d, edge(RelationType.DEFINES, d.id, "abuso", Origin.LLM, "nada"), dropped=3)]
     failures = check_gates(
         {}, indirect_metrics(bad), Thresholds(min_recall_rules=0, min_recall_llm=0)
@@ -230,51 +234,53 @@ def concept_reply():
     )
 
 
-def test_enrich_dispositivos_merges_rule_and_llm_edges_per_dispositivo():
+def test_enrich_provisions_merges_rule_and_llm_edges_per_provision():
     provider = FakeProvider(script=[concept_reply(), concept_reply()])
 
-    outcomes = enrich_dispositivos([ART50, ART3], VOCABULARY, provider, LOCK)
+    outcomes = enrich_provisions([ART50, ART3], VOCABULARY, provider, LOCK)
 
-    by_id = {o.dispositivo.id: o for o in outcomes}
+    by_id = {o.provision.id: o for o in outcomes}
     kinds = {(r.type, r.origin) for r in by_id[ART50.id].relations}
     assert (RelationType.APPLIES_TO, Origin.LLM) in kinds
     assert (RelationType.REFERENCES, Origin.RULE) in kinds
     assert by_id[ART3.id].tokens_in > 0
 
 
-def test_enrich_dispositivos_only_calls_the_wanted_ones_and_reports_progress():
+def test_enrich_provisions_only_calls_the_wanted_ones_and_reports_progress():
     provider = FakeProvider(script=[concept_reply()])
     seen = []
 
-    outcomes = enrich_dispositivos(
+    outcomes = enrich_provisions(
         [ART50, ART3],
         VOCABULARY,
         provider,
         LOCK,
         only={ART3.id},
         on_start=lambda position, total, d: seen.append(("start", position, total, d.id)),
-        on_progress=lambda done, total, outcome: seen.append((done, total, outcome.dispositivo.id)),
+        on_progress=lambda done, total, outcome: seen.append((done, total, outcome.provision.id)),
     )
 
-    assert [o.dispositivo.id for o in outcomes] == [ART3.id]
+    assert [o.provision.id for o in outcomes] == [ART3.id]
     assert seen == [("start", 1, 1, ART3.id), (1, 1, ART3.id)]  # announced before it is sent
 
 
 def test_a_grounded_citation_replaces_its_unresolved_rule_edge():
-    d = Dispositivo(f"{LEI}#art5", LEI, "art5", "Aplica-se o art. 3º da Lei nº 9.999, de 2000.")
+    d = Provision(
+        f"{STATUTE}#art5", STATUTE, "art5", "Aplica-se o art. 3º da Lei nº 9.999, de 2000."
+    )
     grounded = {
         "citacao": "lei:9999/2000 art3",
-        "alvo": f"{LEI}#art3",
+        "alvo": f"{STATUTE}#art3",
         "evidence": "art. 3º da Lei",
     }
     reply = Completion(json.dumps({"conceitos": [], "referencias": [grounded]}))
     provider = FakeProvider(script=[reply, concept_reply()])
 
-    result, _ = enrich_dispositivos([d, ART3], VOCABULARY, provider, LOCK)
+    result, _ = enrich_provisions([d, ART3], VOCABULARY, provider, LOCK)
 
     refs = [r for r in result.relations if r.type is RelationType.REFERENCES]
     assert [(r.target_id, r.origin, r.unresolved) for r in refs] == [
-        (f"{LEI}#art3", Origin.LLM, None)
+        (f"{STATUTE}#art3", Origin.LLM, None)
     ]
 
 
@@ -304,7 +310,7 @@ def test_a_run_is_written_as_it_goes_and_read_back_to_resume(tmp_path):
 
 
 def test_out_of_vocabulary_ids_and_revocations_survive_the_run_file(tmp_path):
-    revoked = Dispositivo(ART3.id, LEI, "art3", "texto", revocations=("(Revogado pela Lei X)",))
+    revoked = Provision(ART3.id, STATUTE, "art3", "texto", revocations=("(Revogado pela Lei X)",))
     first = Outcome(revoked, [], out_of_vocabulary=["invented_concept"])
     path = start_run(tmp_path, {}, run_id="r3")
     append_outcome(path, first)
@@ -322,4 +328,4 @@ def test_persist_run_still_writes_the_whole_run_at_once(tmp_path):
 
     run, outcomes = read_run(path, {ART3.id: ART3})
 
-    assert run["id"] == "r2" and [o.dispositivo for o in outcomes] == [ART3]
+    assert run["id"] == "r2" and [o.provision for o in outcomes] == [ART3]

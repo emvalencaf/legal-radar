@@ -161,7 +161,7 @@ if confirm "Run it now?"; then
   if LMSTUDIO_BASE_URL="$LMSTUDIO_BASE_URL" uv run python scripts/check_embeddings.py lmstudio; then
     say ""
     step "Related queries should say RESOLVED, unrelated ones rejected."
-    step "If not, tune DEFAULT_THRESHOLD in src/legal_radar/application/assunto.py between the two groups' scores."
+    step "If not, tune DEFAULT_THRESHOLD in src/legal_radar/application/subject.py between the two groups' scores."
   else
     SKIPPED+=("live check failed: see the error above (server down, model not loaded, or wrong id)")
   fi

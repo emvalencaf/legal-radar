@@ -11,7 +11,11 @@ from legal_radar.adapters.neo4j_seed import export_seed
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.adapters.prompt_lock import default_lock
 from legal_radar.application.answer import CitedAnswer, ask
-from legal_radar.application.assunto import AssuntoResolver
+from legal_radar.application.case_law import (
+    CASE_LAW,
+    CaseLawReport,
+    ingest_case_law,
+)
 from legal_radar.application.evaluation.answers import (
     QUESTION_PATHS,
     System,
@@ -20,17 +24,13 @@ from legal_radar.application.evaluation.answers import (
 )
 from legal_radar.application.evaluation.report import build_report
 from legal_radar.application.ingest import EnrichConfig, IngestionReport, ingest
-from legal_radar.application.jurisprudencia import (
-    JURISPRUDENCIA,
-    JurisprudenciaReport,
-    ingest_jurisprudencia,
-)
 from legal_radar.application.ports import (
-    JurisprudenciaFetcher,
-    LeiLocator,
-    LeiTextSource,
+    CaseLawFetcher,
     Provider,
+    StatuteLocator,
+    StatuteTextSource,
 )
+from legal_radar.application.subject import SubjectResolver
 from legal_radar.domain.anchors import ANCHORS
 from legal_radar.domain.prompts import PromptLock
 
@@ -38,7 +38,7 @@ from legal_radar.domain.prompts import PromptLock
 @dataclass
 class EndToEndResult:
     ingestion: IngestionReport
-    jurisprudencia: JurisprudenciaReport
+    case_law: CaseLawReport
     answer: CitedAnswer
     evaluations: list[Report]
     report_path: Path
@@ -46,40 +46,38 @@ class EndToEndResult:
 
 
 def run_end_to_end(
-    assunto: str,
+    subject: str,
     *,
-    locator: LeiLocator,
-    texts: LeiTextSource,
-    fetchers: dict[str, JurisprudenciaFetcher],
+    locator: StatuteLocator,
+    texts: StatuteTextSource,
+    fetchers: dict[str, CaseLawFetcher],
     store: Neo4jGraphStore,
     provider: Provider,
     report_out: Path,
     runs_dir: Path = RUNS_DIR,
     seed_out: Path | None = None,
-    lei_enrichment: EnrichConfig | None = None,
+    statute_enrichment: EnrichConfig | None = None,
     decision_enrichment: EnrichConfig | None = None,
     lock: PromptLock | None = None,
 ) -> EndToEndResult:
     """Builds the graph of `assunto`, then answers its name as a query, scores its question set
     (the graph system) into `runs_dir` and writes the static report to `report_out`."""
     lock = lock or default_lock()
-    ingestion = ingest(ANCHORS[assunto], locator, texts, store, enrichment=lei_enrichment)
-    jurisprudencia = ingest_jurisprudencia(
-        fetchers, store, JURISPRUDENCIA[assunto], enrichment=decision_enrichment
-    )
+    ingestion = ingest(ANCHORS[subject], locator, texts, store, enrichment=statute_enrichment)
+    case_law = ingest_case_law(fetchers, store, CASE_LAW[subject], enrichment=decision_enrichment)
     if seed_out:
         seed_out.parent.mkdir(parents=True, exist_ok=True)
         seed_out.write_text(export_seed(store.driver), encoding="utf-8")
     meter = UsageMeter(provider)
-    reader, resolve = Neo4jGraphReader(store.driver), AssuntoResolver(meter).resolve
-    answer = ask(assunto, resolve, reader, meter, lock)
+    reader, resolve = Neo4jGraphReader(store.driver), SubjectResolver(meter).resolve
+    answer = ask(subject, resolve, reader, meter, lock)
     evaluations = run_systems(
         [(System(), lambda query: ask(query, resolve, reader, meter, lock))],
-        load_questions(QUESTION_PATHS[assunto]),
+        load_questions(QUESTION_PATHS[subject]),
         meter,
         lock,
         runs_dir=runs_dir,
     )
     report_out.parent.mkdir(parents=True, exist_ok=True)
     report_out.write_text(build_report(runs_dir, lock), encoding="utf-8")
-    return EndToEndResult(ingestion, jurisprudencia, answer, evaluations, report_out, seed_out)
+    return EndToEndResult(ingestion, case_law, answer, evaluations, report_out, seed_out)

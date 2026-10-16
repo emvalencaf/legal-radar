@@ -8,8 +8,8 @@ from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.adapters.prompt_lock import refresh
 from legal_radar.application.answer import ANSWER_SCHEMA, CitationError, ask, parse_answer
-from legal_radar.application.assunto import AssuntoResolver
-from legal_radar.domain.model import Dispositivo, GraphBatch, Hop, Jurisprudencia, Lei
+from legal_radar.application.subject import SubjectResolver
+from legal_radar.domain.model import CaseLaw, GraphBatch, Hop, Provision, Statute
 
 ART_50 = f"{CC}#art50"
 ART_50_1 = f"{CC}#art50_par1"
@@ -45,8 +45,10 @@ def lock():
     )
 
 
-def d(lei: str, path: str, text: str, parent: str | None = None) -> Dispositivo:
-    return Dispositivo(f"{lei}#{path}", lei, path, text, f"{lei}#{parent}" if parent else None)
+def d(statute: str, path: str, text: str, parent: str | None = None) -> Provision:
+    return Provision(
+        f"{statute}#{path}", statute, path, text, f"{statute}#{parent}" if parent else None
+    )
 
 
 @pytest.fixture
@@ -60,7 +62,7 @@ def graph(driver):
     store = Neo4jGraphStore(driver)
     store.write(
         GraphBatch(
-            Lei(CC, "Código Civil"),
+            Statute(CC, "Código Civil"),
             [
                 d(CC, "art50", "Desconsideração da personalidade em caso de abuso."),
                 d(CC, "art50_par1", "Desvio de finalidade.", "art50"),
@@ -72,7 +74,7 @@ def graph(driver):
     )
     store.write(
         GraphBatch(
-            Lei(CDC, "CDC"),
+            Statute(CDC, "CDC"),
             [d(CDC, "art28", "Desconsideração no consumo.")],
             [],
             [],
@@ -80,7 +82,7 @@ def graph(driver):
     )
     store.write(
         GraphBatch(
-            Lei(CP, "CP"),
+            Statute(CP, "CP"),
             [
                 d(CP, "art121", "Homicídio."),
                 d(CP, "art122", "Equiparação."),
@@ -89,10 +91,10 @@ def graph(driver):
             [],
         )
     )
-    store.write_jurisprudencia(
+    store.write_case_law(
         [
-            Jurisprudencia(TEMA, "STJ", "REsp 1873811", "Ementa sobre abuso.", "Provido", "Tese"),
-            Jurisprudencia(OTHER, "STF", "RE 1", "Outra ementa.", "Negado"),
+            CaseLaw(TEMA, "STJ", "REsp 1873811", "Ementa sobre abuso.", "Provido", "Tese"),
+            CaseLaw(OTHER, "STF", "RE 1", "Outra ementa.", "Negado"),
         ]
     )
     driver.execute_query(
@@ -110,10 +112,10 @@ def graph(driver):
 QUERY = "pedido de desconsiderar a personalidade da pessoa jurídica"
 
 
-def test_resolves_the_assunto_and_cites_graph_nodes_with_their_paths(graph, lock):
-    result = ask(QUERY, AssuntoResolver(FakeProvider()).resolve, graph, FakeProvider(), lock)
+def test_resolves_the_subject_and_cites_graph_nodes_with_their_paths(graph, lock):
+    result = ask(QUERY, SubjectResolver(FakeProvider()).resolve, graph, FakeProvider(), lock)
 
-    assert result.assunto == "desconsideração da personalidade jurídica"
+    assert result.subject == "desconsideração da personalidade jurídica"
     assert result.answer
     assert [c.id for c in result.citations] == sorted(EXPECTED)
     by_id = {c.id: c for c in result.citations}
@@ -135,11 +137,11 @@ def test_a_decision_citing_a_node_reached_by_references_is_not_retrieved(graph, 
         d=CP_121,
     )
 
-    assert OTHER not in [j.id for j in graph.traverse([ART_50, CDC_28]).jurisprudencias]
+    assert OTHER not in [j.id for j in graph.traverse([ART_50, CDC_28]).case_law]
 
 
 def test_every_citation_resolves_to_a_graph_node(graph, lock, driver):
-    result = ask(QUERY, AssuntoResolver(FakeProvider()).resolve, graph, FakeProvider(), lock)
+    result = ask(QUERY, SubjectResolver(FakeProvider()).resolve, graph, FakeProvider(), lock)
 
     for citation in result.citations:
         rows, _, _ = driver.execute_query(
@@ -149,15 +151,15 @@ def test_every_citation_resolves_to_a_graph_node(graph, lock, driver):
 
 
 def test_traversal_returns_the_same_context_for_the_same_anchor(graph):
-    leis = [CDC_28, ART_50]
+    statutes = [CDC_28, ART_50]
 
-    first = graph.traverse(leis)
+    first = graph.traverse(statutes)
 
-    assert graph.traverse(list(reversed(leis))) == first
-    assert graph.traverse(leis) == first
+    assert graph.traverse(list(reversed(statutes))) == first
+    assert graph.traverse(statutes) == first
 
 
-def test_traversal_reports_the_leis_revoking_a_reached_dispositivo(graph, driver):
+def test_traversal_reports_the_statutes_revoking_a_reached_provision(graph, driver):
     driver.execute_query(
         f"""
         MATCH (l:Lei {{id: '{CP}'}}), (d:Dispositivo {{id: '{ART_50_1}'}})
@@ -174,7 +176,7 @@ def test_traversal_reports_the_leis_revoking_a_reached_dispositivo(graph, driver
 def test_the_prompt_carries_the_retrieved_sources_only(graph, lock):
     provider = FakeProvider()
 
-    ask(QUERY, AssuntoResolver(FakeProvider()).resolve, graph, provider, lock)
+    ask(QUERY, SubjectResolver(FakeProvider()).resolve, graph, provider, lock)
 
     (prompt,) = provider.calls
     assert prompt.startswith(f"Pergunta: {QUERY}")
@@ -186,10 +188,10 @@ def test_an_unresolved_query_gets_no_answer_and_no_model_call(graph, lock):
     provider = FakeProvider()
 
     result = ask(
-        "receita de bolo de cenoura", AssuntoResolver(FakeProvider()).resolve, graph, provider, lock
+        "receita de bolo de cenoura", SubjectResolver(FakeProvider()).resolve, graph, provider, lock
     )
 
-    assert (result.assunto, result.answer, result.citations) == (None, None, [])
+    assert (result.subject, result.answer, result.citations) == (None, None, [])
     assert provider.calls == []
 
 
@@ -228,9 +230,9 @@ def test_the_cli_loads_env_without_overriding_the_environment(tmp_path, monkeypa
 
 
 def test_corpus_lists_every_node_with_its_parent(graph):
-    dispositivos, jurisprudencias = graph.corpus()
+    provisions, case_law = graph.corpus()
 
-    by_id = {d.id: d for d in dispositivos}
-    assert len(dispositivos) == 6 and by_id[ART_51].parent_id is None
+    by_id = {d.id: d for d in provisions}
+    assert len(provisions) == 6 and by_id[ART_51].parent_id is None
     assert by_id[ART_50_1].parent_id == ART_50 and not by_id[ART_50].revoked
-    assert [j.id for j in jurisprudencias] == sorted([TEMA, OTHER])
+    assert [j.id for j in case_law] == sorted([TEMA, OTHER])

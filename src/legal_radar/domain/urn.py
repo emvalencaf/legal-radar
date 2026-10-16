@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 
-FEDERAL_LEI = re.compile(r"^urn:lex:br:federal:lei:(\d{4})-\d{2}-\d{2};(\d+)$")
+FEDERAL_STATUTE = re.compile(r"^urn:lex:br:federal:lei:(\d{4})-\d{2}-\d{2};(\d+)$")
 
 
 class LexmlError(Exception):

@@ -4,8 +4,8 @@ from neo4j import Driver, GraphDatabase
 
 from legal_radar.domain.model import (
     CONCEPT_RELATIONS,
+    CaseLaw,
     GraphBatch,
-    Jurisprudencia,
     Relation,
     RelationType,
 )
@@ -24,18 +24,18 @@ def ensure_constraints(session) -> None:
         session.run(statement)
 
 
-MERGE_LEI = """
+MERGE_STATUTE = """
 MERGE (l:Lei {id: $id}) SET l.title = $title, l.planalto_url = $planalto_url
 REMOVE l.stub
 """
-MERGE_DISPOSITIVO = """
+MERGE_PROVISION = """
 MERGE (d:Dispositivo {id: $id})
 SET d.path = $path, d.text = $text, d.kind = $kind, d.revoked = $revoked,
     d.revocations = $revocations
 """
 # A lei only cited (or only revoking) is a stub keyed by its URN until it is ingested.
-MERGE_STUB_LEI = "MERGE (l:Lei {id: $id}) ON CREATE SET l.stub = true"
-COUNT_DISPOSITIVO = "MATCH (d:Dispositivo {id: $id}) RETURN count(d) AS n"
+MERGE_STUB_STATUTE = "MERGE (l:Lei {id: $id}) ON CREATE SET l.stub = true"
+COUNT_PROVISION = "MATCH (d:Dispositivo {id: $id}) RETURN count(d) AS n"
 MERGE_REFERENCE = """
 MATCH (s:Dispositivo|Jurisprudencia {id: $source}), (t:Dispositivo {id: $target})
 MERGE (s)-[r:REFERENCES]->(t)
@@ -75,7 +75,7 @@ MERGE (c:Conceito {{id: $target}})
 MERGE (s)-[r:{type}]->(c)
 SET r.confidence = $confidence, r.origin = $origin, r.evidence = $evidence
 """
-MERGE_LEI_PARTS = """
+MERGE_STATUTE_PARTS = """
 MATCH (l:Lei {id: $lei_id}), (d:Dispositivo {id: $id})
 MERGE (l)-[:PARTS]->(d)
 """
@@ -83,11 +83,11 @@ MERGE_PARTS = """
 MATCH (p:Dispositivo {id: $parent_id}), (d:Dispositivo {id: $id})
 MERGE (p)-[:PARTS]->(d)
 """
-MERGE_JURISPRUDENCIA = """
+MERGE_CASE_LAW = """
 MERGE (j:Jurisprudencia {id: $id})
 SET j.court = $court, j.number = $number, j.ementa = $ementa, j.tese = $tese, j.decisao = $decisao
 """
-MERGE_CONCEITO = "MERGE (:Conceito {id: $id})"
+MERGE_CONCEPT = "MERGE (:Conceito {id: $id})"
 MERGE_LINK = """
 MATCH (d:Dispositivo {id: $dispositivo_id}), (c:Conceito {id: $conceito_id})
 MERGE (d)-[:RELATES_TO]->(c)
@@ -114,20 +114,18 @@ class Neo4jGraphStore:
             self._ensure_constraints(session)
             session.execute_write(self._write, batch)
 
-    def write_jurisprudencia(
-        self, items: list[Jurisprudencia], relations: list[Relation] = ()
-    ) -> None:
+    def write_case_law(self, items: list[CaseLaw], relations: list[Relation] = ()) -> None:
         with self._driver.session() as session:
             self._ensure_constraints(session)
             for j in items:
                 session.run(
-                    MERGE_JURISPRUDENCIA,
+                    MERGE_CASE_LAW,
                     id=j.id,
                     court=j.court,
                     number=j.number,
-                    ementa=j.ementa,
-                    tese=j.tese,
-                    decisao=j.decisao,
+                    ementa=j.headnote,
+                    tese=j.thesis,
+                    decisao=j.ruling,
                 )
             session.execute_write(self._write_relations, relations)
 
@@ -157,14 +155,14 @@ class Neo4jGraphStore:
     @staticmethod
     def _write(tx, batch: GraphBatch) -> None:
         tx.run(
-            MERGE_LEI,
-            id=batch.lei.id,
-            title=batch.lei.title,
-            planalto_url=batch.lei.planalto_url,
+            MERGE_STATUTE,
+            id=batch.statute.id,
+            title=batch.statute.title,
+            planalto_url=batch.statute.planalto_url,
         )
-        for d in batch.dispositivos:
+        for d in batch.provisions:
             tx.run(
-                MERGE_DISPOSITIVO,
+                MERGE_PROVISION,
                 id=d.id,
                 path=d.path,
                 text=d.text,
@@ -172,17 +170,17 @@ class Neo4jGraphStore:
                 revoked=d.revoked,
                 revocations=list(d.revocations),
             )
-        for d in batch.dispositivos:
+        for d in batch.provisions:
             if d.parent_id:
                 tx.run(MERGE_PARTS, id=d.id, parent_id=d.parent_id)
             else:
-                tx.run(MERGE_LEI_PARTS, id=d.id, lei_id=d.lei_id)
+                tx.run(MERGE_STATUTE_PARTS, id=d.id, lei_id=d.statute_id)
         for r in batch.relations:
             Neo4jGraphStore._write_relation(tx, r)
-        for c in batch.conceitos:
-            tx.run(MERGE_CONCEITO, id=c.id)
+        for c in batch.concepts:
+            tx.run(MERGE_CONCEPT, id=c.id)
         for link in batch.links:
-            tx.run(MERGE_LINK, dispositivo_id=link.dispositivo_id, conceito_id=link.conceito_id)
+            tx.run(MERGE_LINK, dispositivo_id=link.provision_id, conceito_id=link.concept_id)
 
     @staticmethod
     def _write_relation(tx, r: Relation) -> None:
@@ -202,13 +200,15 @@ class Neo4jGraphStore:
             if r.source_id is None:  # the revoking act did not resolve: keep the citation
                 tx.run(KEEP_UNRESOLVED_REVOKER, id=r.target_id, citation=r.unresolved)
                 return
-            tx.run(MERGE_STUB_LEI, id=r.source_id)
+            tx.run(MERGE_STUB_STATUTE, id=r.source_id)
             tx.run(MERGE_REVOKES, source=r.source_id, target=r.target_id, **edge)
         elif r.target_id is None:
             tx.run(KEEP_UNRESOLVED_REFERENCE, id=r.source_id, citation=r.unresolved)
-        elif tx.run(COUNT_DISPOSITIVO, id=r.target_id).single()["n"]:
+        elif tx.run(COUNT_PROVISION, id=r.target_id).single()["n"]:
             tx.run(MERGE_REFERENCE, source=r.source_id, target=r.target_id, **edge)
         else:  # a dispositivo of a lei the graph lacks: point at the stub lei, keep where in it
-            lei, _, locator = r.target_id.partition("#")
-            tx.run(MERGE_STUB_LEI, id=lei)
-            tx.run(MERGE_REFERENCE_TO_STUB, source=r.source_id, target=lei, locator=locator, **edge)
+            statute, _, locator = r.target_id.partition("#")
+            tx.run(MERGE_STUB_STATUTE, id=statute)
+            tx.run(
+                MERGE_REFERENCE_TO_STUB, source=r.source_id, target=statute, locator=locator, **edge
+            )

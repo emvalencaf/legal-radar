@@ -7,7 +7,7 @@ from testcontainers.neo4j import Neo4jContainer
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.fixture.pipeline import run
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
-from legal_radar.domain.model import Jurisprudencia
+from legal_radar.domain.model import CaseLaw
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "mini_lei.txt"
 
@@ -65,16 +65,16 @@ def test_pipeline_writes_graph_and_is_idempotent(driver, tag_lock):
     assert ("lei:99#art2", "RELATES_TO", "decisao_judicial") in edges
 
 
-def test_ingested_lei_is_loaded_with_parts_edges_and_reload_is_idempotent(driver):
+def test_ingested_statute_is_loaded_with_parts_edges_and_reload_is_idempotent(driver):
     from ingest_helpers import CC, CC_AGENT, FakePages, lexml_pages, read
 
     from legal_radar.adapters.lexml import LexmlLocator
     from legal_radar.adapters.planalto import PlanaltoTextSource
     from legal_radar.application.ingest import ingest
-    from legal_radar.domain.anchors import AnchorLei
+    from legal_radar.domain.anchors import AnchorStatute
 
     store = Neo4jGraphStore(driver)
-    anchors = [AnchorLei("lei 10406 2002 código civil", "10406", 2002)]
+    anchors = [AnchorStatute("lei 10406 2002 código civil", "10406", 2002)]
     planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
 
     ingest(anchors, LexmlLocator(lexml_pages()), PlanaltoTextSource(planalto), store)
@@ -91,14 +91,12 @@ def test_ingested_lei_is_loaded_with_parts_edges_and_reload_is_idempotent(driver
     assert (CC, "PARTS", f"{CC}#art50") not in edges
 
 
-def test_jurisprudencia_is_loaded_keyed_by_court_native_id_and_reload_is_idempotent(driver):
+def test_case_law_is_loaded_keyed_by_court_native_id_and_reload_is_idempotent(driver):
     store = Neo4jGraphStore(driver)
-    items = [
-        Jurisprudencia("STJ:202001090402", "STJ", "REsp 1873811 / SP", "ementa", "acórdão", "tese")
-    ]
+    items = [CaseLaw("STJ:202001090402", "STJ", "REsp 1873811 / SP", "ementa", "acórdão", "tese")]
 
-    store.write_jurisprudencia(items)
-    store.write_jurisprudencia(items)
+    store.write_case_law(items)
+    store.write_case_law(items)
 
     rows, _, _ = driver.execute_query(
         "MATCH (j:Jurisprudencia) RETURN j.id AS id, j.tese AS tese, j.decisao AS decisao"

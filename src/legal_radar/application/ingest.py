@@ -13,20 +13,20 @@ from legal_radar.application.enricher import (
 from legal_radar.application.enrichment import enrichment_key
 from legal_radar.application.ports import (
     GraphStore,
-    LeiLocator,
-    LeiTextSource,
     MetadataStore,
     Provider,
+    StatuteLocator,
+    StatuteTextSource,
 )
-from legal_radar.domain.anchors import AnchorLei
+from legal_radar.domain.anchors import AnchorStatute
 from legal_radar.domain.llm import ProviderError
 from legal_radar.domain.model import (
-    Dispositivo,
     EnrichmentRecord,
     EnrichmentStatus,
     GraphBatch,
-    Lei,
+    Provision,
     Relation,
+    Statute,
 )
 from legal_radar.domain.prompts import PromptLock
 from legal_radar.domain.relations import Extraction, UrnResolver, extract_relations
@@ -84,9 +84,9 @@ class IngestionReport:
 
 
 def ingest(
-    anchors: list[AnchorLei],
-    locator: LeiLocator,
-    texts: LeiTextSource,
+    anchors: list[AnchorStatute],
+    locator: StatuteLocator,
+    texts: StatuteTextSource,
     store: GraphStore,
     resolver: UrnResolver | None = None,
     enrichment: EnrichConfig | None = None,
@@ -100,7 +100,7 @@ def ingest(
     rules left for the LLM that are `pending` are sent to it, one by one.
     """
     report = IngestionReport()
-    parsed: list[tuple[Lei, list[Dispositivo]]] = []
+    parsed: list[tuple[Statute, list[Provision]]] = []
     for anchor in anchors:
         try:
             page = locator.locate(anchor)
@@ -108,31 +108,33 @@ def ingest(
             if page.planalto_url is None:
                 report.skipped[urn] = page.destinations
                 continue
-            dispositivos = texts.dispositivos(page)
+            provisions = texts.provisions(page)
         except LexmlError as error:
             report.failed[anchor.keyword] = str(error)
             continue
-        parsed.append((Lei(urn, page.title, page.planalto_url), dispositivos))
+        parsed.append((Statute(urn, page.title, page.planalto_url), provisions))
 
-    in_graph = {lei.id: {d.id for d in dispositivos} for lei, dispositivos in parsed}
+    in_graph = {statute.id: {d.id for d in provisions} for statute, provisions in parsed}
     extractions: dict[str, Extraction] = {}
-    for lei, dispositivos in parsed:
+    for statute, provisions in parsed:
         relations: list[Relation] = []
-        for d in dispositivos:
+        for d in provisions:
             extraction = extractions[d.id] = extract_relations(d, resolver, in_graph)
             relations += extraction.relations
-            report.needs_llm[lei.id] = report.needs_llm.get(lei.id, 0) + extraction.needs_enrichment
-            report.dropped[lei.id] = report.dropped.get(lei.id, 0) + extraction.dropped
-        store.write(GraphBatch(lei, dispositivos, [], [], relations))
-        report.ingested[lei.id] = len(dispositivos)
-        report.relations[lei.id] = len(relations)
+            report.needs_llm[statute.id] = (
+                report.needs_llm.get(statute.id, 0) + extraction.needs_enrichment
+            )
+            report.dropped[statute.id] = report.dropped.get(statute.id, 0) + extraction.dropped
+        store.write(GraphBatch(statute, provisions, [], [], relations))
+        report.ingested[statute.id] = len(provisions)
+        report.relations[statute.id] = len(relations)
     if enrichment:
         _enrich(parsed, extractions, store, enrichment, report)
     return report
 
 
 def _enrich(
-    parsed: list[tuple[Lei, list[Dispositivo]]],
+    parsed: list[tuple[Statute, list[Provision]]],
     extractions: dict[str, Extraction],
     store: GraphStore,
     config: EnrichConfig,
@@ -144,16 +146,14 @@ def _enrich(
     key and are `ok` again under the current one, so it is a subset of `processed`. A `too_long`
     chunk is recorded `ok`, so it is not retried forever, but it is counted apart."""
     exhausted = False
-    for lei, dispositivos in parsed:
-        counts = report.enrichment[lei.id] = EnrichmentCounts()
-        by_id = {d.id: d for d in dispositivos}
-        candidates = candidate_targets(dispositivos)
-        chunks = [
-            d for d in dispositivos if extractions[d.id].needs_enrichment and triage(d) is None
-        ]
+    for statute, provisions in parsed:
+        counts = report.enrichment[statute.id] = EnrichmentCounts()
+        by_id = {d.id: d for d in provisions}
+        candidates = candidate_targets(provisions)
+        chunks = [d for d in provisions if extractions[d.id].needs_enrichment and triage(d) is None]
         keys = {d.id: enrichment_key(d.text, config.vocabulary, config.lock) for d in chunks}
-        stored = config.metadata.records(lei.id)
-        pending = set(config.metadata.pending(lei.id, keys))
+        stored = config.metadata.records(statute.id)
+        pending = set(config.metadata.pending(statute.id, keys))
         counts.kept = len(chunks) - len(pending)
         for d in chunks:
             # the rules write their unresolved citations on every run: forget the grounded ones
@@ -165,17 +165,17 @@ def _enrich(
             if exhausted:
                 counts.left_pending += 1
                 continue
-            outcome = _enrich_chunk(d, lei, extractions[d.id], by_id, candidates, config)
+            outcome = _enrich_chunk(d, statute, extractions[d.id], by_id, candidates, config)
             if outcome is None:  # the provider is exhausted: this chunk and the rest stay pending
                 exhausted = True
                 counts.left_pending += 1
                 config.metadata.record(
-                    EnrichmentRecord(d.id, lei.id, keys[d.id], EnrichmentStatus.PENDING)
+                    EnrichmentRecord(d.id, statute.id, keys[d.id], EnrichmentStatus.PENDING)
                 )
             elif outcome.failed:
                 counts.left_pending += 1
                 config.metadata.record(
-                    EnrichmentRecord(d.id, lei.id, keys[d.id], EnrichmentStatus.PENDING)
+                    EnrichmentRecord(d.id, statute.id, keys[d.id], EnrichmentStatus.PENDING)
                 )
             else:
                 resolved = [r.unresolved for r in outcome.resolved if r.unresolved]
@@ -184,7 +184,7 @@ def _enrich(
                 config.metadata.record(
                     EnrichmentRecord(
                         d.id,
-                        lei.id,
+                        statute.id,
                         keys[d.id],
                         EnrichmentStatus.OK,
                         outcome.dropped,
@@ -198,14 +198,14 @@ def _enrich(
                 counts.processed += 1
                 if (before := stored.get(d.id)) and before.status is EnrichmentStatus.OK:
                     counts.returned += 1
-                report.dropped[lei.id] = report.dropped.get(lei.id, 0) + outcome.dropped
+                report.dropped[statute.id] = report.dropped.get(statute.id, 0) + outcome.dropped
 
 
 def _enrich_chunk(
-    d: Dispositivo,
-    lei: Lei,
+    d: Provision,
+    statute: Statute,
     extraction: Extraction,
-    by_id: dict[str, Dispositivo],
+    by_id: dict[str, Provision],
     candidates: list[str],
     config: EnrichConfig,
 ) -> Enrichment | None:

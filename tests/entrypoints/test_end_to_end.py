@@ -4,7 +4,7 @@ pytest.importorskip("assayer")  # the `eval` extra
 
 from ingest_helpers import CC, CC_AGENT, FakePages, lexml_pages, read
 from neo4j import GraphDatabase
-from test_jurisprudencia import stf, stj
+from test_case_law import stf, stj
 from testcontainers.neo4j import Neo4jContainer
 
 from legal_radar.adapters import lexml
@@ -15,7 +15,7 @@ from legal_radar.adapters.neo4j_store import Neo4jGraphStore
 from legal_radar.adapters.planalto import PlanaltoTextSource
 from legal_radar.entrypoints.end_to_end import run_end_to_end
 
-ASSUNTO = "desconsideração da personalidade jurídica"
+SUBJECT = "desconsideração da personalidade jurídica"
 
 
 class LexmlWithoutCdc(FakePages):
@@ -38,7 +38,7 @@ def test_one_run_builds_the_graph_answers_scores_and_reports(neo4j, tmp_path, mo
     driver.execute_query("MATCH (n) DETACH DELETE n")
     try:
         result = run_end_to_end(
-            ASSUNTO,
+            SUBJECT,
             locator=LexmlLocator(LexmlWithoutCdc(lexml_pages().pages)),
             texts=PlanaltoTextSource(FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})),
             fetchers={"STF": stf(), "STJ": stj()},
@@ -48,14 +48,14 @@ def test_one_run_builds_the_graph_answers_scores_and_reports(neo4j, tmp_path, mo
             runs_dir=tmp_path / "runs",
             seed_out=tmp_path / "seed" / "graph.jsonl",
         )
-        leis = driver.execute_query("MATCH (l:Lei {id: $id}) RETURN l", id=CC)[0]
+        statutes = driver.execute_query("MATCH (l:Lei {id: $id}) RETURN l", id=CC)[0]
         decisions = driver.execute_query("MATCH (j:Jurisprudencia) RETURN j")[0]
     finally:
         driver.close()
 
-    assert leis and decisions
-    assert result.ingestion.ingested[CC] > 0 and result.jurisprudencia.ingested > 0
-    assert result.answer.assunto == ASSUNTO and result.answer.citations
+    assert statutes and decisions
+    assert result.ingestion.ingested[CC] > 0 and result.case_law.ingested > 0
+    assert result.answer.subject == SUBJECT and result.answer.citations
     assert [r.system for r in result.evaluations] == ["graph"]
     assert list((tmp_path / "runs").glob("graph-*.json"))
     assert result.seed_path.read_text(encoding="utf-8")

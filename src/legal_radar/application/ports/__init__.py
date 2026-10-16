@@ -2,14 +2,14 @@
 
 from typing import Protocol
 
-from legal_radar.domain.anchors import AnchorLei
+from legal_radar.domain.anchors import AnchorStatute
 from legal_radar.domain.llm import Completion, CompletionParams, Embedding
 from legal_radar.domain.model import (
+    CaseLaw,
     Context,
-    Dispositivo,
     EnrichmentRecord,
     GraphBatch,
-    Jurisprudencia,
+    Provision,
     Relation,
     StoredVector,
 )
@@ -38,9 +38,7 @@ class GraphStore(Protocol):
         A relation whose lei the graph lacks becomes an edge to a stub Lei node keyed by its URN;
         one whose endpoint is unresolved is kept as an attribute of the node it starts from."""
 
-    def write_jurisprudencia(
-        self, items: list[Jurisprudencia], relations: list[Relation] = ()
-    ) -> None:
+    def write_case_law(self, items: list[CaseLaw], relations: list[Relation] = ()) -> None:
         """Idempotently upsert the jurisprudência nodes and the `rule` edges starting at them
         (`relations`, written like a dispositivo's: stub lei, unresolved citation kept)."""
 
@@ -78,10 +76,10 @@ class VectorStore(Protocol):
 
 
 class GraphReader(Protocol):
-    def lei_ids(self) -> list[str]:
+    def statute_ids(self) -> list[str]:
         """The ids (URNs) of every lei in the graph, sorted."""
 
-    def corpus(self) -> tuple[list[Dispositivo], list[Jurisprudencia]]:
+    def corpus(self) -> tuple[list[Provision], list[CaseLaw]]:
         """Every dispositivo (with parent and revoked mark) and decision, sorted by id."""
 
     def traverse(self, anchor_ids: list[str]) -> Context:
@@ -97,17 +95,17 @@ class PageSource(Protocol):
     def get(self, url: str) -> str: ...
 
 
-class LeiLocator(Protocol):
+class StatuteLocator(Protocol):
     """Finds the lei an anchor names and where its consolidated text lives."""
 
-    def locate(self, anchor: AnchorLei) -> UrnPage:
+    def locate(self, anchor: AnchorStatute) -> UrnPage:
         """The URN page of the anchor's lei. Raises `LexmlError` when the lei cannot be found."""
 
 
-class LeiTextSource(Protocol):
+class StatuteTextSource(Protocol):
     """Reads a located lei's text as dispositivos."""
 
-    def dispositivos(self, page: UrnPage) -> list[Dispositivo]:
+    def provisions(self, page: UrnPage) -> list[Provision]:
         """The dispositivos of the lei at `page.planalto_url` (never called when it is None)."""
 
 
@@ -124,7 +122,7 @@ class FormPages(Protocol):
     def submit_form(self, url: str, form: str, fields: dict[str, str]) -> str: ...
 
 
-class JurisprudenciaFetcher(Protocol):
+class CaseLawFetcher(Protocol):
     """One court's search, however it is reached; every court looks the same to the pipeline."""
 
-    def search(self, query: str, limit: int) -> list[Jurisprudencia]: ...
+    def search(self, query: str, limit: int) -> list[CaseLaw]: ...

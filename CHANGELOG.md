@@ -14,6 +14,11 @@ heading when `development` is released to `master`.
 
 ### Changed
 
+- Python identifiers are English: `Dispositivo` is `Provision`, `Lei` is `Statute`,
+  `Jurisprudencia` is `CaseLaw`, `Conceito` is `ConceptNode`, `assunto` is `subject`, with the
+  modules `application/subject.py` and `application/case_law.py`. What is persisted keeps the
+  Portuguese terms: the Neo4j labels, the YAML and JSONL keys, the prompts, and the `assunto` and
+  `by_nivel` keys of run files and checkpoints, so earlier runs still load.
 - README rewritten for an international reader: the problem, the graph against RAG results, the
   design decisions, the Portuguese to English terms and a real roadmap.
 

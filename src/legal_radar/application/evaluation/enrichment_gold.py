@@ -23,8 +23,8 @@ from legal_radar.application.ports import Provider
 from legal_radar.domain.model import (
     CONCEPT_RELATIONS,
     Confidence,
-    Dispositivo,
     Origin,
+    Provision,
     Relation,
     RelationType,
 )
@@ -101,7 +101,7 @@ def _gold_edge(id_: str, raw) -> GoldEdge:
 class Outcome:
     """What enrichment produced for one dispositivo: the final edges (rules, then LLM)."""
 
-    dispositivo: Dispositivo
+    provision: Provision
     relations: list[Relation]
     dropped: int = 0  # items discarded for failing validation, by the rules or the LLM
     skipped: str | None = None
@@ -111,8 +111,8 @@ class Outcome:
     out_of_vocabulary: list[str] = field(default_factory=list)  # concept ids the LLM made up
 
 
-def enrich_dispositivos(
-    dispositivos: Sequence[Dispositivo],
+def enrich_provisions(
+    provisions: Sequence[Provision],
     vocabulary: Vocabulary,
     provider: Provider,
     lock: PromptLock | None = None,
@@ -120,7 +120,7 @@ def enrich_dispositivos(
     resolver=None,
     max_input_tokens: int | None = None,
     only: Collection[str] | None = None,
-    on_start: Callable[[int, int, Dispositivo], None] | None = None,
+    on_start: Callable[[int, int, Provision], None] | None = None,
     on_progress: Callable[[int, int, Outcome], None] | None = None,
 ) -> list[Outcome]:
     """Run the rules and then the LLM over each dispositivo, as ingestion will (#29).
@@ -130,16 +130,17 @@ def enrich_dispositivos(
     no LLM call is spent on them); `on_start(position, total, dispositivo)` fires before each
     one is sent and `on_progress(done, total, outcome)` after it returns.
     """
-    by_id = {d.id: d for d in dispositivos}
+    by_id = {d.id: d for d in provisions}
     ingested: dict[str, set[str]] = {}
-    for d in dispositivos:
-        ingested.setdefault(d.lei_id, set()).add(d.id)
+    for d in provisions:
+        ingested.setdefault(d.statute_id, set()).add(d.id)
     candidates = {
-        lei: candidate_targets([d for d in dispositivos if d.lei_id == lei]) for lei in ingested
+        statute: candidate_targets([d for d in provisions if d.statute_id == statute])
+        for statute in ingested
     }
     limits = {} if max_input_tokens is None else {"max_input_tokens": max_input_tokens}
     outcomes = []
-    wanted = [d for d in dispositivos if only is None or d.id in only]
+    wanted = [d for d in provisions if only is None or d.id in only]
     for position, d in enumerate(wanted, 1):
         if on_start:
             on_start(position, len(wanted), d)
@@ -151,7 +152,7 @@ def enrich_dispositivos(
             lock,
             ancestors=ancestors_of(d, by_id),
             unresolved=[r for r in extraction.relations if r.unresolved],
-            candidates=candidates[d.lei_id],
+            candidates=candidates[d.statute_id],
             **limits,
         )
         kept = [r for r in extraction.relations if r not in result.resolved]
@@ -204,7 +205,7 @@ def score_edges(outcomes: Sequence[Outcome], gold: Mapping[str, Collection[GoldE
     expected = {(g.type, g.source_id, g.target_id) for edges in gold.values() for g in edges}
     predicted: dict[str, set] = {"rule": set(), "llm": set()}
     for o in outcomes:
-        if o.dispositivo.id not in gold:
+        if o.provision.id not in gold:
             continue
         for r in o.relations:
             if r.unresolved or r.source_id is None or r.target_id is None:
@@ -239,7 +240,7 @@ class Indirect:
 
 def indirect_metrics(outcomes: Sequence[Outcome]) -> Indirect:
     references = [r for o in outcomes for r in o.relations if r.type is RelationType.REFERENCES]
-    edges = [(o.dispositivo, r) for o in outcomes for r in o.relations]
+    edges = [(o.provision, r) for o in outcomes for r in o.relations]
     valid = sum(any(r.evidence in source for source in (d.text, *d.revocations)) for d, r in edges)
     dropped = sum(o.dropped for o in outcomes)
     return Indirect(
@@ -326,11 +327,11 @@ def start_run(directory: Path | str, run: dict, run_id: str | None = None) -> Pa
 
 def append_outcome(path: Path, outcome: Outcome) -> None:
     """Add one dispositivo's input and output to a run, so a crash loses nothing already done."""
-    d = outcome.dispositivo
+    d = outcome.provision
     line = {
         "input": {
             "id": d.id,
-            "lei_id": d.lei_id,
+            "lei_id": d.statute_id,
             "path": d.path,
             "kind": d.kind,
             "text": d.text,
@@ -350,9 +351,7 @@ def append_outcome(path: Path, outcome: Outcome) -> None:
         file.write(json.dumps(line, ensure_ascii=False) + "\n")
 
 
-def read_run(
-    path: Path | str, dispositivos: Mapping[str, Dispositivo]
-) -> tuple[dict, list[Outcome]]:
+def read_run(path: Path | str, provisions: Mapping[str, Provision]) -> tuple[dict, list[Outcome]]:
     """The header and the outcomes of a run file, to resume it or to rescore it offline."""
     lines = [json.loads(line) for line in Path(path).read_text("utf-8").splitlines() if line]
     outcomes = []
@@ -372,7 +371,7 @@ def read_run(
         ]
         outcomes.append(
             Outcome(
-                dispositivos[line["input"]["id"]],
+                provisions[line["input"]["id"]],
                 relations,
                 out["dropped"],
                 out["skipped"],

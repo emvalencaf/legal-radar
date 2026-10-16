@@ -5,18 +5,18 @@ from enum import StrEnum
 
 
 @dataclass(frozen=True)
-class Lei:
+class Statute:
     id: str
     title: str
     planalto_url: str | None = None
 
 
 @dataclass(frozen=True)
-class Dispositivo:
+class Provision:
     """A structural unit of a lei (títulos down to alíneas), keyed by `{lei_id}#{path}`."""
 
     id: str
-    lei_id: str
+    statute_id: str
     path: str
     text: str
     parent_id: str | None = None
@@ -26,33 +26,33 @@ class Dispositivo:
 
 
 @dataclass(frozen=True)
-class Jurisprudencia:
+class CaseLaw:
     """A court decision, keyed `{court}:{court-native id}`; ementa, tese and decisão only."""
 
     id: str
     court: str
     number: str
-    ementa: str
-    decisao: str
-    tese: str | None = None
+    headnote: str
+    ruling: str
+    thesis: str | None = None
 
 
 @dataclass(frozen=True)
-class Conceito:
+class ConceptNode:
     id: str
 
 
 @dataclass(frozen=True)
 class ConceptLink:
-    dispositivo_id: str
-    conceito_id: str
+    provision_id: str
+    concept_id: str
 
 
 @dataclass(frozen=True)
 class GraphBatch:
-    lei: Lei
-    dispositivos: list[Dispositivo]
-    conceitos: list[Conceito]
+    statute: Statute
+    provisions: list[Provision]
+    concepts: list[ConceptNode]
     links: list[ConceptLink]
     relations: list["Relation"] = field(default_factory=list)
 
@@ -72,8 +72,8 @@ class Context:
     """What a traversal retrieved: the nodes reached and, per node id, the hops that reached it;
     `revocations` are the leis revoking a reached dispositivo, kept apart as they reach no node."""
 
-    dispositivos: list[Dispositivo]
-    jurisprudencias: list[Jurisprudencia]
+    provisions: list[Provision]
+    case_law: list[CaseLaw]
     paths: dict[str, list[Hop]]
     revocations: list[Hop] = field(default_factory=list)  # REVOKES edges into a retrieved node
 

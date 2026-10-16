@@ -2,16 +2,16 @@
 
 from neo4j import Driver
 
-from legal_radar.domain.model import Context, Dispositivo, Hop, Jurisprudencia
+from legal_radar.domain.model import CaseLaw, Context, Hop, Provision
 
-CORPUS_DISPOSITIVOS = """
+CORPUS_PROVISIONS = """
 MATCH (d:Dispositivo)
 OPTIONAL MATCH (p:Dispositivo)-[:PARTS]->(d)
 RETURN d AS node, p.id AS parent_id
 ORDER BY d.id
 """
-CORPUS_JURISPRUDENCIAS = "MATCH (j:Jurisprudencia) RETURN j AS node ORDER BY j.id"
-LEI_IDS = "MATCH (l:Lei) RETURN l.id AS id ORDER BY id"
+CORPUS_CASE_LAW = "MATCH (j:Jurisprudencia) RETURN j AS node ORDER BY j.id"
+STATUTE_IDS = "MATCH (l:Lei) RETURN l.id AS id ORDER BY id"
 PARTS_DOWN = """
 MATCH p = (a)-[:PARTS*0..]->(d:Dispositivo)
 WHERE a.id IN $anchor_ids AND (a:Lei OR a:Dispositivo)
@@ -38,11 +38,11 @@ ORDER BY d.id, l.id
 """
 
 
-def _dispositivo(node, parent_id: str | None = None) -> Dispositivo:
+def _provision(node, parent_id: str | None = None) -> Provision:
     # The Lei is the id's prefix: ids are `{lei_id}#{path}`.
-    return Dispositivo(
+    return Provision(
         id=node["id"],
-        lei_id=node["id"].split("#", 1)[0],
+        statute_id=node["id"].split("#", 1)[0],
         path=node["path"],
         text=node["text"],
         parent_id=parent_id,
@@ -51,14 +51,14 @@ def _dispositivo(node, parent_id: str | None = None) -> Dispositivo:
     )
 
 
-def _jurisprudencia(node) -> Jurisprudencia:
-    return Jurisprudencia(
+def _case_law(node) -> CaseLaw:
+    return CaseLaw(
         id=node["id"],
         court=node["court"],
         number=node["number"],
-        ementa=node["ementa"],
-        decisao=node["decisao"],
-        tese=node["tese"],
+        headnote=node["ementa"],
+        ruling=node["decisao"],
+        thesis=node["tese"],
     )
 
 
@@ -70,45 +70,45 @@ class Neo4jGraphReader:
         records, _, _ = self._driver.execute_query(query, **parameters)
         return records
 
-    def lei_ids(self) -> list[str]:
-        return [r["id"] for r in self._rows(LEI_IDS)]
+    def statute_ids(self) -> list[str]:
+        return [r["id"] for r in self._rows(STATUTE_IDS)]
 
-    def corpus(self) -> tuple[list[Dispositivo], list[Jurisprudencia]]:
+    def corpus(self) -> tuple[list[Provision], list[CaseLaw]]:
         """Every dispositivo (with its parent and revoked mark) and every decision in the graph,
         sorted by id: what a retrieval without the graph indexes."""
         return (
-            [_dispositivo(r["node"], r["parent_id"]) for r in self._rows(CORPUS_DISPOSITIVOS)],
-            [_jurisprudencia(r["node"]) for r in self._rows(CORPUS_JURISPRUDENCIAS)],
+            [_provision(r["node"], r["parent_id"]) for r in self._rows(CORPUS_PROVISIONS)],
+            [_case_law(r["node"]) for r in self._rows(CORPUS_CASE_LAW)],
         )
 
     def traverse(self, anchor_ids: list[str]) -> Context:
-        dispositivos: dict[str, Dispositivo] = {}
+        provisions: dict[str, Provision] = {}
         paths: dict[str, list[Hop]] = {}
         for r in self._rows(PARTS_DOWN, anchor_ids=anchor_ids):
             node = r["node"]
-            if node["id"] in dispositivos:  # reached from two anchors: the nearer one is kept
+            if node["id"] in provisions:  # reached from two anchors: the nearer one is kept
                 continue
-            dispositivos[node["id"]] = _dispositivo(node)
+            provisions[node["id"]] = _provision(node)
             paths[node["id"]] = [Hop("PARTS", a, b) for a, b in r["hops"]]
-        parts = list(dispositivos)
+        parts = list(provisions)
 
         for r in self._rows(REFERENCED, ids=parts):
             node = r["node"]
-            if node["id"] in dispositivos:  # already reached through PARTS
+            if node["id"] in provisions:  # already reached through PARTS
                 continue
-            dispositivos[node["id"]] = _dispositivo(node)
+            provisions[node["id"]] = _provision(node)
             paths[node["id"]] = [
                 *paths[r["source"]],
                 Hop("REFERENCES", r["source"], r["target"], r["confidence"]),
             ]
 
-        jurisprudencias: dict[str, Jurisprudencia] = {}
+        case_law: dict[str, CaseLaw] = {}
         # only dispositivos reached by PARTS: a decision citing a REFERENCES target would be hop 2
         for r in self._rows(CITING, ids=parts):
             node = r["node"]
-            if node["id"] in jurisprudencias:
+            if node["id"] in case_law:
                 continue
-            jurisprudencias[node["id"]] = _jurisprudencia(node)
+            case_law[node["id"]] = _case_law(node)
             paths[node["id"]] = [
                 *paths[r["target"]],
                 Hop("REFERENCES", r["source"], r["target"], r["confidence"]),
@@ -116,11 +116,11 @@ class Neo4jGraphReader:
 
         revocations = [
             Hop("REVOKES", r["source"], r["target"], r["confidence"])
-            for r in self._rows(REVOKING, ids=sorted(dispositivos))
+            for r in self._rows(REVOKING, ids=sorted(provisions))
         ]
         return Context(
-            sorted(dispositivos.values(), key=lambda d: d.id),
-            sorted(jurisprudencias.values(), key=lambda j: j.id),
+            sorted(provisions.values(), key=lambda d: d.id),
+            sorted(case_law.values(), key=lambda j: j.id),
             paths,
             revocations,
         )

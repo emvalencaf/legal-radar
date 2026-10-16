@@ -8,10 +8,10 @@ from legal_radar.application.evaluation.report import (
     load_enrichment_run,
     render_report,
 )
-from legal_radar.domain.model import Confidence, Dispositivo, Origin, Relation, RelationType
+from legal_radar.domain.model import Confidence, Origin, Provision, Relation, RelationType
 
-LEI = "urn:lex:br:federal:lei:2002-01-10;10406"
-ART = Dispositivo(f"{LEI}#art50", LEI, "art50", "Em caso de abuso da personalidade jurídica.")
+STATUTE = "urn:lex:br:federal:lei:2002-01-10;10406"
+ART = Provision(f"{STATUTE}#art50", STATUTE, "art50", "Em caso de abuso da personalidade jurídica.")
 LOCK = refresh({"cited-answer": "c1"}, lambda name, commit: ("Responda {query}", None))
 WHEN = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
 
@@ -44,9 +44,9 @@ def run(system="graph", k=None):
             {
                 "id": "requisitos-cc",
                 "answer": "Exige abuso <b>da</b> personalidade.",
-                "citations": [f"{LEI}#art50", "STJ:1"],
+                "citations": [f"{STATUTE}#art50", "STJ:1"],
                 "citation_paths": {
-                    f"{LEI}#art50": [["PARTS", LEI, f"{LEI}#art50"]],
+                    f"{STATUTE}#art50": [["PARTS", STATUTE, f"{STATUTE}#art50"]],
                     "STJ:1": [],
                 },
             },
@@ -82,7 +82,7 @@ def test_example_answers_list_each_citation_with_its_graph_path_and_skip_abstent
     html = page()
 
     assert "requisitos-cc" in html and "abstain" not in html
-    assert f"<code>{LEI}#art50</code>: PARTS({LEI}#art50)" in html
+    assert f"<code>{STATUTE}#art50</code>: PARTS({STATUTE}#art50)" in html
     assert "<code>STJ:1</code>: anchor" in html
 
 

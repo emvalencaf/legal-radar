@@ -12,7 +12,7 @@ from pathlib import Path
 from legal_radar.adapters.tracing import safely
 from legal_radar.application.answer import CitedAnswer
 from legal_radar.application.evaluation.answers import (
-    BASE_NIVEL,
+    BASE_LEVEL,
     Checkpoint,
     Outcome,
     Question,
@@ -53,7 +53,13 @@ class Report:
     grounding: dict = field(default_factory=dict)
     system: str = "graph"  # what answered: the graph, or a RAG baseline (`rag-naive`, ...)
     k: int | None = None  # the baseline's top-k; None for the graph
-    by_nivel: dict[str, dict[str, float | None]] = field(default_factory=dict)  # nivel -> scores
+    by_level: dict[str, dict[str, float | None]] = field(default_factory=dict)  # nivel -> scores
+
+    def _persisted(self) -> dict:
+        """The run file keeps the Portuguese key `by_nivel`, so earlier runs stay comparable."""
+        raw = dict(self.__dict__)
+        raw["by_nivel"] = raw.pop("by_level")
+        return raw
 
     def render(self) -> str:
         label = System(self.system, self.k).label
@@ -73,7 +79,8 @@ class Report:
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / f"{self.experiment}.json"
         path.write_text(
-            json.dumps(self.__dict__, ensure_ascii=False, indent=2, default=str), encoding="utf-8"
+            json.dumps(self._persisted(), ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8",
         )
         return path
 
@@ -219,14 +226,14 @@ def checkpoint_for(
     return Checkpoint(CHECKPOINT_DIR / f"{system.slug}.json", fingerprint)
 
 
-def aggregate_by_nivel(
-    runs, nivel_of: dict[str, str | None], graph_paths: bool = True
+def aggregate_by_level(
+    runs, level_of: dict[str, str | None], graph_paths: bool = True
 ) -> dict[str, dict]:
     """`aggregate` over the questions of each `nivel` (`nivel_of` maps a question id to it)."""
     groups: dict[str, list] = {}
     for run in runs:
-        groups.setdefault(nivel_of.get(run.input) or BASE_NIVEL, []).append(run)
-    return {nivel: aggregate(group, graph_paths) for nivel, group in sorted(groups.items())}
+        groups.setdefault(level_of.get(run.input) or BASE_LEVEL, []).append(run)
+    return {level: aggregate(group, graph_paths) for level, group in sorted(groups.items())}
 
 
 def run_evaluation(
@@ -319,14 +326,14 @@ def run_evaluation(
         faithfulness = ragas_faithfulness(rows, grounding_llm)
         grounding["faithfulness"] = sum(faithfulness) / len(faithfulness) if faithfulness else None
         grounding["faithfulness_scored"] = f"{len(faithfulness)}/{len(rows)}"
-    nivel_of = {q.id: q.nivel for q in questions}
+    level_of = {q.id: q.level for q in questions}
     return Report(
         name,
         aggregate(result.runs, system.has_graph),
         [
             {
                 "id": run.input,
-                "nivel": nivel_of.get(run.input),
+                "nivel": level_of.get(run.input),
                 "answer": run.output["answer"],
                 "citations": run.output["citations"],
                 "citation_paths": run.output.get("citation_paths", {}),
@@ -347,7 +354,7 @@ def run_evaluation(
         grounding,
         system.name,
         system.k,
-        aggregate_by_nivel(result.runs, nivel_of, system.has_graph),
+        aggregate_by_level(result.runs, level_of, system.has_graph),
     )
 
 

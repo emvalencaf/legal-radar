@@ -11,14 +11,14 @@ from typing import TypedDict
 import jsonschema
 from langgraph.graph import END, START, StateGraph
 
-from legal_radar.application.assunto import Resolution
 from legal_radar.application.ports import GraphReader, Provider
+from legal_radar.application.subject import Resolution
 from legal_radar.domain.complexity import DEFAULT_MAX_CONTEXT_TOKENS, classify
 from legal_radar.domain.llm import CompletionParams, content_hash
-from legal_radar.domain.model import Context, Hop, Jurisprudencia
+from legal_radar.domain.model import CaseLaw, Context, Hop
 from legal_radar.domain.prompts import PromptError, PromptLock
 from legal_radar.domain.relations import extract_decision_relations
-from legal_radar.domain.urn import FEDERAL_LEI
+from legal_radar.domain.urn import FEDERAL_STATUTE
 
 ANSWER_PROMPT = "cited-answer"
 # The sources come first and the question last, so a provider can cache the fixed context block.
@@ -70,7 +70,7 @@ class Citation:
 @dataclass(frozen=True)
 class CitedAnswer:
     query: str
-    assunto: str | None  # None: the query matched no known assunto, so nothing was answered
+    subject: str | None  # None: the query matched no known assunto, so nothing was answered
     answer: str | None
     citations: list[Citation]
     retrieved: list[str] = field(default_factory=list)  # every node id the traversal reached
@@ -98,16 +98,16 @@ def answer_schema(lock: PromptLock, context_ids: list[str]) -> dict:
     return schema
 
 
-def jurisprudencia_text(j: Jurisprudencia) -> str:
+def case_law_text(j: CaseLaw) -> str:
     """The text a decision is shown as: its number, tese and ementa (never the decisão)."""
-    return f"{j.number}. Tese: {j.tese or '-'}. Ementa: {j.ementa}"
+    return f"{j.number}. Tese: {j.thesis or '-'}. Ementa: {j.headnote}"
 
 
 def source_texts(context: Context) -> dict[str, str]:
     """Each retrieved node's id with the text the model is shown for it."""
-    texts = {d.id: d.text for d in context.dispositivos}
-    for j in context.jurisprudencias:
-        texts[j.id] = jurisprudencia_text(j)
+    texts = {d.id: d.text for d in context.provisions}
+    for j in context.case_law:
+        texts[j.id] = case_law_text(j)
     return texts
 
 
@@ -134,7 +134,7 @@ def render_context(context: Context) -> str:
 def unsupported_mentions(answer: str, retrieved: list[str]) -> list[str]:
     """The dispositivos the answer names that the sources it was given do not contain. A mention
     that names no lei is not checked: it cannot be resolved."""
-    mentions = extract_decision_relations(Jurisprudencia("", "", "", answer, ""))
+    mentions = extract_decision_relations(CaseLaw("", "", "", answer, ""))
     known = set(retrieved)
     return [r.target_id for r in mentions.relations if r.target_id and r.target_id not in known]
 
@@ -153,10 +153,10 @@ def anchor_ids_of(resolution: Resolution, urns: list[str]) -> list[str]:
     number and year), its anchor dispositivos, or the whole lei when it names none."""
     found = []
     for urn in urns:
-        m = FEDERAL_LEI.match(urn)
+        m = FEDERAL_STATUTE.match(urn)
         for anchor in resolution.anchors:
             if m and (m[2], int(m[1])) == (anchor.numero, anchor.ano):
-                found += [f"{urn}#{path}" for path in anchor.artigos] or [urn]
+                found += [f"{urn}#{path}" for path in anchor.articles] or [urn]
     return found
 
 
@@ -191,12 +191,12 @@ def build_graph(
 ):
     """Compile the pipeline; `resolve(query) -> Resolution | None` is the assunto resolver."""
 
-    def resolve_assunto(state: State) -> State:
+    def resolve_subject(state: State) -> State:
         return {"resolution": resolve(state["query"])}
 
     def traverse(state: State) -> State:
-        leis = anchor_ids_of(state["resolution"], reader.lei_ids())
-        return {"context": reader.traverse(leis)}
+        statutes = anchor_ids_of(state["resolution"], reader.statute_ids())
+        return {"context": reader.traverse(statutes)}
 
     def generate(state: State) -> State:
         context = state["context"]
@@ -207,7 +207,7 @@ def build_graph(
         return {"answer": answer, "cited": cited}
 
     graph = StateGraph(State)
-    graph.add_node("resolve_assunto", resolve_assunto)
+    graph.add_node("resolve_assunto", resolve_subject)
     graph.add_node("traverse", traverse)
     graph.add_node("generate", generate)
     graph.add_edge(START, "resolve_assunto")
@@ -232,11 +232,11 @@ def ask(
     if resolution is None:
         return CitedAnswer(query, None, None, [])
     context = state["context"]
-    kinds = {d.id: "Dispositivo" for d in context.dispositivos}
-    kinds |= {j.id: "Jurisprudencia" for j in context.jurisprudencias}
+    kinds = {d.id: "Dispositivo" for d in context.provisions}
+    kinds |= {j.id: "Jurisprudencia" for j in context.case_law}
     texts = source_texts(context)
     citations = [Citation(i, kinds[i], context.paths[i], texts[i]) for i in state["cited"]]
     unsupported = unsupported_mentions(state["answer"] or "", list(texts))
     return CitedAnswer(
-        query, resolution.assunto, state["answer"], citations, list(texts), unsupported
+        query, resolution.subject, state["answer"], citations, list(texts), unsupported
     )

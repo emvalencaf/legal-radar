@@ -69,7 +69,7 @@ def test_adding_the_same_edge_twice_keeps_one():
     assert result["edges"] == [{**added, "review": "added"}]
 
 
-def test_assemble_keeps_proposal_order_and_refuses_unreviewed_dispositivos():
+def test_assemble_keeps_proposal_order_and_refuses_unreviewed_provisions():
     reviewed = [{"id": "b", "edges": []}, {"id": "a", "edges": []}]
 
     assert [e["id"] for e in assemble(["a", "b"], reviewed)] == ["a", "b"]

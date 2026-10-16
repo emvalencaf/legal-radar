@@ -6,13 +6,13 @@ import pytest
 from legal_radar.application.evaluation.comparison import latest_runs, render_comparison
 
 
-def run(system, k, f1, nivel_f1, paths=None):
+def run(system, k, f1, level_f1, paths=None):
     return {
         "experiment": f"{system}-{k}",
         "system": system,
         "k": k,
         "scores": {"citation_correctness": f1, "graph_path": paths},
-        "by_nivel": {"facil": {"citation_correctness": nivel_f1}, "dificil": {"abstention": 1.0}},
+        "by_nivel": {"facil": {"citation_correctness": level_f1}, "dificil": {"abstention": 1.0}},
         "questions": [
             {"nivel": "facil", "input_tokens": 100},
             {"nivel": None, "input_tokens": 300},
@@ -43,7 +43,7 @@ def test_each_metric_is_a_row_and_what_does_not_apply_is_na():
     assert rows["tokens in (total)"].endswith("| 100 | 100 | 100 |")
 
 
-def test_nivel_tables_split_each_metric():
+def test_level_tables_split_each_metric():
     text = render_comparison(RUNS)
 
     section = text.split("## citation_correctness per nivel")[1].split("##")[0]
@@ -89,7 +89,7 @@ def test_compare_evals_command_prints_the_table_of_the_given_runs(tmp_path, caps
     assert "| metric | rag-naive@5 |" in capsys.readouterr().out
 
 
-def test_every_metric_is_split_by_nivel_and_tokens_are_averaged_per_question():
+def test_every_metric_is_split_by_level_and_tokens_are_averaged_per_question():
     text = render_comparison(RUNS)
 
     for metric in ("citation_correctness_precision", "fabricated_citations", "graph_path"):

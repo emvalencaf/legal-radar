@@ -11,7 +11,7 @@ inward only. The decision and its alternatives are in
 
 | Layer | Holds | May import |
 |---|---|---|
-| `domain/` | The model (`Lei`, `Dispositivo`, `Relation`...), the rule-based relation extraction, URN and prompt-lock values, LLM value types, the complexity classifier and the anchor leis. Pure: no I/O, no framework. | itself |
+| `domain/` | The model (`Statute`, `Provision`, `CaseLaw`, `Relation`...), the rule-based relation extraction, URN and prompt-lock values, LLM value types, the complexity classifier and the anchor leis. Pure: no I/O, no framework. | itself |
 | `application/` | The use cases (ingest, enrich, answer, evaluate, RAG baselines) and the **ports** they need, as small `Protocol`s in `application/ports/`. | `domain` |
 | `adapters/` | Everything that touches the outside: Neo4j, SQLite, the LLM providers and router, LexML, Planalto, STF, STJ, LangSmith, the assayer harness and the prompt lock file. Each implements a port or wraps a library. | `application`, `domain` |
 | `entrypoints/` | The CLI and the end-to-end run, which compose concrete adapters. | everything |
@@ -19,6 +19,11 @@ inward only. The decision and its alternatives are in
 `bootstrap.py` is the **composition root**: the only module that reads the environment
 (`.env`, `NEO4J_*`, `METADATA_DB`...) and builds concrete adapters. `settings.py` holds every
 path and environment-derived value in one frozen `Settings`; defaults match a source checkout.
+
+Python names are English (`Statute`, `Provision`, `CaseLaw`, `Subject`); what is persisted keeps
+the Portuguese domain terms: the Neo4j labels (`:Lei`, `:Dispositivo`, `:Jurisprudencia`,
+`:Conceito`), the YAML and JSONL keys, and the prompts. See the glossary in
+[CONTEXT.md](CONTEXT.md#english-glossary).
 
 ## The dependency rule is enforced
 

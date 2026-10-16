@@ -68,6 +68,8 @@ def test_pipeline_writes_graph_and_is_idempotent(driver, tag_lock):
 def test_ingested_lei_is_loaded_with_parts_edges_and_reload_is_idempotent(driver):
     from ingest_helpers import CC, CC_AGENT, FakePages, lexml_pages, read
 
+    from legal_radar.adapters.lexml import LexmlLocator
+    from legal_radar.adapters.planalto import PlanaltoTextSource
     from legal_radar.application.ingest import ingest
     from legal_radar.domain.anchors import AnchorLei
 
@@ -75,9 +77,9 @@ def test_ingested_lei_is_loaded_with_parts_edges_and_reload_is_idempotent(driver
     anchors = [AnchorLei("lei 10406 2002 código civil", "10406", 2002)]
     planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
 
-    ingest(anchors, lexml_pages(), planalto, store)
+    ingest(anchors, LexmlLocator(lexml_pages()), PlanaltoTextSource(planalto), store)
     first = snapshot(driver)
-    ingest(anchors, lexml_pages(), planalto, store)
+    ingest(anchors, LexmlLocator(lexml_pages()), PlanaltoTextSource(planalto), store)
 
     assert snapshot(driver) == first
     _, edges = first

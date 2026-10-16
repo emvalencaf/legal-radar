@@ -9,7 +9,9 @@ from dataclasses import dataclass, field, replace
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 
+from legal_radar.application.ports import PageSource
 from legal_radar.domain.model import Dispositivo
+from legal_radar.domain.urn import UrnPage
 
 _ROMAN = r"[IVXLCDM]+"
 _HEADINGS: list[tuple[str, int, re.Pattern[str]]] = [
@@ -209,3 +211,14 @@ def _lines(html: str) -> list[tuple[str, str]]:
         if (pair := (_clean("".join(live)), _clean("".join(struck)))) != ("", ""):
             lines.append(pair)
     return lines
+
+
+class PlanaltoTextSource:
+    """`LeiTextSource` over the lei's Planalto page."""
+
+    def __init__(self, pages: PageSource):
+        self.pages = pages
+
+    def dispositivos(self, page: UrnPage) -> list[Dispositivo]:
+        assert page.planalto_url is not None
+        return parse_planalto(self.pages.get(page.planalto_url), page.urn)

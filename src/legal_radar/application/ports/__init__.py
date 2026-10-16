@@ -2,6 +2,7 @@
 
 from typing import Protocol
 
+from legal_radar.domain.anchors import AnchorLei
 from legal_radar.domain.llm import Completion, CompletionParams, Embedding
 from legal_radar.domain.model import (
     Context,
@@ -11,6 +12,7 @@ from legal_radar.domain.model import (
     Jurisprudencia,
     Relation,
 )
+from legal_radar.domain.urn import UrnPage
 
 
 class Provider(Protocol):
@@ -82,6 +84,20 @@ class PageSource(Protocol):
     production adapter drives a real browser."""
 
     def get(self, url: str) -> str: ...
+
+
+class LeiLocator(Protocol):
+    """Finds the lei an anchor names and where its consolidated text lives."""
+
+    def locate(self, anchor: AnchorLei) -> UrnPage:
+        """The URN page of the anchor's lei. Raises `LexmlError` when the lei cannot be found."""
+
+
+class LeiTextSource(Protocol):
+    """Reads a located lei's text as dispositivos."""
+
+    def dispositivos(self, page: UrnPage) -> list[Dispositivo]:
+        """The dispositivos of the lei at `page.planalto_url` (never called when it is None)."""
 
 
 class JsonApi(Protocol):

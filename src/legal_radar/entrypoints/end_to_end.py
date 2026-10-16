@@ -25,7 +25,12 @@ from legal_radar.application.jurisprudencia import (
     JurisprudenciaReport,
     ingest_jurisprudencia,
 )
-from legal_radar.application.ports import JurisprudenciaFetcher, PageSource, Provider
+from legal_radar.application.ports import (
+    JurisprudenciaFetcher,
+    LeiLocator,
+    LeiTextSource,
+    Provider,
+)
 from legal_radar.domain.anchors import ANCHORS
 from legal_radar.domain.prompts import PromptLock
 
@@ -43,8 +48,8 @@ class EndToEndResult:
 def run_end_to_end(
     assunto: str,
     *,
-    lexml: PageSource,
-    planalto: PageSource,
+    locator: LeiLocator,
+    texts: LeiTextSource,
     fetchers: dict[str, JurisprudenciaFetcher],
     store: Neo4jGraphStore,
     provider: Provider,
@@ -58,7 +63,7 @@ def run_end_to_end(
     """Builds the graph of `assunto`, then answers its name as a query, scores its question set
     (the graph system) into `runs_dir` and writes the static report to `report_out`."""
     lock = lock or default_lock()
-    ingestion = ingest(ANCHORS[assunto], lexml, planalto, store, enrichment=lei_enrichment)
+    ingestion = ingest(ANCHORS[assunto], locator, texts, store, enrichment=lei_enrichment)
     jurisprudencia = ingest_jurisprudencia(
         fetchers, store, JURISPRUDENCIA[assunto], enrichment=decision_enrichment
     )

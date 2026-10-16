@@ -177,9 +177,7 @@ def index_path(chunking: str, directory: Path = INDEX_DIR) -> Path:
 class RagBaseline:
     """`ask(query) -> CitedAnswer` over a vector index instead of the graph."""
 
-    def __init__(
-        self, name: str, index: RagIndex, provider: Provider, k: int, lock: PromptLock
-    ):
+    def __init__(self, name: str, index: RagIndex, provider: Provider, k: int, lock: PromptLock):
         self.name, self.index, self.provider, self.k = name, index, provider, k
         self.lock = lock
 

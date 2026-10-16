@@ -10,7 +10,9 @@ from testcontainers.neo4j import Neo4jContainer
 from legal_radar.adapters import lexml
 from legal_radar.adapters.assayer import harness as assayer_harness
 from legal_radar.adapters.fake_provider import FakeProvider
+from legal_radar.adapters.lexml import LexmlLocator
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
+from legal_radar.adapters.planalto import PlanaltoTextSource
 from legal_radar.entrypoints.end_to_end import run_end_to_end
 
 ASSUNTO = "desconsideração da personalidade jurídica"
@@ -37,8 +39,8 @@ def test_one_run_builds_the_graph_answers_scores_and_reports(neo4j, tmp_path, mo
     try:
         result = run_end_to_end(
             ASSUNTO,
-            lexml=LexmlWithoutCdc(lexml_pages().pages),
-            planalto=FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")}),
+            locator=LexmlLocator(LexmlWithoutCdc(lexml_pages().pages)),
+            texts=PlanaltoTextSource(FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})),
             fetchers={"STF": stf(), "STJ": stj()},
             store=Neo4jGraphStore(driver),
             provider=FakeProvider(),

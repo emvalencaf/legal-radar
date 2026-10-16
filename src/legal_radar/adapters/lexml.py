@@ -9,6 +9,7 @@ from urllib.parse import quote_plus, urlparse
 from bs4 import BeautifulSoup
 
 from legal_radar.application.ports import PageSource
+from legal_radar.domain.anchors import AnchorLei
 from legal_radar.domain.urn import FEDERAL_LEI, LexmlError, UrnPage
 
 SEARCH_URL = "https://www.lexml.gov.br/busca/search?keyword={keyword}"
@@ -67,6 +68,17 @@ def resolve_urn(pages: PageSource, urn: str) -> UrnPage:
         (u for u, h in zip(links, hosts, strict=True) if h.endswith("planalto.gov.br")), None
     )
     return UrnPage(urn, title, planalto, hosts)
+
+
+class LexmlLocator:
+    """`LeiLocator` over LexML: keyword search to the URN, then the URN page."""
+
+    def __init__(self, pages: PageSource):
+        self.pages = pages
+
+    def locate(self, anchor: AnchorLei) -> UrnPage:
+        urn = search_urn(self.pages, anchor.keyword, anchor.numero, anchor.ano)
+        return resolve_urn(self.pages, urn)
 
 
 def lexml_resolver(pages: PageSource) -> Callable[[str, str, int], str | None]:

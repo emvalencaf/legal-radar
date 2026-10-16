@@ -262,7 +262,9 @@ def evaluate(args: argparse.Namespace, settings: Settings, store) -> None:
 
 
 def run_all(args: argparse.Namespace, settings: Settings, store) -> None:
+    from legal_radar.adapters.lexml import LexmlLocator
     from legal_radar.adapters.pages import BrowserPageSource
+    from legal_radar.adapters.planalto import PlanaltoTextSource
     from legal_radar.adapters.router_config import build_router, load_config
     from legal_radar.adapters.stf import StfFetcher
     from legal_radar.adapters.stj import StjFetcher
@@ -278,8 +280,8 @@ def run_all(args: argparse.Namespace, settings: Settings, store) -> None:
     try:
         result = run_end_to_end(
             args.assunto,
-            lexml=browser,
-            planalto=browser,
+            locator=LexmlLocator(browser),
+            texts=PlanaltoTextSource(browser),
             fetchers={"STF": StfFetcher(chrome), "STJ": StjFetcher(chrome)},
             store=store,
             provider=build_router(load_config("router.yaml")),
@@ -322,12 +324,20 @@ def draft_concepts(args: argparse.Namespace, settings: Settings, store) -> None:
 
 
 def ingest_leis(args: argparse.Namespace, settings: Settings, store) -> None:
+    from legal_radar.adapters.lexml import LexmlLocator
     from legal_radar.adapters.pages import BrowserPageSource
+    from legal_radar.adapters.planalto import PlanaltoTextSource
 
     config = enrich_config(settings, args.assunto) if args.enrich else None
     browser = BrowserPageSource()
     try:
-        ingested = ingest(ANCHORS[args.assunto], browser, browser, store, enrichment=config)
+        ingested = ingest(
+            ANCHORS[args.assunto],
+            LexmlLocator(browser),
+            PlanaltoTextSource(browser),
+            store,
+            enrichment=config,
+        )
         print(ingested.render())
     finally:
         browser.close()

@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from legal_radar.adapters.planalto import decode_html
-from legal_radar.domain.model import GraphBatch, Jurisprudencia, Relation
+from legal_radar.domain.model import Dispositivo, GraphBatch, Jurisprudencia, Relation
+from legal_radar.domain.urn import UrnPage
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CC = "urn:lex:br:federal:lei:2002-01-10;10406"
@@ -57,3 +58,20 @@ def lexml_pages() -> FakePages:
             f"https://www.lexml.gov.br/urn/{CDC}": read("lexml/urn_cdc.html"),
         }
     )
+
+
+class FakeLocator:
+    """Finds the Código Civil for any anchor, without a LexML page."""
+
+    def locate(self, anchor) -> UrnPage:
+        return UrnPage(CC, "Lei nº 10.406 - Código Civil", CC_AGENT, ["planalto.gov.br"])
+
+
+class FakeTexts:
+    """Hands out fixed dispositivos instead of parsing a Planalto page."""
+
+    def __init__(self, dispositivos: list[Dispositivo]):
+        self.items = dispositivos
+
+    def dispositivos(self, page: UrnPage) -> list[Dispositivo]:
+        return self.items

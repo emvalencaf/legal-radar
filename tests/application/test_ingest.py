@@ -1,13 +1,21 @@
 import json
 import logging
-from unittest.mock import patch
 
 import pytest
-from ingest_helpers import CC, CC_AGENT, FakePages, MemoryStore, lexml_pages, read
+from ingest_helpers import (
+    CC,
+    CC_AGENT,
+    FakeLocator,
+    FakePages,
+    FakeTexts,
+    MemoryStore,
+    lexml_pages,
+    read,
+)
 
 from legal_radar.adapters import lexml
-from legal_radar.adapters.lexml import resolve_urn, search_urn
-from legal_radar.application import ingest as ingest_module
+from legal_radar.adapters.lexml import LexmlLocator, resolve_urn, search_urn
+from legal_radar.adapters.planalto import PlanaltoTextSource
 from legal_radar.application.ingest import ingest
 from legal_radar.domain.anchors import AnchorLei
 from legal_radar.domain.model import Dispositivo
@@ -58,7 +66,10 @@ def test_ingest_loads_the_lei_following_the_urn_page_link():
     planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
 
     report = ingest(
-        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)], lexml_pages(), planalto, store
+        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)],
+        LexmlLocator(lexml_pages()),
+        PlanaltoTextSource(planalto),
+        store,
     )
 
     assert planalto.requested == [CC_AGENT]  # the link off the URN page, never a guessed filename
@@ -75,7 +86,10 @@ def test_non_planalto_destinations_are_skipped_and_reported():
     store = MemoryStore()
 
     report = ingest(
-        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)], lexml, FakePages({}), store
+        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)],
+        LexmlLocator(lexml),
+        PlanaltoTextSource(FakePages({})),
+        store,
     )
 
     assert store.batches == []
@@ -86,8 +100,8 @@ def test_non_planalto_destinations_are_skipped_and_reported():
 def test_unresolvable_lei_is_reported_as_failed():
     report = ingest(
         [AnchorLei("lei 10406 2002 código civil", "1", 1)],
-        lexml_pages(),
-        FakePages({}),
+        LexmlLocator(lexml_pages()),
+        PlanaltoTextSource(FakePages({})),
         MemoryStore(),
     )
 
@@ -99,7 +113,10 @@ def test_ingest_extracts_relations_and_reports_them():
     planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
 
     report = ingest(
-        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)], lexml_pages(), planalto, store
+        [AnchorLei("lei 10406 2002 código civil", "10406", 2002)],
+        LexmlLocator(lexml_pages()),
+        PlanaltoTextSource(planalto),
+        store,
     )
 
     (batch,) = store.batches
@@ -155,18 +172,16 @@ TEXTS = [  # each one has a citation the rules cannot ground
 
 def run_enrich(metadata, provider, vocabulary=VOCAB, prompts=None, store=None):
     store = store or MemoryStore()
-    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
     config = EnrichConfig(vocabulary, provider, metadata, prompts or lock())
-    with patch.object(ingest_module, "parse_planalto", lambda html, urn: chunks(*TEXTS)):
-        report = ingest(ANCHOR, lexml_pages(), planalto, store, enrichment=config)
+    report = ingest(ANCHOR, FakeLocator(), FakeTexts(chunks(*TEXTS)), store, enrichment=config)
     return report, store
 
 
 def test_ingest_without_enrich_calls_no_provider_and_writes_no_report_line():
     report = ingest(
         ANCHOR,
-        lexml_pages(),
-        FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")}),
+        LexmlLocator(lexml_pages()),
+        PlanaltoTextSource(FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})),
         MemoryStore(),
     )
 
@@ -259,11 +274,11 @@ def test_concept_edges_of_the_reply_are_handed_to_the_store():
 def test_chunks_the_enricher_never_sends_are_not_counted_or_recorded():
     metadata, provider = SqliteMetadataStore(), EndlessProvider()
     revoked = replace(chunks(TEXTS[0])[0], id=f"{CC}#art9", path="art9", revoked=True)
-    store, planalto = MemoryStore(), FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
+    store = MemoryStore()
     config = EnrichConfig(VOCAB, provider, metadata, lock())
 
-    with patch.object(ingest_module, "parse_planalto", lambda h, u: [*chunks(*TEXTS), revoked]):
-        report = ingest(ANCHOR, lexml_pages(), planalto, store, enrichment=config)
+    texts = FakeTexts([*chunks(*TEXTS), revoked])
+    report = ingest(ANCHOR, FakeLocator(), texts, store, enrichment=config)
 
     counts = report.enrichment[CC]
     assert len(provider.calls) == counts.processed == len(TEXTS)
@@ -285,14 +300,12 @@ def test_grounded_citation_is_forgotten_and_stays_forgotten_on_rerun():
             ],
         }
     )
-    texts = ["Ver art. 3º da Lei nº 9.999, de 2000.", "Outro dispositivo."]
+    texts = FakeTexts(chunks("Ver art. 3º da Lei nº 9.999, de 2000.", "Outro dispositivo."))
     metadata = SqliteMetadataStore()
-    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
     config = EnrichConfig(VOCAB, FakeProvider(script=[Completion(reply)]), metadata, lock())
 
     def run(store, config):
-        with patch.object(ingest_module, "parse_planalto", lambda h, u: chunks(*texts)):
-            ingest(ANCHOR, lexml_pages(), planalto, store, enrichment=config)
+        ingest(ANCHOR, FakeLocator(), texts, store, enrichment=config)
 
     first = MemoryStore()
     run(first, config)
@@ -307,11 +320,10 @@ def test_grounded_citation_is_forgotten_and_stays_forgotten_on_rerun():
 
 def test_too_long_chunk_is_recorded_ok_but_counted_apart():
     metadata, provider = SqliteMetadataStore(), EndlessProvider()
-    planalto = FakePages({CC_AGENT: read("planalto/l10406_excerpt.htm")})
     config = EnrichConfig(VOCAB, provider, metadata, lock(), max_input_tokens=1)
+    texts = FakeTexts(chunks(*TEXTS))
 
-    with patch.object(ingest_module, "parse_planalto", lambda h, u: chunks(*TEXTS)):
-        report = ingest(ANCHOR, lexml_pages(), planalto, MemoryStore(), enrichment=config)
+    report = ingest(ANCHOR, FakeLocator(), texts, MemoryStore(), enrichment=config)
 
     counts = report.enrichment[CC]
     assert (counts.too_long, counts.processed, counts.left_pending) == (len(TEXTS), 0, 0)

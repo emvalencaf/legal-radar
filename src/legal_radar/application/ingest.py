@@ -2,8 +2,6 @@
 
 from dataclasses import dataclass, field, replace
 
-from legal_radar.adapters.lexml import resolve_urn, search_urn
-from legal_radar.adapters.planalto import parse_planalto
 from legal_radar.application.concepts import Vocabulary
 from legal_radar.application.enricher import (
     Enrichment,
@@ -13,7 +11,13 @@ from legal_radar.application.enricher import (
     triage,
 )
 from legal_radar.application.enrichment import enrichment_key
-from legal_radar.application.ports import GraphStore, MetadataStore, PageSource, Provider
+from legal_radar.application.ports import (
+    GraphStore,
+    LeiLocator,
+    LeiTextSource,
+    MetadataStore,
+    Provider,
+)
 from legal_radar.domain.anchors import AnchorLei
 from legal_radar.domain.llm import ProviderError
 from legal_radar.domain.model import (
@@ -81,8 +85,8 @@ class IngestionReport:
 
 def ingest(
     anchors: list[AnchorLei],
-    lexml: PageSource,
-    planalto: PageSource,
+    locator: LeiLocator,
+    texts: LeiTextSource,
     store: GraphStore,
     resolver: UrnResolver | None = None,
     enrichment: EnrichConfig | None = None,
@@ -99,12 +103,12 @@ def ingest(
     parsed: list[tuple[Lei, list[Dispositivo]]] = []
     for anchor in anchors:
         try:
-            urn = search_urn(lexml, anchor.keyword, anchor.numero, anchor.ano)
-            page = resolve_urn(lexml, urn)
+            page = locator.locate(anchor)
+            urn = page.urn
             if page.planalto_url is None:
                 report.skipped[urn] = page.destinations
                 continue
-            dispositivos = parse_planalto(planalto.get(page.planalto_url), urn)
+            dispositivos = texts.dispositivos(page)
         except LexmlError as error:
             report.failed[anchor.keyword] = str(error)
             continue

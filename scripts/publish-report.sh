@@ -51,7 +51,7 @@ else
   rm -f "$work/site/graph.html"
 fi
 touch "$work/site/.nojekyll"
-git -C "$work/site" add -A index.html graph.html .nojekyll
+git -C "$work/site" add -A  # the worktree holds only the generated pages; graph.html may be absent
 # --no-verify: the gh-pages branch is generated output, not subject to the commit hooks.
 git -C "$work/site" commit -q --no-verify -m "chore(report): publish report $(date -u +%Y-%m-%dT%H:%MZ)"
 git -C "$work/site" push "$remote" gh-pages

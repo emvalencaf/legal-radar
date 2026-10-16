@@ -9,6 +9,52 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- MIT `LICENSE`; an English glossary of the domain terms in `CONTEXT.md`; the `ask-flow` and
+  `evaluation-loop` diagrams in `docs/diagrams/`, embedded in `ARCHITECTURE.md`.
+
+### Changed
+
+- Python identifiers are English: `Dispositivo` is `Provision`, `Lei` is `Statute`,
+  `Jurisprudencia` is `CaseLaw`, `Conceito` is `ConceptNode`, `assunto` is `subject`, with the
+  modules `application/subject.py` and `application/case_law.py`. What is persisted keeps the
+  Portuguese terms: the Neo4j labels, the YAML and JSONL keys, the prompts, and the `assunto` and
+  `by_nivel` keys of run files and checkpoints, so earlier runs still load.
+- README rewritten for an international reader: the problem, the graph against RAG results, the
+  design decisions, the Portuguese to English terms and a real roadmap.
+
+### Removed
+
+- Obsolete scripts: the `setup-langsmith-*` wizards (the prompts are published and pinned in
+  `prompts/pins.yml`; `make refresh-prompts` maintains them), `skeleton.sh` (replaced by
+  `docker compose up -d neo4j` and `legal-radar run`) and `check_enricher.py` (covered by
+  `legal-radar eval` and `scripts/eval_enrichment.py`).
+
+### Changed
+
+- The last layer-boundary exceptions are gone (`ignore_imports` is empty): the use cases take
+  the prompt lock instead of defaulting to the file-backed one, `ingest` depends on the
+  `LeiLocator` and `LeiTextSource` ports (LexML and Planalto adapters), and `build_index` uses
+  a `VectorStore` port (SQLite adapter). A new import-linter contract keeps infrastructure
+  packages out of `application`. No behaviour change.
+- Layered architecture (ADR-0009): `legal_radar` is organised as `entrypoints > adapters >
+  application > domain`, enforced by `import-linter` in CI. `domain.py` moved to
+  `legal_radar.domain.model`, and `legal_radar.settings.Settings` centralises paths and
+  environment-derived values. No behaviour change. The CLI moved to
+  `legal_radar.entrypoints.cli.app` behind the new composition root `legal_radar.bootstrap`
+  (`python -m legal_radar` and the `legal-radar` script are unchanged), and the setup scripts
+  import the new module paths.
+
+### Added
+
+- `legal-radar report` also writes `report/graph.html` (#87): an offline, phone-friendly sample of
+  the knowledge graph (Cytoscape.js, shipped as package data) around the example answers'
+  citations, with their `PARTS` ancestors and 1-hop typed neighbours, capped at 150 nodes. Node
+  colour shows the kind; edge style the type, edge colour the confidence and the source-end marker
+  the origin; hovering or tapping an edge shows its evidence. It is built from `seed/graph.jsonl`
+  and the latest enrichment run, and skipped with a warning when either is missing.
+  `scripts/publish-report.sh` publishes it with the report.
+- `ARCHITECTURE.md` and four diagrams in `docs/diagrams/` (layers, the end-to-end run, the graph
+  model and the outputs per command), and `import-linter` in CI (ADR-0009).
 - One-command end-to-end run (#48): `legal-radar run-all <assunto> [--enrich]` (`make run-all`)
   ingests the leis and decisions, exports the seed, answers the assunto as a cited query, scores
   the question set and writes the report (`legal_radar.end_to_end.run_end_to_end`). Its top-seam

@@ -5,9 +5,9 @@ Usage: eval_enrichment.py GOLD.yml [--provider groq|gemini|lmstudio] [--model NA
                           [--thresholds evaluation.yml]
 
 Runs the rules and the LLM over the Planalto excerpts under `tests/fixtures/planalto`, scores the
-dispositivos listed in the gold set per edge (split by origin and relation type), prints the
+provisions listed in the gold set per edge (split by origin and relation type), prints the
 indirect metrics and exits non-zero when a gate fails. Every input and output is written to a JSONL
-run file under `--persist` (default `eval-runs/`) as each dispositivo finishes, so a rate limit or a
+run file under `--persist` (default `eval-runs/`) as each provision finishes, so a rate limit or a
 crash loses nothing: `--resume RUNFILE` continues it (same provider, model and vocabulary). The
 gold set itself is annotated by a human (#67).
 """
@@ -18,13 +18,19 @@ import sys
 import time
 from pathlib import Path
 
-from legal_radar.__main__ import load_env
-from legal_radar.concepts import load_vocabulary
-from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE
-from legal_radar.evaluation import (
+from legal_radar.adapters.planalto import decode_html, parse_planalto
+from legal_radar.adapters.prompt_lock import refresh
+from legal_radar.adapters.router_config import (
+    build_router,
+    enrichment_max_input_tokens,
+    load_config,
+)
+from legal_radar.application.concepts import load_vocabulary
+from legal_radar.application.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE
+from legal_radar.application.evaluation.enrichment_gold import (
     append_outcome,
     check_gates,
-    enrich_dispositivos,
+    enrich_provisions,
     indirect_metrics,
     load_gold,
     load_thresholds,
@@ -32,14 +38,12 @@ from legal_radar.evaluation import (
     score_edges,
     start_run,
 )
-from legal_radar.llm import AllProvidersFailedError
-from legal_radar.planalto import decode_html, parse_planalto
-from legal_radar.prompts import refresh
-from legal_radar.router_config import build_router, enrichment_max_input_tokens, load_config
+from legal_radar.bootstrap import load_env
+from legal_radar.domain.llm import AllProvidersFailedError
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"
-LEIS = (
+STATUTES = (
     ("l10406_excerpt.htm", "urn:lex:br:federal:lei:2002-01-10;10406"),
     ("l8078_excerpt.htm", "urn:lex:br:federal:lei:1990-09-11;8078"),
 )
@@ -67,9 +71,9 @@ def start_printer(already: int, grand_total: int):
 
 
 def progress_printer(started: float, already: int, grand_total: int, path: Path):
-    """One line per dispositivo: position, what it yielded and the time left at this pace.
+    """One line per provision: position, what it yielded and the time left at this pace.
 
-    Each finished dispositivo is also appended to the run file, so a failure loses nothing.
+    Each finished provision is also appended to the run file, so a failure loses nothing.
     """
 
     def show(done: int, total: int, outcome) -> None:
@@ -80,7 +84,7 @@ def progress_printer(started: float, already: int, grand_total: int, path: Path)
         tokens = outcome.tokens_in + outcome.tokens_out
         print(
             f"[{already + done:>{len(str(grand_total))}}/{grand_total}] "
-            f"{outcome.dispositivo.id.split('#')[1]:<20} "
+            f"{outcome.provision.id.split('#')[1]:<20} "
             f"{len(outcome.relations):>2} relations  {tokens:>6} tok"
             f"  elapsed {clock(elapsed)}  eta {clock(eta)}" + (f"  [{note}]" if note else ""),
             file=sys.stderr,
@@ -104,12 +108,12 @@ def main(args: argparse.Namespace) -> int:
     lock = refresh({ENRICHMENT_PROMPT: "local"}, lambda name, commit: (ENRICHMENT_TEMPLATE, None))
     gold = load_gold(args.gold.read_text(encoding="utf-8"), vocabulary)
 
-    dispositivos = [
+    provisions = [
         d
-        for filename, lei_id in LEIS
-        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), lei_id)
+        for filename, statute_id in STATUTES
+        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), statute_id)
     ]
-    missing = set(gold) - {d.id for d in dispositivos}
+    missing = set(gold) - {d.id for d in provisions}
     if missing:
         print(f"gold dispositivos not in the slice: {sorted(missing)}", file=sys.stderr)
         return 2
@@ -121,7 +125,7 @@ def main(args: argparse.Namespace) -> int:
     }
     done: list = []
     if args.resume:
-        previous, done = read_run(args.resume, {d.id: d for d in dispositivos})
+        previous, done = read_run(args.resume, {d.id: d for d in provisions})
         stale = [k for k in ("provider", "model", "vocabulary") if previous.get(k) != header[k]]
         if stale:
             print(f"cannot resume: {', '.join(stale)} changed since that run", file=sys.stderr)
@@ -131,11 +135,11 @@ def main(args: argparse.Namespace) -> int:
     else:
         path = start_run(args.persist, header)
         print(f"writing {path}", file=sys.stderr)
-    todo = set(gold) - {o.dispositivo.id for o in done}
+    todo = set(gold) - {o.provision.id for o in done}
     started = time.monotonic()
     try:
-        outcomes = done + enrich_dispositivos(
-            dispositivos,
+        outcomes = done + enrich_provisions(
+            provisions,
             vocabulary,
             router,
             lock,
@@ -153,7 +157,7 @@ def main(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 3
-    scored = [o for o in outcomes if o.dispositivo.id in gold]
+    scored = [o for o in outcomes if o.provision.id in gold]
     scores, indirect = score_edges(scored, gold), indirect_metrics(scored)
     failures = check_gates(scores, indirect, load_thresholds(args.thresholds))
 

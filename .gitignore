@@ -25,6 +25,7 @@ graphify-out/
 .claude/budget
 .claude/usage/
 logs/
+.playwright-mcp/
 
 # LLM-drafted concept candidates, curated into the committed vocabulary
 concepts/*.draft.yml

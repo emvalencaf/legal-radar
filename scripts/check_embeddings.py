@@ -1,15 +1,15 @@
-"""Live check of an embedding provider: one embed call, then assunto resolution scores.
+"""Live check of an embedding provider: one embed call, then subject resolution scores.
 
 Usage: check_embeddings.py [gemini|lmstudio] (default gemini). Gemini needs GEMINI_API_KEY;
 LM Studio reads LMSTUDIO_BASE_URL and needs its embedding model loaded.
 Prints each query's best score so the resolver threshold
-(`legal_radar.assunto.DEFAULT_THRESHOLD`) can be tuned against a real model.
+(`legal_radar.application.subject.DEFAULT_THRESHOLD`) can be tuned against a real model.
 """
 
 import sys
 
-from legal_radar.assunto import DEFAULT_THRESHOLD, AssuntoResolver, cosine
-from legal_radar.router_config import build_router, load_config
+from legal_radar.adapters.router_config import build_router, load_config
+from legal_radar.application.subject import DEFAULT_THRESHOLD, SubjectResolver, cosine
 
 RELATED = [
     "desconsideração da personalidade jurídica",
@@ -20,7 +20,7 @@ RELATED = [
     "sócio responde com o patrimônio pessoal por dívidas da empresa",
     "confusão patrimonial entre sócio e sociedade",
 ]
-# Same legal register as the assunto, so only meaning (not vocabulary) can reject them.
+# Same legal register as the subject, so only meaning (not vocabulary) can reject them.
 UNRELATED = [
     "prescrição intercorrente na execução fiscal",
     "usucapião extraordinária de imóvel urbano",
@@ -39,7 +39,7 @@ def main(provider: str) -> int:
     probe = router.embed(["teste"])
     print(f"embed ok: {probe.provider}/{probe.model}, {len(probe.vectors[0])} dimensions")
 
-    resolver = AssuntoResolver(router)
+    resolver = SubjectResolver(router)
     catalog = list(resolver.catalog)
     vectors = router.embed(catalog).vectors
     for label, queries in (("related", RELATED), ("unrelated", UNRELATED)):

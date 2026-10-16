@@ -1,11 +1,11 @@
-"""Wizard: review the proposed enrichment gold set one dispositivo at a time (#67).
+"""Wizard: review the proposed enrichment gold set one provision at a time (#67).
 
 Usage: annotate_gold.py [--proposed evaluation/enrichment_gold.proposed.yml]
                         [--gold evaluation/enrichment_gold.yml]
 
-Shows each dispositivo with the relations Claude Code proposed and asks you to accept, correct or
-reject each one, then to add what it missed. There is no way to skip a dispositivo: an empty answer
-confirms a negative. Progress is saved after every dispositivo (re-run to resume); the gold file is
+Shows each provision with the relations Claude Code proposed and asks you to accept, correct or
+reject each one, then to add what it missed. There is no way to skip a provision: an empty answer
+confirms a negative. Progress is saved after every provision (re-run to resume); the gold file is
 written once all are reviewed, with how each edge came to be (accepted, corrected, added). The
 metrics measure agreement with a single annotator, not absolute truth.
 """
@@ -16,16 +16,15 @@ from pathlib import Path
 
 import yaml
 
-from legal_radar.concepts import load_vocabulary
-from legal_radar.domain import RelationType
-from legal_radar.enricher import CONCEPT_RELATIONS
-from legal_radar.evaluation import load_gold
-from legal_radar.gold_review import review_all
-from legal_radar.planalto import decode_html, parse_planalto
+from legal_radar.adapters.planalto import decode_html, parse_planalto
+from legal_radar.application.concepts import load_vocabulary
+from legal_radar.application.evaluation.enrichment_gold import load_gold
+from legal_radar.application.evaluation.gold_review import review_all
+from legal_radar.domain.model import CONCEPT_RELATIONS, RelationType
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"
-LEIS = (
+STATUTES = (
     ("l10406_excerpt.htm", "urn:lex:br:federal:lei:2002-01-10;10406"),
     ("l8078_excerpt.htm", "urn:lex:br:federal:lei:1990-09-11;8078"),
 )
@@ -43,14 +42,14 @@ def show(edge: dict) -> str:
 def parse_edge(line: str, concepts: set[str]) -> dict | None:
     """`TYPE target` -> an edge, or `None` when it is not valid.
 
-    A concept relation targets a curated concept id, a `REFERENCES` a dispositivo id, and for a
-    `REVOKES` the `target` typed is the revoking act (the dispositivo itself is the target).
+    A concept relation targets a curated concept id, a `REFERENCES` a provision id, and for a
+    `REVOKES` the `target` typed is the revoking act (the provision itself is the target).
     """
     parts = line.split()
     if len(parts) != 2 or parts[0].upper() not in TYPES:
         return None
     type_, target = parts[0].upper(), parts[1]
-    if type_ == "REVOKES":  # the dispositivo is the target; the revoking act is the source
+    if type_ == "REVOKES":  # the provision is the target; the revoking act is the source
         return {"type": type_, "source": target}
     valid = target in concepts if type_ in CONCEPT_TYPES else "#" in target
     return {"type": type_, "target": target} if valid else None
@@ -58,12 +57,12 @@ def parse_edge(line: str, concepts: set[str]) -> dict | None:
 
 def main(args: argparse.Namespace) -> int:
     vocabulary = load_vocabulary(ROOT / "concepts" / "desconsideracao_personalidade.yml")
-    concepts = {c.id for c in vocabulary.conceitos}
-    labels = {c.id: f"   ({c.category}: {c.label})" for c in vocabulary.conceitos}
-    dispositivos = {
+    concepts = {c.id for c in vocabulary.concepts}
+    labels = {c.id: f"   ({c.category}: {c.label})" for c in vocabulary.concepts}
+    provisions = {
         d.id: d
-        for filename, lei_id in LEIS
-        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), lei_id)
+        for filename, statute_id in STATUTES
+        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), statute_id)
     }
     proposed = yaml.safe_load(args.proposed.read_text(encoding="utf-8"))
     if proposed.get("vocabulary_hash") != vocabulary.hash:
@@ -76,7 +75,7 @@ def main(args: argparse.Namespace) -> int:
     def save(reviewed: list[dict]) -> None:
         progress.write_text(yaml.safe_dump(reviewed, allow_unicode=True, sort_keys=False), "utf-8")
 
-    added: list[dict] = []  # edges recorded for the dispositivo under review
+    added: list[dict] = []  # edges recorded for the provision under review
 
     def decide(entry: dict, edge: dict) -> dict | None:
         if edge:
@@ -113,7 +112,7 @@ def main(args: argparse.Namespace) -> int:
     for index, entry in enumerate(proposed["dispositivos"], 1):
         if entry["id"] in {e["id"] for e in done}:
             continue  # reviewed in an earlier run
-        d = dispositivos[entry["id"]]
+        d = provisions[entry["id"]]
         print(f"\n{BOLD}[{index}/{total}] {d.id.split('#')[1]}{RESET}  ({d.kind})\n\n  {d.text}")
         if entry.get("note"):
             print(f"  {DIM}note: {entry['note']}{RESET}")

@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from legal_radar.domain import GraphBatch, Jurisprudencia, Relation
-from legal_radar.planalto import decode_html
+from legal_radar.adapters.planalto import decode_html
+from legal_radar.domain.model import CaseLaw, GraphBatch, Provision, Relation
+from legal_radar.domain.urn import UrnPage
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CC = "urn:lex:br:federal:lei:2002-01-10;10406"
@@ -22,7 +23,7 @@ class FakePages:
 class MemoryStore:
     def __init__(self):
         self.batches: list[GraphBatch] = []
-        self.jurisprudencia: list[list[Jurisprudencia]] = []
+        self.case_law: list[list[CaseLaw]] = []
         self.decision_relations: list[Relation] = []
         self.resolved: list[tuple[str, list[str]]] = []
         self.replaced: list[tuple[str, list[Relation]]] = []
@@ -36,10 +37,8 @@ class MemoryStore:
     def resolve_citations(self, chunk_id: str, citations: list[str]) -> None:
         self.resolved.append((chunk_id, citations))
 
-    def write_jurisprudencia(
-        self, items: list[Jurisprudencia], relations: list[Relation] = ()
-    ) -> None:
-        self.jurisprudencia.append(items)
+    def write_case_law(self, items: list[CaseLaw], relations: list[Relation] = ()) -> None:
+        self.case_law.append(items)
         self.decision_relations += relations
 
 
@@ -57,3 +56,20 @@ def lexml_pages() -> FakePages:
             f"https://www.lexml.gov.br/urn/{CDC}": read("lexml/urn_cdc.html"),
         }
     )
+
+
+class FakeLocator:
+    """Finds the Código Civil for any anchor, without a LexML page."""
+
+    def locate(self, anchor) -> UrnPage:
+        return UrnPage(CC, "Lei nº 10.406 - Código Civil", CC_AGENT, ["planalto.gov.br"])
+
+
+class FakeTexts:
+    """Hands out fixed dispositivos instead of parsing a Planalto page."""
+
+    def __init__(self, provisions: list[Provision]):
+        self.items = provisions
+
+    def provisions(self, page: UrnPage) -> list[Provision]:
+        return self.items

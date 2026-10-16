@@ -2,10 +2,10 @@
 
 Usage: visualize_gold.py [--out evaluation/gold.html] [FILE ...]
 
-Dispositivos sit in the left column, grouped by lei; the curated concepts in the right column,
+Provisions sit in the left column, grouped by statute; the curated concepts in the right column,
 grouped by category; an edge joins them, coloured by relation type. `REFERENCES` arcs stay on the
 left. Several files can be loaded and switched in the page (default: the proposal, the gold and
-the review progress, whichever exist). Click a dispositivo or a concept to isolate its edges; the
+the review progress, whichever exist). Click a provision or a concept to isolate its edges; the
 side panel shows the text and how each edge was reviewed. Concepts without any edge are greyed
 out, which is where vocabulary gaps and dead concepts show.
 """
@@ -17,12 +17,12 @@ from pathlib import Path
 
 import yaml
 
-from legal_radar.concepts import load_vocabulary
-from legal_radar.planalto import decode_html, parse_planalto
+from legal_radar.adapters.planalto import decode_html, parse_planalto
+from legal_radar.application.concepts import load_vocabulary
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "planalto"
-LEIS = (
+STATUTES = (
     ("l10406_excerpt.htm", "urn:lex:br:federal:lei:2002-01-10;10406", "Código Civil"),
     ("l8078_excerpt.htm", "urn:lex:br:federal:lei:1990-09-11;8078", "CDC"),
 )
@@ -36,18 +36,18 @@ def load_set(path: Path) -> list[dict]:
 
 def build_data(files: list[Path]) -> dict:
     vocabulary = load_vocabulary(ROOT / "concepts" / "desconsideracao_personalidade.yml")
-    dispositivos = [
+    provisions = [
         {"id": d.id, "path": d.id.split("#")[1], "kind": d.kind, "text": d.text, "lei": name}
-        for filename, lei_id, name in LEIS
-        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), lei_id)
+        for filename, statute_id, name in STATUTES
+        for d in parse_planalto(decode_html((FIXTURES / filename).read_bytes()), statute_id)
         if d.kind in ("artigo", "paragrafo", "inciso", "alinea")
     ]
     return {
         "concepts": [
             {"id": c.id, "label": c.label, "category": c.category, "hint": c.instructions}
-            for c in vocabulary.conceitos
+            for c in vocabulary.concepts
         ],
-        "dispositivos": dispositivos,
+        "dispositivos": provisions,
         "sets": {f.name: load_set(f) for f in files},
     }
 

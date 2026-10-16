@@ -2,9 +2,9 @@
 
 Usage: gold_editor.py [--port 8765] [--proposed FILE] [--gold FILE]
 
-Serves the same page as `visualize_gold.py`, editable, on 127.0.0.1. Review one dispositivo at a
+Serves the same page as `visualize_gold.py`, editable, on 127.0.0.1. Review one provision at a
 time: accept, correct or reject each relation Claude Code inferred, add what it missed, then
-confirm. A dispositivo only counts once confirmed (a proposal with nothing is confirmed as a
+confirm. A provision only counts once confirmed (a proposal with nothing is confirmed as a
 negative), so none can be skipped; each confirmation is saved to the same `.progress.yml` the
 terminal wizard (`annotate_gold.py`) uses, with the same accepted/corrected/added marks. When all
 are confirmed the page writes the gold file, checked against the vocabulary hash. The metrics
@@ -20,9 +20,9 @@ from pathlib import Path
 import yaml
 from visualize_gold import ROOT, TEMPLATE, build_data
 
-from legal_radar.concepts import load_vocabulary
-from legal_radar.evaluation import GoldError, load_gold
-from legal_radar.gold_review import assemble
+from legal_radar.application.concepts import load_vocabulary
+from legal_radar.application.evaluation.enrichment_gold import GoldError, load_gold
+from legal_radar.application.evaluation.gold_review import assemble
 
 
 class Editor:

@@ -19,7 +19,12 @@ and test conventions when you start from this template.
   (enforced by `scripts/check_unicode.py`).
 - Type checker: none. Rely on names and tests for intent.
 - Test command: `pytest`, run as `uv run pytest`. Tests live under `tests/`.
-- Directory layout: `src/` layout (`src/legal_radar/`).
+- Directory layout: `src/` layout (`src/legal_radar/`), in the layers of
+  [ARCHITECTURE.md](ARCHITECTURE.md): `domain/` (pure), `application/` (use cases and their
+  ports), `adapters/` (I/O), `entrypoints/` (CLI), with dependencies pointing inward only.
+  `uv run lint-imports` enforces it in CI; do not add an `ignore_imports` entry to make it pass.
+- Paths and environment variables come from `Settings` (`legal_radar/settings.py`); only
+  `bootstrap.py` reads the environment. Tests mirror the layers under `tests/`.
 - Docstrings: Google style, where a docstring is warranted.
 
 ## Documentation

@@ -2,8 +2,8 @@
 
 import json
 
-from legal_radar.domain import Jurisprudencia
-from legal_radar.ports import JsonApi
+from legal_radar.application.ports import JsonApi
+from legal_radar.domain.model import CaseLaw
 
 API_URL = "https://jurisprudencia.stf.jus.br/api/search/search"
 _SOURCE_FIELDS = [
@@ -18,7 +18,7 @@ class StfFetcher:
     def __init__(self, api: JsonApi):
         self._api = api
 
-    def search(self, query: str, limit: int) -> list[Jurisprudencia]:
+    def search(self, query: str, limit: int) -> list[CaseLaw]:
         body = {
             "query": {
                 "bool": {
@@ -35,19 +35,19 @@ class StfFetcher:
         return [j for hit in hits if (j := _parse(hit)) is not None]
 
 
-def _parse(hit: dict) -> Jurisprudencia | None:
+def _parse(hit: dict) -> CaseLaw | None:
     source = hit["_source"]
-    ementa = _clean(source.get("ementa_texto"), strip_prefix="EMENTA")
-    decisao = _clean(source.get("acordao_ata"))
-    if not ementa or not decisao:
+    headnote = _clean(source.get("ementa_texto"), strip_prefix="EMENTA")
+    ruling = _clean(source.get("acordao_ata"))
+    if not headnote or not ruling:
         return None
-    return Jurisprudencia(
+    return CaseLaw(
         id=f"STF:{hit['_id']}",
         court="STF",
         number=source["titulo"],
-        ementa=ementa,
-        decisao=decisao,
-        tese=_clean(source.get("documental_tese_texto")),
+        headnote=headnote,
+        ruling=ruling,
+        thesis=_clean(source.get("documental_tese_texto")),
     )
 
 

@@ -6,7 +6,7 @@ import math
 import re
 import unicodedata
 
-from legal_radar.llm import Completion, CompletionParams, Embedding
+from legal_radar.domain.llm import Completion, CompletionParams, Embedding
 
 EMBEDDING_DIMENSIONS = 256
 STEM_LENGTH = 5

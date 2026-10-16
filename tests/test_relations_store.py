@@ -3,15 +3,15 @@ from neo4j import GraphDatabase
 from testcontainers.neo4j import Neo4jContainer
 
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
-from legal_radar.domain import (
+from legal_radar.domain.model import (
+    CaseLaw,
     Confidence,
-    Dispositivo,
     GraphBatch,
-    Jurisprudencia,
-    Lei,
     Origin,
+    Provision,
     Relation,
     RelationType,
+    Statute,
 )
 
 A = "urn:lex:br:federal:lei:2000-01-01;1"
@@ -39,10 +39,10 @@ def rel(type_, source, target, evidence="e", unresolved=None, confidence=Confide
 
 def batch(*relations):
     ds = [
-        Dispositivo(f"{A}#art1", A, "art1", "x"),
-        Dispositivo(f"{A}#art2", A, "art2", "y", revoked=True, revocations=("(Revogado)",)),
+        Provision(f"{A}#art1", A, "art1", "x"),
+        Provision(f"{A}#art2", A, "art2", "y", revoked=True, revocations=("(Revogado)",)),
     ]
-    return GraphBatch(Lei(A, "A"), ds, [], [], list(relations))
+    return GraphBatch(Statute(A, "A"), ds, [], [], list(relations))
 
 
 def rows(driver, query):
@@ -69,7 +69,7 @@ def test_relations_are_written_with_provenance_and_idempotently(driver):
     ]
 
 
-def test_reference_to_a_lei_the_graph_lacks_points_at_a_stub_lei(driver):
+def test_reference_to_a_statute_the_graph_lacks_points_at_a_stub_statute(driver):
     store = Neo4jGraphStore(driver)
     store.write(
         batch(
@@ -84,10 +84,10 @@ def test_reference_to_a_lei_the_graph_lacks_points_at_a_stub_lei(driver):
     ) == [{"l": OUTSIDE, "p": "art9"}]
 
 
-def test_ingesting_a_stub_lei_clears_the_stub_flag(driver):
+def test_ingesting_a_stub_statute_clears_the_stub_flag(driver):
     store = Neo4jGraphStore(driver)
     store.write(batch(rel(RelationType.REVOKES, B, f"{A}#art2")))
-    store.write(GraphBatch(Lei(B, "B"), [], [], []))
+    store.write(GraphBatch(Statute(B, "B"), [], [], []))
 
     assert rows(
         driver, "MATCH (l:Lei {id: $id}) RETURN l.stub AS s, l.title AS t".replace("$id", f"'{B}'")
@@ -154,8 +154,8 @@ def test_replacing_llm_relations_swaps_them_and_keeps_rule_edges(driver):
 
 def test_a_decision_gets_llm_concept_edges_that_a_rerun_replaces(driver):
     store = Neo4jGraphStore(driver)
-    decision = Jurisprudencia("STJ:1", "STJ", "REsp 1", "ementa", "decisão", "tese")
-    store.write_jurisprudencia([decision])
+    decision = CaseLaw("STJ:1", "STJ", "REsp 1", "ementa", "decisão", "tese")
+    store.write_case_law([decision])
     store.replace_llm_relations("STJ:1", [llm(RelationType.APPLIES_TO, "STJ:1", "abuso")])
     store.replace_llm_relations("STJ:1", [llm(RelationType.DEFINES, "STJ:1", "socio")])
 
@@ -166,11 +166,11 @@ def test_a_decision_gets_llm_concept_edges_that_a_rerun_replaces(driver):
     ) == [{"t": "DEFINES", "o": "llm", "c": "MEDIUM", "target": "socio"}]
 
 
-def test_a_decision_gets_rule_references_to_dispositivos_stubs_and_unresolved_citations(driver):
+def test_a_decision_gets_rule_references_to_provisions_stubs_and_unresolved_citations(driver):
     store = Neo4jGraphStore(driver)
-    decision = Jurisprudencia("STJ:1", "STJ", "REsp 1", "ementa", "decisão", "tese")
+    decision = CaseLaw("STJ:1", "STJ", "REsp 1", "ementa", "decisão", "tese")
     store.write(batch())
-    store.write_jurisprudencia(
+    store.write_case_law(
         [decision],
         [
             rel(RelationType.REFERENCES, "STJ:1", f"{A}#art1", "art. 1"),
@@ -186,7 +186,7 @@ def test_a_decision_gets_rule_references_to_dispositivos_stubs_and_unresolved_ci
             ),
         ],
     )
-    store.write_jurisprudencia([decision], [rel(RelationType.REFERENCES, "STJ:1", f"{A}#art1")])
+    store.write_case_law([decision], [rel(RelationType.REFERENCES, "STJ:1", f"{A}#art1")])
 
     assert rows(
         driver,

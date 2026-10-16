@@ -7,7 +7,7 @@ import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from legal_radar.llm import (
+from legal_radar.domain.llm import (
     Completion,
     CompletionParams,
     Embedding,

@@ -20,7 +20,7 @@ eval = [
 ]
 
 [project.scripts]
-legal-radar = "legal_radar.__main__:main"
+legal-radar = "legal_radar.entrypoints.cli.app:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -34,6 +34,7 @@ packages = ["src/legal_radar"]
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.15",
     "pytest",
     "testcontainers>=4.15.0",
 ]
@@ -49,6 +50,28 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "RUF"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["tests"]
+pythonpath = ["tests", "tests/application", "tests/adapters"]  # tests import each other's helpers
 addopts = "-m 'not live'"
 markers = ["live: hits the real STF/STJ sources through a browser; run with `pytest -m live`"]
+
+[tool.importlinter]
+root_package = "legal_radar"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers point inward"
+type = "layers"
+layers = ["legal_radar.entrypoints", "legal_radar.adapters", "legal_radar.application", "legal_radar.domain"]
+
+[[tool.importlinter.contracts]]
+name = "The domain stays free of infrastructure"
+type = "forbidden"
+source_modules = ["legal_radar.domain"]
+forbidden_modules = ["neo4j", "bs4", "sqlite3", "langsmith", "playwright", "langgraph", "yaml", "jsonschema"]
+
+[[tool.importlinter.contracts]]
+name = "The application stays free of infrastructure"
+type = "forbidden"
+source_modules = ["legal_radar.application"]
+# `yaml` and `jsonschema` stay allowed: the application parses vocabularies and validates replies
+forbidden_modules = ["neo4j", "bs4", "sqlite3", "langsmith", "playwright"]

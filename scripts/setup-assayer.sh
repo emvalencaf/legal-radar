@@ -192,7 +192,7 @@ banner "assayer: clone and verify the eval harness"
 
 # ── 1. Clone ──────────────────────────────────────────────────────────────
 stage "Clone assayer"
-say "legal-radar's eval harness (src/legal_radar/assayer_harness.py) was written"
+say "legal-radar's eval harness (src/legal_radar/adapters/assayer/harness.py) was written"
 say "against assayer's source but never executed. Clone it outside this repo."
 ASSAYER_DIR="${ASSAYER_DIR:-$HOME/personal_projects/gen-ai/assayer}"
 ask ASSAYER_DIR "Where to clone it? [$ASSAYER_DIR]"

@@ -28,7 +28,7 @@ class Settings:
     runs_dir: Path = ROOT / "eval-runs"
     questions_dir: Path = ROOT / "evals"
     concepts_dir: Path = ROOT / "concepts"
-    log_path: Path = ROOT / "logs" / "llm_calls.jsonl"
+    log_path: Path = Path("logs/llm_calls.jsonl")  # relative to the working directory, as ever
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: str = "legal-radar-dev"

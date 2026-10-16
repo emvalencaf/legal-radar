@@ -2,14 +2,14 @@
 
 Usage: check_enricher.py [gemini|groq|lmstudio] (default gemini); Gemini needs GEMINI_API_KEY
 (read from the environment or `.env`). Uses the template shipped in
-`legal_radar.application.enricher`, not the Hub, and prints per dispositivo whether the reply followed the schema, what was dropped and why,
-the tokens spent and the edges produced. It does not measure quality: that is the gold set (#28).
+`legal_radar.application.enricher`, not the Hub, and prints per dispositivo whether the reply
+followed the schema, what was dropped and why, the tokens spent and the edges produced. It does
+not measure quality: that is the gold set (#28).
 """
 
 import sys
 from pathlib import Path
 
-from legal_radar.__main__ import load_env
 from legal_radar.adapters.planalto import decode_html, parse_planalto
 from legal_radar.adapters.prompt_lock import refresh
 from legal_radar.adapters.router_config import (
@@ -24,6 +24,7 @@ from legal_radar.application.enricher import (
     candidate_targets,
     enrich,
 )
+from legal_radar.bootstrap import load_env
 from legal_radar.domain.relations import extract_relations
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -11,9 +11,9 @@ from pathlib import Path
 import yaml
 
 from legal_radar.domain.prompts import PromptError, PromptLock, parse_lock
-from legal_radar.settings import ROOT as REPO_ROOT
+from legal_radar.settings import Settings
 
-ROOT = REPO_ROOT / "prompts"
+ROOT = Settings().prompts_dir
 PINS_PATH = ROOT / "pins.yml"
 LOCK_PATH = ROOT / "lock.json"
 

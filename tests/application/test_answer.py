@@ -208,7 +208,7 @@ def test_a_citation_outside_the_retrieved_context_is_rejected():
 
 
 def test_the_cli_loads_env_without_overriding_the_environment(tmp_path, monkeypatch):
-    from legal_radar.__main__ import load_env
+    from legal_radar.bootstrap import load_env
 
     env = tmp_path / ".env"
     env.write_text('# c\nNEW_KEY=abc\nKEPT=from-file\nQUOTED="x y"\n', encoding="utf-8")

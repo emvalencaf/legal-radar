@@ -20,7 +20,7 @@ eval = [
 ]
 
 [project.scripts]
-legal-radar = "legal_radar.__main__:main"
+legal-radar = "legal_radar.entrypoints.cli.app:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -79,7 +79,7 @@ def test_latest_runs_keeps_the_newest_per_system_and_k(tmp_path):
 
 
 def test_compare_evals_command_prints_the_table_of_the_given_runs(tmp_path, capsys):
-    from legal_radar.__main__ import main
+    from legal_radar.entrypoints.cli.app import main
 
     path = tmp_path / "r.json"
     path.write_text(json.dumps(run("rag-naive", 5, 0.4, 0.5)))

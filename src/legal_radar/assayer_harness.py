@@ -24,8 +24,9 @@ from legal_radar.answer_evaluation import (
 )
 from legal_radar.application.answer import CitedAnswer
 from legal_radar.domain.llm import content_hash
+from legal_radar.settings import Settings
 
-RUNS_DIR = Path(__file__).resolve().parents[2] / "eval-runs"
+RUNS_DIR = Settings().runs_dir
 CITATIONS, PATH, CONTRADICTIONS = "citation_check", "path", "contradiction_check"
 ABSTENTION = "abstention_check"
 MENTIONS = "mentions_check"

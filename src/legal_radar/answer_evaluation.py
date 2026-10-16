@@ -15,8 +15,9 @@ from legal_radar.application.answer import Citation, CitedAnswer
 from legal_radar.application.ports import Provider
 from legal_radar.domain.llm import Completion, CompletionParams, Embedding
 from legal_radar.domain.model import Hop
+from legal_radar.settings import Settings
 
-QUESTIONS_DIR = Path(__file__).resolve().parents[2] / "evals"
+QUESTIONS_DIR = Settings().questions_dir
 QUESTION_PATHS = {
     "desconsideração da personalidade jurídica": QUESTIONS_DIR / "desconsideracao_personalidade.yml"
 }

@@ -18,7 +18,6 @@ import sys
 import time
 from pathlib import Path
 
-from legal_radar.__main__ import load_env
 from legal_radar.adapters.planalto import decode_html, parse_planalto
 from legal_radar.adapters.prompt_lock import refresh
 from legal_radar.adapters.router_config import (
@@ -28,6 +27,7 @@ from legal_radar.adapters.router_config import (
 )
 from legal_radar.application.concepts import load_vocabulary
 from legal_radar.application.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE
+from legal_radar.bootstrap import load_env
 from legal_radar.domain.llm import AllProvidersFailedError
 from legal_radar.evaluation import (
     append_outcome,

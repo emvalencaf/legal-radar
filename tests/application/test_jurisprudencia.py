@@ -146,7 +146,7 @@ def test_with_zero_top_hits_only_the_seeds_are_ingested():
 
 
 def test_the_cli_requires_a_known_assunto(capsys):
-    from legal_radar.__main__ import main
+    from legal_radar.entrypoints.cli.app import main
 
     for argv in (["ingest-jurisprudencia"], ["ingest-jurisprudencia", "nope"]):
         with pytest.raises(SystemExit) as exit_:

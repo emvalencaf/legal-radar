@@ -18,15 +18,14 @@ from legal_radar.adapters.prompt_lock import default_lock
 from legal_radar.application.ports import Provider
 from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.domain.prompts import PromptLock
-from legal_radar.settings import ROOT as REPO_ROOT
+from legal_radar.settings import Settings
 
 CATEGORIES = ("DIREITO", "ATOR", "PROCESSO", "REQUISITO", "PRINCIPIO", "TEORIA", "EFEITO")
 ORIGINS = ("llm", "human")
 STATUSES = ("draft", "curated")
 ID_PATTERN = re.compile(r"[a-z][a-z0-9]*(_[a-z0-9]+)*")
 VOCABULARY_PATHS = {
-    "desconsideração da personalidade jurídica": REPO_ROOT
-    / "concepts"
+    "desconsideração da personalidade jurídica": Settings().concepts_dir
     / "desconsideracao_personalidade.yml",
 }
 # Dispositivo roots the drafter reads (with their parágrafos, incisos and alíneas); every

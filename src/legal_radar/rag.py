@@ -28,11 +28,12 @@ from legal_radar.application.ports import Provider
 from legal_radar.domain.llm import AllProvidersFailedError, CompletionParams
 from legal_radar.domain.model import Dispositivo, Jurisprudencia
 from legal_radar.domain.prompts import PromptLock
+from legal_radar.settings import Settings
 
 CHUNKINGS = ("naive", "contextual")
 BASELINES = tuple(f"rag-{name}" for name in CHUNKINGS)
 BATCH_SIZE = 50  # Gemini's batchEmbedContents takes at most 100 texts
-INDEX_DIR = Path(__file__).resolve().parents[2] / "data"
+INDEX_DIR = Settings().index_dir
 EMBED_STEP = "rag_embedding"
 RETRY_WAIT = 30.0  # seconds: free embedding tiers throttle per minute, counting every text
 RETRIES = 8  # waits per batch before giving up; the saved batches make a rerun resume

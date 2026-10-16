@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.llm import (
+from legal_radar.domain.llm import (
     AllProvidersFailedError,
     Completion,
     CompletionParams,
@@ -171,7 +171,7 @@ def test_usage_ignores_other_days_and_failures(tmp_path):
 
 
 def test_rejected_request_falls_back_instead_of_aborting(tmp_path):
-    from legal_radar.llm import ProviderError
+    from legal_radar.domain.llm import ProviderError
 
     router, _, _ = make_router(
         tmp_path, [FakeProvider("groq", script=[ProviderError("401")]), FakeProvider("gemini")]
@@ -188,7 +188,7 @@ def test_usage_skips_a_torn_log_line(tmp_path):
 
 
 def test_embed_is_routed_logged_and_falls_back_past_a_provider_without_embeddings(tmp_path):
-    from legal_radar.llm import ProviderError
+    from legal_radar.domain.llm import ProviderError
 
     first = FakeProvider("groq", script=[ProviderError("no embedding model")])
     second = FakeProvider("gemini", embedding_model="emb-1")

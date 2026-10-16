@@ -2,6 +2,7 @@ import json
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.concepts import Concept, Vocabulary
+from legal_radar.domain.llm import Completion
 from legal_radar.domain.model import (
     Confidence,
     Dispositivo,
@@ -18,7 +19,6 @@ from legal_radar.enricher import (
     enrich_decision,
 )
 from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
-from legal_radar.llm import Completion
 from legal_radar.prompts import refresh
 
 LEI = "urn:lex:br:federal:lei:2002-01-10;10406"

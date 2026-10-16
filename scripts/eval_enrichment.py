@@ -20,6 +20,7 @@ from pathlib import Path
 
 from legal_radar.__main__ import load_env
 from legal_radar.concepts import load_vocabulary
+from legal_radar.domain.llm import AllProvidersFailedError
 from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE
 from legal_radar.evaluation import (
     append_outcome,
@@ -32,7 +33,6 @@ from legal_radar.evaluation import (
     score_edges,
     start_run,
 )
-from legal_radar.llm import AllProvidersFailedError
 from legal_radar.planalto import decode_html, parse_planalto
 from legal_radar.prompts import refresh
 from legal_radar.router_config import build_router, enrichment_max_input_tokens, load_config

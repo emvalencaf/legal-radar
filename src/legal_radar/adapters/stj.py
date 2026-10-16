@@ -5,8 +5,8 @@ import re
 
 from bs4 import BeautifulSoup, Tag
 
+from legal_radar.application.ports import FormPages
 from legal_radar.domain.model import Jurisprudencia
-from legal_radar.ports import FormPages
 
 SEARCH_URL = "https://scon.stj.jus.br/SCON/"
 FORM = "frmPesquisaJurHeader"

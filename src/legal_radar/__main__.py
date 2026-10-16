@@ -25,9 +25,9 @@ from pathlib import Path
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.adapters.neo4j_store import Neo4jGraphStore
-from legal_radar.anchors import ANCHORS
 from legal_radar.answer_evaluation import QUESTION_PATHS
 from legal_radar.concepts import VOCABULARY_PATHS
+from legal_radar.domain.anchors import ANCHORS
 from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
 from legal_radar.ingest import ingest
 from legal_radar.jurisprudencia import JURISPRUDENCIA
@@ -224,7 +224,7 @@ def main(argv: list[str] | None = None) -> None:
         if args.command == "ask":
             from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
             from legal_radar.answer import ask
-            from legal_radar.assunto import AssuntoResolver
+            from legal_radar.application.assunto import AssuntoResolver
             from legal_radar.router_config import (
                 build_router,
                 load_config,
@@ -266,8 +266,8 @@ def main(argv: list[str] | None = None) -> None:
             from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
             from legal_radar.answer import ask
             from legal_radar.answer_evaluation import System, UsageMeter, load_questions
+            from legal_radar.application.assunto import AssuntoResolver
             from legal_radar.assayer_harness import Pricing, ragas_llm_from_env
-            from legal_radar.assunto import AssuntoResolver
             from legal_radar.eval_runner import run_systems
             from legal_radar.prompts import default_lock
             from legal_radar.router_config import (

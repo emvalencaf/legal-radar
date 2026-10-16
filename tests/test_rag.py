@@ -2,8 +2,8 @@ import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.answer import ANSWER_SCHEMA
+from legal_radar.domain.llm import AllProvidersFailedError, Completion, Embedding
 from legal_radar.domain.model import Dispositivo, Jurisprudencia
-from legal_radar.llm import AllProvidersFailedError, Completion, Embedding
 from legal_radar.prompts import refresh
 from legal_radar.rag import RagBaseline, RagError, build_chunks, build_index
 

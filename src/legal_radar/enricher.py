@@ -14,7 +14,9 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
+from legal_radar.application.ports import Provider
 from legal_radar.concepts import Vocabulary
+from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.domain.model import (
     Confidence,
     Dispositivo,
@@ -24,8 +26,6 @@ from legal_radar.domain.model import (
     RelationType,
 )
 from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
-from legal_radar.llm import CompletionParams, content_hash
-from legal_radar.ports import Provider
 from legal_radar.prompts import PromptLock, default_lock
 from legal_radar.relations import CURATED_CODES
 

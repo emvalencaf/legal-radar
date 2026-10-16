@@ -5,8 +5,8 @@ import pytest
 from legal_radar.adapters.fake_provider import FakeProvider
 from legal_radar.answer import Citation, CitedAnswer
 from legal_radar.answer_evaluation import Question, System, UsageMeter
+from legal_radar.domain.llm import Completion
 from legal_radar.domain.model import Hop
-from legal_radar.llm import Completion
 
 pytest.importorskip("assayer")  # the `eval` extra
 

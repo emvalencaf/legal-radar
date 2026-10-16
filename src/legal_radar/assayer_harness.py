@@ -22,7 +22,7 @@ from legal_radar.answer_evaluation import (
     graph_path,
     outcome_of,
 )
-from legal_radar.llm import content_hash
+from legal_radar.domain.llm import content_hash
 from legal_radar.tracing import safely
 
 RUNS_DIR = Path(__file__).resolve().parents[2] / "eval-runs"

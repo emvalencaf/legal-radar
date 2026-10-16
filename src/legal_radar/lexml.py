@@ -8,7 +8,7 @@ from urllib.parse import quote_plus, urlparse
 
 from bs4 import BeautifulSoup
 
-from legal_radar.ports import PageSource
+from legal_radar.application.ports import PageSource
 
 SEARCH_URL = "https://www.lexml.gov.br/busca/search?keyword={keyword}"
 URN_URL = "https://www.lexml.gov.br/urn/{urn}"

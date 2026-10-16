@@ -15,8 +15,8 @@ from pathlib import Path
 import yaml
 from neo4j import Driver
 
-from legal_radar.llm import CompletionParams, content_hash
-from legal_radar.ports import Provider
+from legal_radar.application.ports import Provider
+from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.prompts import PromptLock, default_lock
 
 CATEGORIES = ("DIREITO", "ATOR", "PROCESSO", "REQUISITO", "PRINCIPIO", "TEORIA", "EFEITO")

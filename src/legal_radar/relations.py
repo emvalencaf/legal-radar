@@ -11,6 +11,7 @@ import re
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 
+from legal_radar.application.ports import PageSource
 from legal_radar.domain.model import (
     Confidence,
     Dispositivo,
@@ -21,7 +22,6 @@ from legal_radar.domain.model import (
 )
 from legal_radar.enrichment import EXTRACTOR_VERSION
 from legal_radar.lexml import LexmlError, search_urn
-from legal_radar.ports import PageSource
 
 logger = logging.getLogger(__name__)
 UrnResolver = Callable[[str, str, int], str | None]  # (kind, numero, ano) -> URN, e.g. ("lei", ...)

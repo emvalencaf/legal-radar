@@ -6,7 +6,7 @@ Rule-derived edges do not use it, so they are kept.
 """
 
 from legal_radar.concepts import Vocabulary
-from legal_radar.llm import content_hash
+from legal_radar.domain.llm import content_hash
 from legal_radar.prompts import PromptLock, default_lock
 
 ENRICHMENT_PROMPT = "dispositivo-enrichment"

@@ -12,9 +12,9 @@ from pathlib import Path
 import yaml
 
 from legal_radar.answer import Citation, CitedAnswer
+from legal_radar.application.ports import Provider
+from legal_radar.domain.llm import Completion, CompletionParams, Embedding
 from legal_radar.domain.model import Hop
-from legal_radar.llm import Completion, CompletionParams, Embedding
-from legal_radar.ports import Provider
 
 QUESTIONS_DIR = Path(__file__).resolve().parents[2] / "evals"
 QUESTION_PATHS = {

@@ -5,7 +5,7 @@ import pytest
 from conftest import RecordingStore
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.llm import Completion
+from legal_radar.domain.llm import Completion
 from legal_radar.pipeline import TAG_SCHEMA, TaggingError, run
 from legal_radar.prompts import PromptError, refresh
 

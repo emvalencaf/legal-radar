@@ -10,7 +10,7 @@ from legal_radar.concepts import (
     load_vocabulary,
     parse_vocabulary,
 )
-from legal_radar.llm import Completion
+from legal_radar.domain.llm import Completion
 
 
 @pytest.fixture(scope="module")
@@ -219,8 +219,8 @@ def test_with_assunto_reports_a_count_mismatch():
 
 
 def test_every_anchor_assunto_has_a_valid_registered_vocabulary():
-    from legal_radar.anchors import ANCHORS
     from legal_radar.concepts import VOCABULARY_PATHS, load_registered
+    from legal_radar.domain.anchors import ANCHORS
 
     assert set(ANCHORS) == set(VOCABULARY_PATHS)
     for assunto in VOCABULARY_PATHS:

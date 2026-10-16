@@ -7,7 +7,7 @@ from ingest_helpers import CC, CC_AGENT, FakePages, MemoryStore, lexml_pages, re
 
 from legal_radar import ingest as ingest_module
 from legal_radar import lexml
-from legal_radar.anchors import AnchorLei
+from legal_radar.domain.anchors import AnchorLei
 from legal_radar.domain.model import Dispositivo
 from legal_radar.ingest import ingest
 from legal_radar.lexml import LexmlError, resolve_urn, search_urn
@@ -115,10 +115,10 @@ from dataclasses import replace  # noqa: E402
 from legal_radar.adapters.fake_provider import FakeProvider  # noqa: E402
 from legal_radar.adapters.sqlite_metadata import SqliteMetadataStore  # noqa: E402
 from legal_radar.concepts import Concept, Vocabulary  # noqa: E402
+from legal_radar.domain.llm import AllProvidersFailedError, Completion  # noqa: E402
 from legal_radar.domain.model import EnrichmentStatus  # noqa: E402
 from legal_radar.enricher import ENRICHMENT_PROMPT, ENRICHMENT_TEMPLATE  # noqa: E402
 from legal_radar.ingest import EnrichConfig  # noqa: E402
-from legal_radar.llm import AllProvidersFailedError, Completion  # noqa: E402
 from legal_radar.prompts import refresh  # noqa: E402
 
 ANCHOR = [AnchorLei("lei 10406 2002 código civil", "10406", 2002)]

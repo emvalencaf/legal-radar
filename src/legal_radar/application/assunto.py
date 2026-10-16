@@ -3,9 +3,9 @@
 import math
 from dataclasses import dataclass
 
-from legal_radar.anchors import ANCHORS, AnchorLei
-from legal_radar.llm import CompletionParams
-from legal_radar.ports import Provider
+from legal_radar.application.ports import Provider
+from legal_radar.domain.anchors import ANCHORS, AnchorLei
+from legal_radar.domain.llm import CompletionParams
 
 DEFAULT_THRESHOLD = 0.5
 PIPELINE_STEP = "assunto_resolution"

@@ -21,11 +21,11 @@ from legal_radar.answer import (
     strip_amendments,
     unsupported_mentions,
 )
-from legal_radar.assunto import cosine
+from legal_radar.application.assunto import cosine
+from legal_radar.application.ports import Provider
+from legal_radar.domain.llm import AllProvidersFailedError, CompletionParams
 from legal_radar.domain.model import Dispositivo, Jurisprudencia
 from legal_radar.enricher import STRUCTURAL_KINDS, ancestors_of
-from legal_radar.llm import AllProvidersFailedError, CompletionParams
-from legal_radar.ports import Provider
 from legal_radar.prompts import PromptLock, default_lock
 
 CHUNKINGS = ("naive", "contextual")

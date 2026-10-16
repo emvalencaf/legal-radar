@@ -2,12 +2,12 @@
 
 from dataclasses import dataclass, field
 
+from legal_radar.application.ports import GraphStore, JurisprudenciaFetcher
+from legal_radar.domain.llm import ProviderError
 from legal_radar.domain.model import EnrichmentRecord, EnrichmentStatus, Jurisprudencia, Relation
 from legal_radar.enricher import decision_texts, enrich_decision
 from legal_radar.enrichment import DECISION_PROMPT, enrichment_key
 from legal_radar.ingest import EnrichConfig, EnrichmentCounts
-from legal_radar.llm import ProviderError
-from legal_radar.ports import GraphStore, JurisprudenciaFetcher
 from legal_radar.relations import UrnResolver, extract_decision_relations
 
 TOP_HITS = 5  # default number of top hits per court

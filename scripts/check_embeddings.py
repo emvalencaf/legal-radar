@@ -3,12 +3,12 @@
 Usage: check_embeddings.py [gemini|lmstudio] (default gemini). Gemini needs GEMINI_API_KEY;
 LM Studio reads LMSTUDIO_BASE_URL and needs its embedding model loaded.
 Prints each query's best score so the resolver threshold
-(`legal_radar.assunto.DEFAULT_THRESHOLD`) can be tuned against a real model.
+(`legal_radar.application.assunto.DEFAULT_THRESHOLD`) can be tuned against a real model.
 """
 
 import sys
 
-from legal_radar.assunto import DEFAULT_THRESHOLD, AssuntoResolver, cosine
+from legal_radar.application.assunto import DEFAULT_THRESHOLD, AssuntoResolver, cosine
 from legal_radar.router_config import build_router, load_config
 
 RELATED = [

@@ -4,7 +4,7 @@ the router (fallback on quota, wait on RPM, single retry on a transient error)."
 import pytest
 
 from legal_radar.adapters.http_providers import GeminiProvider, GroqProvider, LMStudioProvider
-from legal_radar.llm import AllProvidersFailedError
+from legal_radar.domain.llm import AllProvidersFailedError
 from legal_radar.router import Router
 from legal_radar.router_config import DEFAULT_PRIORITY, build_router, load_config
 from legal_radar.wide_events import WideEventLog
@@ -238,7 +238,7 @@ def test_strict_schemas_close_every_nested_object():
 
 
 def test_openai_compatible_adapters_request_a_strict_json_schema():
-    from legal_radar.llm import CompletionParams
+    from legal_radar.domain.llm import CompletionParams
 
     for make in (ADAPTERS["groq"][0], ADAPTERS["lmstudio"][0]):
         transport = ScriptedTransport(openai_ok())
@@ -255,7 +255,7 @@ def test_openai_compatible_adapters_request_a_strict_json_schema():
 
 
 def test_gemini_requests_json_output_with_the_schema():
-    from legal_radar.llm import CompletionParams
+    from legal_radar.domain.llm import CompletionParams
 
     transport = ScriptedTransport(gemini_ok())
     ADAPTERS["gemini"][0](transport).complete("p", CompletionParams(response_schema=SCHEMA))

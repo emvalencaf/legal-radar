@@ -1,9 +1,9 @@
 import pytest
 
 from legal_radar.adapters.fake_provider import FakeProvider
-from legal_radar.anchors import ANCHORS
-from legal_radar.assunto import AssuntoResolver
-from legal_radar.llm import Embedding
+from legal_radar.application.assunto import AssuntoResolver
+from legal_radar.domain.anchors import ANCHORS
+from legal_radar.domain.llm import Embedding
 
 DESCONSIDERACAO = "desconsideração da personalidade jurídica"
 

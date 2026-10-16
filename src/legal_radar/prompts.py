@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-from legal_radar.llm import content_hash
+from legal_radar.domain.llm import content_hash
 
 ROOT = Path(__file__).resolve().parents[2] / "prompts"
 PINS_PATH = ROOT / "pins.yml"

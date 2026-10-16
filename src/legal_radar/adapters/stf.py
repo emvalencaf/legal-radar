@@ -2,8 +2,8 @@
 
 import json
 
+from legal_radar.application.ports import JsonApi
 from legal_radar.domain.model import Jurisprudencia
-from legal_radar.ports import JsonApi
 
 API_URL = "https://jurisprudencia.stf.jus.br/api/search/search"
 _SOURCE_FIELDS = [

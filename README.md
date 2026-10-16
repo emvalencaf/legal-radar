@@ -241,7 +241,10 @@ Coding and documentation rules are in [CODE_STANDARDS.md](CODE_STANDARDS.md).
 
 ## License
 
-No license has been chosen yet.
+Distributed under the MIT License. See [LICENSE](LICENSE).
+
+The legislation and court decisions the system ingests are public Brazilian legal texts; the
+license covers this project's code, vocabularies and evaluation data, not those sources.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

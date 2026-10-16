@@ -159,6 +159,7 @@ def seed(args: argparse.Namespace, settings: Settings, store) -> None:
 
 def ask_command(args: argparse.Namespace, settings: Settings, store) -> None:
     from legal_radar.adapters.neo4j_reader import Neo4jGraphReader
+    from legal_radar.adapters.prompt_lock import default_lock
     from legal_radar.adapters.router_config import (
         build_router,
         load_config,
@@ -175,6 +176,7 @@ def ask_command(args: argparse.Namespace, settings: Settings, store) -> None:
         AssuntoResolver(router).resolve,
         Neo4jGraphReader(store.driver),
         router,
+        default_lock(),
         max_context_tokens=tier_max_context_tokens(config),
     )
     if result.assunto is None:
@@ -303,12 +305,13 @@ def run_all(args: argparse.Namespace, settings: Settings, store) -> None:
 
 def draft_concepts(args: argparse.Namespace, settings: Settings, store) -> None:
     from legal_radar.adapters.neo4j_corpus import graph_corpus
+    from legal_radar.adapters.prompt_lock import default_lock
     from legal_radar.adapters.router_config import build_router, load_config
     from legal_radar.application.concepts import corpus_ids, draft_candidates, with_assunto
 
     router = build_router(load_config("router.yaml"))
     corpus = graph_corpus(store.driver)
-    drafted = draft_candidates(args.assunto, corpus, router)
+    drafted = draft_candidates(args.assunto, corpus, router, default_lock())
     draft, error = with_assunto(args.assunto, drafted, corpus_ids(corpus))
     target = VOCABULARY_PATHS[args.assunto].with_suffix(".draft.yml")
     target.parent.mkdir(parents=True, exist_ok=True)

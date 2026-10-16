@@ -11,7 +11,6 @@ from typing import TypedDict
 import jsonschema
 from langgraph.graph import END, START, StateGraph
 
-from legal_radar.adapters.prompt_lock import default_lock
 from legal_radar.application.assunto import Resolution
 from legal_radar.application.ports import GraphReader, Provider
 from legal_radar.domain.complexity import DEFAULT_MAX_CONTEXT_TOKENS, classify
@@ -223,11 +222,11 @@ def ask(
     resolve,
     reader: GraphReader,
     provider: Provider,
-    lock: PromptLock | None = None,
+    lock: PromptLock,
     max_context_tokens: int = DEFAULT_MAX_CONTEXT_TOKENS,
 ) -> CitedAnswer:
     """Answers `query` from the knowledge graph, citing the dispositivos and jurisprudência used."""
-    graph = build_graph(resolve, reader, provider, lock or default_lock(), max_context_tokens)
+    graph = build_graph(resolve, reader, provider, lock, max_context_tokens)
     state = graph.invoke({"query": query})
     resolution = state["resolution"]
     if resolution is None:

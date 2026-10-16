@@ -3,6 +3,7 @@ from neo4j import GraphDatabase
 from testcontainers.neo4j import Neo4jContainer
 
 from legal_radar.adapters.fake_provider import FakeProvider
+from legal_radar.adapters.prompt_lock import default_lock
 from legal_radar.application.concepts import (
     CATEGORIES,
     VocabularyError,
@@ -142,7 +143,7 @@ def test_draft_candidates_counts_then_extracts_that_many():
     )
     corpus = ["[CC#art50]\nabuso", "[STJ:1]\nTema 1210"]
 
-    draft = draft_candidates("desconsideração", corpus, provider)
+    draft = draft_candidates("desconsideração", corpus, provider, default_lock())
 
     assert [c["id"] for c in draft.conceitos] == ["x"]
     assert (draft.model, draft.expected) == ("g/m", 7)
@@ -157,7 +158,7 @@ def test_each_step_sends_its_own_schema_and_pipeline_step():
     complete = provider.complete
     provider.complete = lambda prompt, params=None: seen.append(params) or complete(prompt, params)
 
-    draft_candidates("a", ["[x]\nt"], provider)
+    draft_candidates("a", ["[x]\nt"], provider, default_lock())
 
     count, extract = seen
     assert (count.pipeline_step, extract.pipeline_step) == (
@@ -169,7 +170,6 @@ def test_each_step_sends_its_own_schema_and_pipeline_step():
 
 
 def test_schemas_describe_every_field_and_limit_categories_and_sources():
-    from legal_radar.adapters.prompt_lock import default_lock
     from legal_radar.application.concepts import extract_schema
 
     lock = default_lock()
@@ -207,7 +207,7 @@ def test_draft_candidates_rejects_an_answer_off_the_schema(script):
     provider = FakeProvider(script=[Completion(text) for text in script])
 
     with pytest.raises(VocabularyError):
-        draft_candidates("a", ["[x]\nt"], provider)
+        draft_candidates("a", ["[x]\nt"], provider, default_lock())
 
 
 def test_with_assunto_reports_a_count_mismatch():

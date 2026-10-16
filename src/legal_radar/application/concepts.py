@@ -14,7 +14,6 @@ from pathlib import Path
 
 import yaml
 
-from legal_radar.adapters.prompt_lock import default_lock
 from legal_radar.application.ports import Provider
 from legal_radar.domain.llm import CompletionParams, content_hash
 from legal_radar.domain.prompts import PromptLock
@@ -254,11 +253,10 @@ def _answer(
 
 
 def draft_candidates(
-    assunto: str, corpus: list[str], provider: Provider, lock: PromptLock | None = None
+    assunto: str, corpus: list[str], provider: Provider, lock: PromptLock
 ) -> Draft:
     """LLM-drafted candidates in two structured steps (count, then extract that many); a human
     curates them into the vocabulary."""
-    lock = lock or default_lock()
     text = "\n\n---\n\n".join(corpus)
     quantidade, _ = _answer(
         provider,

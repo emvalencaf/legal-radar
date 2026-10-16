@@ -49,8 +49,9 @@ def enrich_config(settings: Settings, assunto: str, prompt: str = ENRICHMENT_PRO
     from legal_radar.application.ingest import EnrichConfig
     from legal_radar.domain.prompts import PromptError
 
+    lock = default_lock()
     try:
-        default_lock().prompt_hash(prompt)
+        lock.prompt_hash(prompt)
         vocabulary = load_registered(assunto)
         config = load_config("router.yaml")
         missing = providers_without_credentials(config)
@@ -70,6 +71,7 @@ def enrich_config(settings: Settings, assunto: str, prompt: str = ENRICHMENT_PRO
         vocabulary,
         router,
         SqliteMetadataStore(settings.metadata_db),
+        lock,
         max_input_tokens=limit,
     )
 

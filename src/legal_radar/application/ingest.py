@@ -36,7 +36,7 @@ class EnrichConfig:
     vocabulary: Vocabulary
     provider: Provider
     metadata: MetadataStore
-    lock: PromptLock | None = None
+    lock: PromptLock
     max_input_tokens: int | None = None
 
 

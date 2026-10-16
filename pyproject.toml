@@ -66,7 +66,6 @@ layers = ["legal_radar.entrypoints", "legal_radar.adapters", "legal_radar.applic
 # the use cases still default to the file-backed prompt lock, and `ingest` still calls the
 # LexML and Planalto adapters directly instead of going through ports.
 ignore_imports = [
-    "legal_radar.application.* -> legal_radar.adapters.prompt_lock",
     "legal_radar.application.ingest -> legal_radar.adapters.lexml",
     "legal_radar.application.ingest -> legal_radar.adapters.planalto",
 ]

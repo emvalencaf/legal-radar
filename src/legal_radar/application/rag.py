@@ -13,7 +13,6 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from legal_radar.adapters.prompt_lock import default_lock
 from legal_radar.application.answer import (
     Citation,
     CitedAnswer,
@@ -179,10 +178,10 @@ class RagBaseline:
     """`ask(query) -> CitedAnswer` over a vector index instead of the graph."""
 
     def __init__(
-        self, name: str, index: RagIndex, provider: Provider, k: int, lock: PromptLock | None = None
+        self, name: str, index: RagIndex, provider: Provider, k: int, lock: PromptLock
     ):
         self.name, self.index, self.provider, self.k = name, index, provider, k
-        self.lock = lock or default_lock()
+        self.lock = lock
 
     def ask(self, query: str) -> CitedAnswer:
         embedding = self.provider.embed([query], CompletionParams(pipeline_step=EMBED_STEP))

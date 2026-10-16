@@ -14,7 +14,6 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from legal_radar.adapters.prompt_lock import default_lock
 from legal_radar.application.concepts import Vocabulary
 from legal_radar.application.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
 from legal_radar.application.ports import Provider
@@ -137,7 +136,7 @@ def enrich(
     d: Dispositivo,
     vocabulary: Vocabulary,
     provider: Provider,
-    lock: PromptLock | None = None,
+    lock: PromptLock,
     *,
     ancestors: Sequence[Dispositivo] = (),
     unresolved: Sequence[Relation] = (),
@@ -148,7 +147,6 @@ def enrich(
     ground one in `candidates`. `ancestors` run from the farthest to the nearest."""
     if reason := triage(d):
         return Enrichment(skipped=reason)
-    lock = lock or default_lock()
     citations = [u for u in unresolved if u.unresolved]
     candidates = sorted(set(candidates)) if citations else []
     kept = list(ancestors)
@@ -198,7 +196,7 @@ def enrich_decision(
     j: Jurisprudencia,
     vocabulary: Vocabulary,
     provider: Provider,
-    lock: PromptLock | None = None,
+    lock: PromptLock,
     *,
     max_input_tokens: int = MAX_INPUT_TOKENS,
 ) -> Enrichment:
@@ -207,7 +205,6 @@ def enrich_decision(
     if not j.ementa.strip():
         return Enrichment(skipped="empty")
     texts = decision_texts(j)
-    lock = lock or default_lock()
     prompt = lock.render(
         DECISION_PROMPT,
         assunto=vocabulary.assunto,

@@ -343,12 +343,24 @@ def _evaluation(runs: list[dict]) -> str:
     )
 
 
-def _examples(runs: list[dict]) -> str:
+def example_answers(runs: list[dict]) -> list[dict]:
+    """The questions shown as examples: the graph system's first answers that cite something."""
     graph = next((r for r in runs if r.get("system", "graph") == "graph"), None)
     if graph is None:
+        return []
+    return [q for q in graph["questions"] if q["citations"]][:EXAMPLES]
+
+
+def _examples(runs: list[dict], graph_href: str | None = None) -> str:
+    answered = example_answers(runs)
+    if not answered:
         return ""
-    answered = [q for q in graph["questions"] if q["citations"]][:EXAMPLES]
     out = []
+    if graph_href:
+        out.append(
+            f'<p><a href="{escape(graph_href)}"><i class="fa-solid fa-diagram-project"></i> '
+            "Explore a sample of the knowledge graph around these answers</a></p>"
+        )
     for q in answered:
         out.append(f'<div class="card"><h3>{escape(q["id"])}</h3>')
         out.append(f'<blockquote>{escape(q["answer"])}</blockquote><ul class="cites">')
@@ -382,9 +394,10 @@ def render_report(
     runs: list[dict],
     lock: PromptLock,
     generated_at: datetime | None = None,
+    graph_href: str | None = None,
 ) -> str:
     """The whole page. `enrichment` is a `load_enrichment_run` result, `runs` the evaluation run
-    files (`eval_comparison.latest_runs`)."""
+    files (`eval_comparison.latest_runs`); `graph_href` links the graph sample page, when built."""
     stamp = (generated_at or datetime.now(UTC)).strftime("%Y-%m-%d %H:%M UTC")
     ingestion = (
         _ingestion(*enrichment)
@@ -398,13 +411,18 @@ def render_report(
         f'<link rel="stylesheet" href="{FONT_AWESOME}"><style>{STYLE}</style></head><body>'
         '<header class="hero"><div><h1><i class="fa-solid fa-scale-balanced"></i> Legal Radar</h1>'
         f"<p>Pipeline report · generated {stamp}</p></div></header><main>"
-        f"{_evaluation(runs)}{_examples(runs)}{_how_it_works()}{ingestion}"
+        f"{_evaluation(runs)}{_examples(runs, graph_href)}{_how_it_works()}{ingestion}"
         f"{_glossary()}{_prompts(lock)}"
         "</main></body></html>"
     )
 
 
-def build_report(directory: Path, lock: PromptLock) -> str:
+def build_report(directory: Path, lock: PromptLock, graph_href: str | None = None) -> str:
     """The report of the latest runs found in `directory` (usually `eval-runs/`)."""
     path = latest_enrichment_run(directory)
-    return render_report(load_enrichment_run(path) if path else None, latest_runs(directory), lock)
+    return render_report(
+        load_enrichment_run(path) if path else None,
+        latest_runs(directory),
+        lock,
+        graph_href=graph_href,
+    )

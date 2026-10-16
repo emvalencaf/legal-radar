@@ -24,6 +24,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `legal-radar report` also writes `report/graph.html` (#87): an offline, phone-friendly sample of
+  the knowledge graph (Cytoscape.js, shipped as package data) around the example answers'
+  citations, with their `PARTS` ancestors and 1-hop typed neighbours, capped at 150 nodes. Node
+  colour shows the kind; edge style the type, edge colour the confidence and the source-end marker
+  the origin; hovering or tapping an edge shows its evidence. It is built from `seed/graph.jsonl`
+  and the latest enrichment run, and skipped with a warning when either is missing.
+  `scripts/publish-report.sh` publishes it with the report.
 - `ARCHITECTURE.md` and four diagrams in `docs/diagrams/` (layers, the end-to-end run, the graph
   model and the outputs per command), and `import-linter` in CI (ADR-0009).
 - One-command end-to-end run (#48): `legal-radar run-all <assunto> [--enrich]` (`make run-all`)

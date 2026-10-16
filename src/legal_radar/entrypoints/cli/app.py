@@ -15,7 +15,9 @@ and the baselines per metric and per nivel;
 with `LANGSMITH_API_KEY` set, `ask` and `eval` trace the LangGraph run and the experiment there;
 `legal-radar refresh-prompts` re-snapshots the pinned LangSmith Hub prompts into prompts/lock.json;
 `legal-radar report [out]` writes the static HTML report (ingestion, evaluation, example answers)
-from the latest runs in eval-runs/ (`make publish-report` publishes it to GitHub Pages);
+and, beside it, `graph.html`, a sample of the knowledge graph around those answers (needs the seed
+and an enrichment run), from the latest runs in eval-runs/ (`make publish-report` publishes both
+to GitHub Pages);
 `legal-radar export-seed [path]` / `legal-radar seed [path]` write / rebuild the versioned seed."""
 
 import argparse
@@ -122,14 +124,13 @@ def refresh_prompts(args: argparse.Namespace, settings: Settings) -> None:
 
 def report(args: argparse.Namespace, settings: Settings) -> None:
     from legal_radar.adapters.prompt_lock import default_lock
-    from legal_radar.application.evaluation.report import build_report
+    from legal_radar.entrypoints.report_files import write_report
 
     runs_dir = settings.runs_dir
     if not any(runs_dir.glob("*.json")):
         print(f"warning: no evaluation run in {runs_dir}; the report will be empty")
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(build_report(runs_dir, default_lock()), encoding="utf-8")
-    print(f"wrote {args.out}")
+    for path in write_report(args.out, settings, default_lock()):
+        print(f"wrote {path}")
 
 
 def compare_evals(args: argparse.Namespace, settings: Settings) -> None:

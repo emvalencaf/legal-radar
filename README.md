@@ -193,10 +193,13 @@ Generate the static report (ingestion statistics, evaluation results, example an
 cited graph paths, `prompt_hash` and run ids; no LangSmith trace links) from the latest runs in
 `eval-runs/`, and publish it by hand to GitHub Pages at
 <https://emvalencaf.github.io/legal-radar/>. The first time, enable Pages in the repository
-settings (source: branch `gh-pages`, folder `/`); no CI is involved.
+settings (source: branch `gh-pages`, folder `/`); no CI is involved. When `seed/graph.jsonl` and an
+enrichment run exist, `report/graph.html` also draws a sample of the knowledge graph around the
+example answers (offline, works on a phone); without them the report is still built, with a warning
+and no link.
 
 ```bash
-make report            # writes report/index.html
+make report            # writes report/index.html and report/graph.html
 make publish-report    # builds it and pushes the gh-pages branch
 ```
 

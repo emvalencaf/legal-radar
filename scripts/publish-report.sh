@@ -32,13 +32,26 @@ else
 fi
 # The page embeds its generation time; ignore it to tell whether anything else changed.
 stamp() { sed 's/generated [0-9: -]* UTC//' "$1"; }
-if [ -f "$work/site/index.html" ] && diff -q <(stamp "$work/site/index.html") <(stamp "$work/index.html") >/dev/null; then
+same=1
+for page in index.html graph.html; do
+  if [ -f "$work/$page" ] || [ -f "$work/site/$page" ]; then
+    [ -f "$work/$page" ] && [ -f "$work/site/$page" ] &&
+      diff -q <(stamp "$work/site/$page") <(stamp "$work/$page") >/dev/null || same=0
+  fi
+done
+if [ "$same" -eq 1 ]; then
   echo "report unchanged; nothing to publish"
   exit 0
 fi
 cp "$work/index.html" "$work/site/index.html"
+# graph.html exists only when the seed and an enrichment run were found; drop a stale one otherwise.
+if [ -f "$work/graph.html" ]; then
+  cp "$work/graph.html" "$work/site/graph.html"
+else
+  rm -f "$work/site/graph.html"
+fi
 touch "$work/site/.nojekyll"
-git -C "$work/site" add index.html .nojekyll
+git -C "$work/site" add -A index.html graph.html .nojekyll
 # --no-verify: the gh-pages branch is generated output, not subject to the commit hooks.
 git -C "$work/site" commit -q --no-verify -m "chore(report): publish report $(date -u +%Y-%m-%dT%H:%MZ)"
 git -C "$work/site" push "$remote" gh-pages

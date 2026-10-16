@@ -13,6 +13,7 @@ class CompletionParams:
     tools: tuple[dict, ...] = ()
     response_schema: dict | None = None  # JSON Schema the reply must conform to (structured output)
     prompt_snapshot: str | None = None  # hash of the prompt lockfile the prompt was rendered from
+    complexity: str | None = None  # "simple" | "complex": which tier's providers to try first
 
 
 @dataclass(frozen=True)

@@ -157,6 +157,20 @@ def test_traversal_returns_the_same_context_for_the_same_anchor(graph):
     assert graph.traverse(leis) == first
 
 
+def test_traversal_reports_the_leis_revoking_a_reached_dispositivo(graph, driver):
+    driver.execute_query(
+        f"""
+        MATCH (l:Lei {{id: '{CP}'}}), (d:Dispositivo {{id: '{ART_50_1}'}})
+        MERGE (l)-[:REVOKES {{confidence: 'HIGH'}}]->(d)
+        """
+    )
+
+    context = graph.traverse([ART_50])
+
+    assert context.revocations == [Hop("REVOKES", CP, ART_50_1, "HIGH")]
+    assert graph.traverse([CDC_28]).revocations == []
+
+
 def test_the_prompt_carries_the_retrieved_sources_only(graph, lock):
     provider = FakeProvider()
 

@@ -64,15 +64,18 @@ class Hop:
     type: str
     source: str
     target: str
+    confidence: str | None = None  # the edge's `Confidence` value; PARTS hops carry none
 
 
 @dataclass(frozen=True)
 class Context:
-    """What a traversal retrieved: the nodes reached and, per node id, the hops that reached it."""
+    """What a traversal retrieved: the nodes reached and, per node id, the hops that reached it;
+    `revocations` are the leis revoking a reached dispositivo, kept apart as they reach no node."""
 
     dispositivos: list[Dispositivo]
     jurisprudencias: list[Jurisprudencia]
     paths: dict[str, list[Hop]]
+    revocations: list[Hop] = field(default_factory=list)  # REVOKES edges into a retrieved node
 
 
 class RelationType(StrEnum):

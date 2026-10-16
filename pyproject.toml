@@ -68,3 +68,10 @@ name = "The domain stays free of infrastructure"
 type = "forbidden"
 source_modules = ["legal_radar.domain"]
 forbidden_modules = ["neo4j", "bs4", "sqlite3", "langsmith", "playwright", "langgraph", "yaml", "jsonschema"]
+
+[[tool.importlinter.contracts]]
+name = "The application stays free of infrastructure"
+type = "forbidden"
+source_modules = ["legal_radar.application"]
+# `yaml` and `jsonschema` stay allowed: the application parses vocabularies and validates replies
+forbidden_modules = ["neo4j", "bs4", "sqlite3", "langsmith", "playwright"]

@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Changed
 
+- The last layer-boundary exceptions are gone (`ignore_imports` is empty): the use cases take
+  the prompt lock instead of defaulting to the file-backed one, `ingest` depends on the
+  `LeiLocator` and `LeiTextSource` ports (LexML and Planalto adapters), and `build_index` uses
+  a `VectorStore` port (SQLite adapter). A new import-linter contract keeps infrastructure
+  packages out of `application`. No behaviour change.
 - Layered architecture (ADR-0009): `legal_radar` is organised as `entrypoints > adapters >
   application > domain`, enforced by `import-linter` in CI. `domain.py` moved to
   `legal_radar.domain.model`, and `legal_radar.settings.Settings` centralises paths and

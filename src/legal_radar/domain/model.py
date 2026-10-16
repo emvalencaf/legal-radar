@@ -139,6 +139,16 @@ class EnrichmentRecord:
     resolved: tuple[str, ...] = ()  # the unresolved citations the LLM grounded
 
 
+@dataclass(frozen=True)
+class StoredVector:
+    """One embedded chunk as the vector store keeps it: the hash of the text it was computed
+    from and the model that computed it, so a changed text or model is detected."""
+
+    text_hash: str
+    model: str
+    vector: list[float]
+
+
 CONCEPT_RELATIONS = (
     RelationType.DEFINES,
     RelationType.APPLIES_TO,

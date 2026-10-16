@@ -57,14 +57,25 @@ def test_chunks_are_sorted_by_id():
     assert ids == sorted(ids)
 
 
+class MemoryVectorStore:
+    def __init__(self):
+        self.rows = {}
+
+    def load(self):
+        return dict(self.rows)
+
+    def save(self, vectors):
+        self.rows.update(vectors)
+
+
 def test_index_is_built_once_and_reused(tmp_path):
     chunks = build_chunks(CORPUS, [DECISION], contextual=False)
-    path = tmp_path / "idx.sqlite"
+    store = MemoryVectorStore()
     first = FakeProvider()
 
-    built = build_index(chunks, first, path, batch_size=2)
+    built = build_index(chunks, first, store, batch_size=2)
     second = FakeProvider()
-    reused = build_index(chunks, second, path)
+    reused = build_index(chunks, second, store)
 
     assert len(first.calls) == len(chunks) and second.calls == []
     for a, b in zip(reused.vectors, built.vectors, strict=True):
@@ -74,33 +85,33 @@ def test_index_is_built_once_and_reused(tmp_path):
 
 def test_index_embeds_only_what_changed(tmp_path):
     chunks = build_chunks(CORPUS, [DECISION], contextual=False)
-    path = tmp_path / "idx.sqlite"
-    build_index(chunks, FakeProvider(), path)
+    store = MemoryVectorStore()
+    build_index(chunks, FakeProvider(), store)
     edited = [*chunks[:-1], type(chunks[-1])(chunks[-1].id, chunks[-1].kind, "texto novo")]
     provider = FakeProvider()
 
-    build_index(edited, provider, path)
+    build_index(edited, provider, store)
 
     assert provider.calls == ["texto novo"]
 
 
 def test_a_failed_batch_keeps_the_earlier_ones_so_the_build_resumes(tmp_path):
     chunks = build_chunks(CORPUS, [DECISION], contextual=False)
-    path = tmp_path / "idx.sqlite"
+    store = MemoryVectorStore()
     other = Embedding([[1.0]] * 2, model="fallback")
     flaky = FakeProvider(script=[Embedding([[0.1]] * 2, model="fake-embedding"), other])
 
     with pytest.raises(RagError, match="fallback"):
-        build_index(chunks, flaky, path, batch_size=2)
+        build_index(chunks, flaky, store, batch_size=2)
 
     resumed = FakeProvider()
-    build_index(chunks, resumed, path, batch_size=2)
+    build_index(chunks, resumed, store, batch_size=2)
     assert len(resumed.calls) == len(chunks) - 2
 
 
 def test_an_empty_corpus_is_an_error(tmp_path):
     with pytest.raises(RagError, match="nothing to index"):
-        build_index([], FakeProvider(), tmp_path / "idx.sqlite")
+        build_index([], FakeProvider(), MemoryVectorStore())
 
 
 @pytest.fixture
@@ -114,7 +125,7 @@ def lock():
 def baseline(tmp_path, lock, k, provider=None):
     chunks = build_chunks(CORPUS, [DECISION], contextual=True)
     provider = provider or FakeProvider()
-    index = build_index(chunks, provider, tmp_path / "idx.sqlite")
+    index = build_index(chunks, provider, MemoryVectorStore())
     return RagBaseline("rag-contextual", index, provider, k, lock)
 
 
@@ -166,22 +177,22 @@ def test_a_throttled_provider_is_waited_out_and_retried(tmp_path):
     chunks = build_chunks(CORPUS, [DECISION], contextual=False)
     flaky = FakeProvider(script=[AllProvidersFailedError("busy")] * 2)
 
-    index = build_index(chunks, flaky, tmp_path / "idx.sqlite", wait=0, retries=2)
+    index = build_index(chunks, flaky, MemoryVectorStore(), wait=0, retries=2)
 
     assert len(index.chunks) == len(chunks)
 
 
 def test_a_provider_that_stays_down_ends_the_build_but_keeps_what_was_saved(tmp_path):
     chunks = build_chunks(CORPUS, [DECISION], contextual=False)
-    path = tmp_path / "idx.sqlite"
+    store = MemoryVectorStore()
     down = FakeProvider(
         script=[Embedding([[0.1]] * 2, model="fake-embedding")]
         + [AllProvidersFailedError("busy")] * 3
     )
 
     with pytest.raises(AllProvidersFailedError):
-        build_index(chunks, down, path, batch_size=2, wait=0, retries=2)
+        build_index(chunks, down, store, batch_size=2, wait=0, retries=2)
 
     resumed = FakeProvider()
-    build_index(chunks, resumed, path, batch_size=2)
+    build_index(chunks, resumed, store, batch_size=2)
     assert len(resumed.calls) == len(chunks) - 2

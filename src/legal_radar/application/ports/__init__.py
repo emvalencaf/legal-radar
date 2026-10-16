@@ -11,6 +11,7 @@ from legal_radar.domain.model import (
     GraphBatch,
     Jurisprudencia,
     Relation,
+    StoredVector,
 )
 from legal_radar.domain.urn import UrnPage
 
@@ -64,6 +65,16 @@ class MetadataStore(Protocol):
     def pending(self, source_id: str, current_keys: dict[str, str]) -> list[str]:
         """The chunks of `current_keys` (chunk id -> current key) that are pending: no record, a
         `pending` record, or a stored key that differs. Keeps the order of `current_keys`."""
+
+
+class VectorStore(Protocol):
+    """Embedded chunks kept between runs, so an interrupted index build resumes where it stopped."""
+
+    def load(self) -> dict[str, StoredVector]:
+        """Every stored vector, by chunk id."""
+
+    def save(self, vectors: dict[str, StoredVector]) -> None:
+        """Upsert a batch of vectors atomically."""
 
 
 class GraphReader(Protocol):

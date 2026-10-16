@@ -22,15 +22,16 @@ path and environment-derived value in one frozen `Settings`; defaults match a so
 
 ## The dependency rule is enforced
 
-`import-linter` runs in CI (`uv run lint-imports`, configured in `pyproject.toml`) with two
+`import-linter` runs in CI (`uv run lint-imports`, configured in `pyproject.toml`) with three
 contracts:
 
 1. **Layers point inward**: `entrypoints > adapters > application > domain`.
 2. **The domain stays free of infrastructure**: it may not import `neo4j`, `bs4`, `sqlite3`,
    `langsmith`, `playwright`, `langgraph`, `yaml` or `jsonschema`.
+3. **The application stays free of infrastructure**: it may not import `neo4j`, `bs4`, `sqlite3`,
+   `langsmith` or `playwright`. It reaches them only through ports.
 
-A broken contract fails the build. The `ignore_imports` list in `pyproject.toml` is the known
-debt (below); it only shrinks.
+A broken contract fails the build, and the layers contract has no exceptions.
 
 ## Where things go
 
@@ -58,14 +59,3 @@ The graph itself has a small model, with every edge carrying its confidence and 
 ![The knowledge graph](docs/diagrams/graph-model.svg)
 
 The same diagrams are available as standalone HTML in [docs/diagrams/](docs/diagrams/).
-
-## Known debt
-
-Recorded as `ignore_imports` in `pyproject.toml`, to be removed one by one:
-
-- **Default prompt lock.** The use cases default to `adapters.prompt_lock.default_lock()` when no
-  lock is passed. The fix is to inject the lock from `bootstrap.py` and drop the defaults.
-- **`ingest` calls LexML and Planalto directly.** It should depend on two ports (a lei locator
-  and a lei text source) with the LexML and Planalto adapters behind them.
-- **RAG index in SQLite.** `application/rag.py` talks to `sqlite3` directly; it should use a
-  vector-store port like the enrichment records do.

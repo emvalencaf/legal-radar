@@ -5,10 +5,8 @@ Two chunkings are compared with the graph run: `naive` (one chunk per dispositiv
 and `contextual` (the text preceded by the non-structural ancestors the enricher also builds
 with `ancestors_of`). Neither uses an edge, a concept or a traversal."""
 
-import array
 import hashlib
 import logging
-import sqlite3
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,9 +21,9 @@ from legal_radar.application.answer import (
 )
 from legal_radar.application.assunto import cosine
 from legal_radar.application.enricher import STRUCTURAL_KINDS, ancestors_of
-from legal_radar.application.ports import Provider
+from legal_radar.application.ports import Provider, VectorStore
 from legal_radar.domain.llm import AllProvidersFailedError, CompletionParams
-from legal_radar.domain.model import Dispositivo, Jurisprudencia
+from legal_radar.domain.model import Dispositivo, Jurisprudencia, StoredVector
 from legal_radar.domain.prompts import PromptLock
 from legal_radar.settings import Settings
 
@@ -95,16 +93,6 @@ class RagIndex:
         return [chunk for chunk, _ in ranked[:k]]
 
 
-def _connect(path: Path) -> sqlite3.Connection:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(path)
-    db.execute(
-        "CREATE TABLE IF NOT EXISTS vectors (chunk_id TEXT PRIMARY KEY, text_hash TEXT NOT NULL,"
-        " model TEXT NOT NULL, vector BLOB NOT NULL)"
-    )
-    return db
-
-
 def _embed_waiting(provider: Provider, texts: list[str], wait: float, retries: int):
     """`provider.embed`, waiting out a throttled provider up to `retries` times."""
     for attempt in range(retries + 1):
@@ -120,51 +108,45 @@ def _embed_waiting(provider: Provider, texts: list[str], wait: float, retries: i
 def build_index(
     chunks: list[Chunk],
     provider: Provider,
-    path: Path,
+    store: VectorStore,
     batch_size: int = BATCH_SIZE,
     wait: float = RETRY_WAIT,
     retries: int = RETRIES,
 ) -> RagIndex:
-    """The index of `chunks`, embedding only what `path` (SQLite) does not already hold: each
-    batch is saved as it arrives, so a quota error mid-build resumes where it stopped. Raises
-    `RagError` when the provider falls back to another embedding model, whose vectors cannot be
-    mixed with the stored ones (delete `path` to rebuild with the new model). A throttled provider
-    is waited out: `wait` seconds, up to `retries` times per batch."""
-    db = _connect(path)
-    try:
-        stored = {
-            row[0]: row[1:]
-            for row in db.execute("SELECT chunk_id, text_hash, model, vector FROM vectors")
-        }
-        models = [row[1] for row in stored.values()]
-        model = max(set(models), key=models.count) if models else None
+    """The index of `chunks`, embedding only what `store` does not already hold: each batch is
+    saved as it arrives, so a quota error mid-build resumes where it stopped. Raises `RagError`
+    when the provider falls back to another embedding model, whose vectors cannot be mixed with
+    the stored ones (clear the store to rebuild with the new model). A throttled provider is
+    waited out: `wait` seconds, up to `retries` times per batch."""
+    stored = store.load()
+    models = [v.model for v in stored.values()]
+    model = max(set(models), key=models.count) if models else None
 
-        def fresh(chunk: Chunk) -> bool:
-            row = stored.get(chunk.id)
-            return bool(row) and row[0] == _digest(chunk.text) and row[1] == model
+    def fresh(chunk: Chunk) -> bool:
+        row = stored.get(chunk.id)
+        return row is not None and row.text_hash == _digest(chunk.text) and row.model == model
 
-        pending = [c for c in chunks if not fresh(c)]
-        vectors = {c.id: array.array("f", stored[c.id][2]).tolist() for c in chunks if fresh(c)}
-        for start in range(0, len(pending), batch_size):
-            batch = pending[start : start + batch_size]
-            embedding = _embed_waiting(provider, [c.text for c in batch], wait, retries)
-            if model is None:
-                model = embedding.model
-            if embedding.model != model:
-                raise RagError(
-                    f"the embedding model changed from {model} to {embedding.model} while "
-                    f"building {path.name}; {len(vectors)} of {len(chunks)} chunks are saved: "
-                    "rerun when the first model is back, or delete the file to start over"
-                )
-            for chunk, vector in zip(batch, embedding.vectors, strict=True):
-                vectors[chunk.id] = vector
-                db.execute(
-                    "INSERT OR REPLACE INTO vectors VALUES (?, ?, ?, ?)",
-                    (chunk.id, _digest(chunk.text), model, array.array("f", vector).tobytes()),
-                )
-            db.commit()
-    finally:
-        db.close()
+    pending = [c for c in chunks if not fresh(c)]
+    vectors = {c.id: stored[c.id].vector for c in chunks if fresh(c)}
+    for start in range(0, len(pending), batch_size):
+        batch = pending[start : start + batch_size]
+        embedding = _embed_waiting(provider, [c.text for c in batch], wait, retries)
+        if model is None:
+            model = embedding.model
+        if embedding.model != model:
+            raise RagError(
+                f"the embedding model changed from {model} to {embedding.model} while "
+                f"building the index; {len(vectors)} of {len(chunks)} chunks are saved: "
+                "rerun when the first model is back, or clear the stored vectors to start over"
+            )
+        for chunk, vector in zip(batch, embedding.vectors, strict=True):
+            vectors[chunk.id] = vector
+        store.save(
+            {
+                c.id: StoredVector(_digest(c.text), model, v)
+                for c, v in zip(batch, embedding.vectors, strict=True)
+            }
+        )
     if not chunks:
         raise RagError("there is nothing to index: the graph has no dispositivo or decision")
     return RagIndex(chunks, [vectors[c.id] for c in chunks], model or "")

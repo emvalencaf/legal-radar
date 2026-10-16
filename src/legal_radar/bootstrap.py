@@ -78,8 +78,13 @@ def enrich_config(settings: Settings, assunto: str, prompt: str = ENRICHMENT_PRO
 
 def rag_index(settings: Settings, chunking: str, reader, provider):
     """The vector index of the whole graph for one chunking, built once and kept under `data/`."""
+    from legal_radar.adapters.sqlite_vectors import SqliteVectorStore
     from legal_radar.application.rag import build_chunks, build_index, index_path
 
     dispositivos, jurisprudencias = reader.corpus()
     chunks = build_chunks(dispositivos, jurisprudencias, contextual=chunking == "contextual")
-    return build_index(chunks, provider, index_path(chunking, settings.index_dir))
+    store = SqliteVectorStore(index_path(chunking, settings.index_dir))
+    try:
+        return build_index(chunks, provider, store)
+    finally:
+        store.close()

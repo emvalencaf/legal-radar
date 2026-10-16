@@ -182,6 +182,17 @@ reused on the next run (while the questions and pinned prompts are the same); `-
 them. `compare-evals` tables the graph, naive RAG and contextual RAG per metric and, for the main ones,
 per `nivel` (the questions without one are `base`); give it run files to compare specific runs.
 
+Generate the static report (ingestion statistics, evaluation results, example answers with their
+cited graph paths, `prompt_hash` and run ids; no LangSmith trace links) from the latest runs in
+`eval-runs/`, and publish it by hand to GitHub Pages at
+<https://emvalencaf.github.io/legal-radar/>. The first time, enable Pages in the repository
+settings (source: branch `gh-pages`, folder `/`); no CI is involved.
+
+```bash
+make report            # writes report/index.html
+make publish-report    # builds it and pushes the gh-pages branch
+```
+
 Opt-in live smoke test against the real courts (not run by default): `uv run pytest -m live`.
 
 Tests (need Docker for the Neo4j test container): `uv run pytest`.

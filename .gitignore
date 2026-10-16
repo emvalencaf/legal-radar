@@ -34,3 +34,6 @@ eval-runs/
 
 # Ingestion metadata (enrichment records, ADR-0002)
 data/
+
+# Generated static report (published to GitHub Pages by scripts/publish-report.sh)
+report/

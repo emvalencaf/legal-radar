@@ -1,4 +1,4 @@
-.PHONY: seed export-seed refresh-prompts eval
+.PHONY: seed export-seed refresh-prompts eval report publish-report
 
 # Rebuild a fresh Neo4j from the versioned seed (docker compose up -d neo4j first).
 seed:
@@ -16,3 +16,11 @@ refresh-prompts:
 # providers and `uv sync --extra eval`); results land in eval-runs/.
 eval:
 	uv run --extra eval legal-radar eval "desconsideração da personalidade jurídica"
+
+# Write the static report from the latest runs in eval-runs/ to report/index.html.
+report:
+	uv run legal-radar report
+
+# Publish the report to GitHub Pages (manual; pushes the gh-pages branch).
+publish-report:
+	scripts/publish-report.sh

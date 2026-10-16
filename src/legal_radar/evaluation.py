@@ -11,7 +11,7 @@ is an error because an unannotated dispositivo is not a negative.
 
 import json
 from collections.abc import Callable, Collection, Mapping, Sequence
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -101,6 +101,7 @@ class Outcome:
     failed: str | None = None
     tokens_in: int = 0
     tokens_out: int = 0
+    out_of_vocabulary: list[str] = field(default_factory=list)  # concept ids the LLM made up
 
 
 def enrich_dispositivos(
@@ -155,6 +156,7 @@ def enrich_dispositivos(
             result.failed,
             result.tokens_in,
             result.tokens_out,
+            result.out_of_vocabulary,
         )
         outcomes.append(outcome)
         if on_progress:
@@ -319,7 +321,14 @@ def append_outcome(path: Path, outcome: Outcome) -> None:
     """Add one dispositivo's input and output to a run, so a crash loses nothing already done."""
     d = outcome.dispositivo
     line = {
-        "input": {"id": d.id, "lei_id": d.lei_id, "path": d.path, "kind": d.kind, "text": d.text},
+        "input": {
+            "id": d.id,
+            "lei_id": d.lei_id,
+            "path": d.path,
+            "kind": d.kind,
+            "text": d.text,
+            "revocations": list(d.revocations),
+        },
         "output": {
             "relations": [asdict(r) for r in outcome.relations],
             "dropped": outcome.dropped,
@@ -327,6 +336,7 @@ def append_outcome(path: Path, outcome: Outcome) -> None:
             "failed": outcome.failed,
             "tokens_in": outcome.tokens_in,
             "tokens_out": outcome.tokens_out,
+            "out_of_vocabulary": outcome.out_of_vocabulary,
         },
     }
     with path.open("a", encoding="utf-8") as file:
@@ -362,6 +372,7 @@ def read_run(
                 out["failed"],
                 out["tokens_in"],
                 out["tokens_out"],
+                out.get("out_of_vocabulary", []),
             )
         )
     return lines[0]["run"], outcomes

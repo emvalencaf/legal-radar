@@ -91,7 +91,8 @@ diagrams of the pipeline and its outputs.
 Start Neo4j with docker compose and run the pipeline over the fixture lei:
 
 ```bash
-scripts/skeleton.sh
+docker compose up -d neo4j
+uv run legal-radar run
 ```
 
 Ingest the anchor leis of an assunto from LexML/Planalto (needs `uv sync --extra browser` and
@@ -144,7 +145,7 @@ gate fails; `--persist DIR` keeps each input and output as JSONL for audit. The 
 documented in `legal_radar.application.evaluation.enrichment_gold.load_gold`.
 
 ```bash
-uv run scripts/eval_enrichment.py gold.yml --provider gemini --persist eval-runs
+uv run scripts/eval_enrichment.py evaluation/enrichment_gold.yml --provider gemini --persist eval-runs
 ```
 
 Ask a question: resolve the assunto, traverse the graph (`PARTS`, then 1 hop of `REFERENCES`)

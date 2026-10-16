@@ -7,6 +7,13 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Removed
+
+- Obsolete scripts: the `setup-langsmith-*` wizards (the prompts are published and pinned in
+  `prompts/pins.yml`; `make refresh-prompts` maintains them), `skeleton.sh` (replaced by
+  `docker compose up -d neo4j` and `legal-radar run`) and `check_enricher.py` (covered by
+  `legal-radar eval` and `scripts/eval_enrichment.py`).
+
 ### Changed
 
 - The last layer-boundary exceptions are gone (`ignore_imports` is empty): the use cases take

@@ -12,10 +12,15 @@ heading when `development` is released to `master`.
 - Layered architecture (ADR-0009): `legal_radar` is organised as `entrypoints > adapters >
   application > domain`, enforced by `import-linter` in CI. `domain.py` moved to
   `legal_radar.domain.model`, and `legal_radar.settings.Settings` centralises paths and
-  environment-derived values. No behaviour change.
+  environment-derived values. No behaviour change. The CLI moved to
+  `legal_radar.entrypoints.cli.app` behind the new composition root `legal_radar.bootstrap`
+  (`python -m legal_radar` and the `legal-radar` script are unchanged), and the setup scripts
+  import the new module paths.
 
 ### Added
 
+- `ARCHITECTURE.md` and four diagrams in `docs/diagrams/` (layers, the end-to-end run, the graph
+  model and the outputs per command), and `import-linter` in CI (ADR-0009).
 - One-command end-to-end run (#48): `legal-radar run-all <assunto> [--enrich]` (`make run-all`)
   ingests the leis and decisions, exports the seed, answers the assunto as a cited query, scores
   the question set and writes the report (`legal_radar.end_to_end.run_end_to_end`). Its top-seam

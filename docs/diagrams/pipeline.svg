@@ -1,0 +1,77 @@
+<svg width="100%" viewBox="0 100 1000 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="pipeline-title pipeline-desc">
+      <title id="pipeline-title">The end-to-end run</title>
+      <desc id="pipeline-desc">Six steps of run-all in order: ingest the leis and decisions into the graph, export the seed, answer, evaluate and report, with optional LLM enrichment recorded in SQLite.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto-start-reverse"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+      </defs>
+      <rect x="0" y="100" width="1000" height="460" fill="#f5f5f5"/>
+      <path d="M164,158 H196" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M324,158 H356" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M484,158 H516" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M644,158 H676" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M804,158 H836" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M100,186 V300" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M260,186 V300" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M420,300 V186" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M580,300 V186" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="96.0" y="237" width="39.0" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="115.5" y="246" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">WRITE</text>
+      <rect x="256.0" y="237" width="39.0" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="275.5" y="246" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">WRITE</text>
+      <rect x="416.0" y="237" width="33.6" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="432.8" y="246" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">READ</text>
+      <rect x="576.0" y="237" width="33.6" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="592.8" y="246" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">READ</text>
+      <path d="M316,420 V364" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="322.0" y="389" width="60.6" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="352.3" y="398" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">LLM EDGES</text>
+      <path d="M436,448 H500" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="453.9" y="431" width="28.2" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="468.0" y="440" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">KEY</text>
+      <rect x="36" y="130" width="128" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="36" y="130" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="100.0" y="154.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Ingest leis</text>
+      <text x="100.0" y="170.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">lexml → planalto</text>
+      <rect x="196" y="130" width="128" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="196" y="130" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="260.0" y="154.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Ingest decisions</text>
+      <text x="260.0" y="170.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">stf · stj</text>
+      <rect x="356" y="130" width="128" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="356" y="130" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="420.0" y="154.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Export seed</text>
+      <text x="420.0" y="170.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">graph → jsonl</text>
+      <rect x="516" y="130" width="128" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="516" y="130" width="128" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="580.0" y="154.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Answer</text>
+      <text x="580.0" y="170.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">resolve · traverse</text>
+      <rect x="676" y="130" width="128" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="676" y="130" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="740.0" y="154.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Evaluate</text>
+      <text x="740.0" y="170.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">question set</text>
+      <rect x="836" y="130" width="128" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="836" y="130" width="128" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="900.0" y="154.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Report</text>
+      <text x="900.0" y="170.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">static html</text>
+      <rect x="36" y="300" width="608" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="36" y="300" width="608" height="64" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="340.0" y="328.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Knowledge graph</text>
+      <text x="340.0" y="344.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">neo4j · Lei · Dispositivo · Jurisprudencia · Conceito</text>
+      <rect x="196" y="420" width="240" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="196" y="420" width="240" height="56" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="316.0" y="444.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Enrichment</text>
+      <text x="316.0" y="460.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">ingest --enrich · LLM, optional</text>
+      <rect x="500" y="420" width="144" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="500" y="420" width="144" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="572.0" y="444.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Records</text>
+      <text x="572.0" y="460.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">ingestion.sqlite</text>
+      <line x1="30" y1="512" x2="970" y2="512" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="30" y="528" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+      <line x1="110" y1="525" x2="138" y2="525" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="146" y="529" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">data flow</text>
+      <line x1="219" y1="525" x2="247" y2="525" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="255" y="529" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">optional</text>
+      <rect x="323" y="520" width="20" height="11" rx="3" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="351" y="529" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">the graph</text>
+    </svg>

@@ -51,6 +51,10 @@ A RAG-based project that ingests a given legal topic (pointing to a law) and
 finds jurisprudence precedents, doctrine, and law amendments via the
 [LexML Brasil](https://www.lexml.gov.br/) portal.
 
+The code is organised in layers (domain, application, adapters, entrypoints) with the
+dependency rule enforced in CI; see [ARCHITECTURE.md](ARCHITECTURE.md) for the layout and the
+diagrams of the pipeline and its outputs.
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Built With
@@ -104,7 +108,7 @@ whose text, vocabulary, `dispositivo-enrichment` prompt or extractor version cha
 
 Ingest an assunto's seed precedents (for the anchor assunto: STJ Tema 1210, STF Tema 1232) and the
 top hits of each court's search. The sources are catalogued per assunto in `JURISPRUDENCIA`
-(`legal_radar.jurisprudencia`): the seeds, one search per court and the number of top hits (default
+(`legal_radar.application.jurisprudencia`): the seeds, one search per court and the number of top hits (default
 5; 0 ingests only the seeds). STJ's Cloudflare check rejects bundled Chromium, so this needs Google
 Chrome installed:
 
@@ -137,7 +141,7 @@ Score the enrichment (rules and LLM) against a hand-validated gold set: per-edge
 precision/recall/F1 split by origin and relation type, the indirect metrics (target-resolved,
 valid-evidence and drop rates) and the quality gates in `evaluation.yml`. It exits non-zero when a
 gate fails; `--persist DIR` keeps each input and output as JSONL for audit. The gold set format is
-documented in `legal_radar.evaluation.load_gold`.
+documented in `legal_radar.application.evaluation.enrichment_gold.load_gold`.
 
 ```bash
 uv run scripts/eval_enrichment.py gold.yml --provider gemini --persist eval-runs

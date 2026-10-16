@@ -23,6 +23,7 @@ from legal_radar.answer_evaluation import (
     outcome_of,
 )
 from legal_radar.llm import content_hash
+from legal_radar.tracing import safely
 
 RUNS_DIR = Path(__file__).resolve().parents[2] / "eval-runs"
 CITATIONS, PATH, CONTRADICTIONS = "citation_check", "path", "contradiction_check"
@@ -242,11 +243,13 @@ def run_evaluation(
     experiment: str | None = None,
     system: System | None = None,
     checkpoint: Checkpoint | None = None,
+    publish: Callable[[object], None] | None = None,
 ) -> Report:
     """Answers every question through `ask` (whose model calls go through `meter`) and scores it.
     A `checkpoint` keeps each answer as it arrives, so a run that dies resumes without asking
     again (the caller discards it once the report is written). A system with no graph (a RAG
-    baseline) leaves `graph_path` unscored: n/a."""
+    baseline) leaves `graph_path` unscored: n/a. `publish`, when given, hears of the experiment's
+    result (to trace it in LangSmith); it never fails the run."""
     from assayer.runner.pipeline import EvaluationPipeline
     from assayer.runner.pricing import PricingConfig
 
@@ -300,6 +303,8 @@ def run_evaluation(
         pricing_config=PricingConfig(price.input / 1e6, price.output / 1e6),
         experiment_name=name,
     ).run()
+    if publish is not None:
+        safely(lambda: publish(result))
 
     grounding = {}
     if grounding_llm is not None:

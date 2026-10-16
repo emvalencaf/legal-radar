@@ -250,3 +250,20 @@ def test_checkpoint_for_resumes_the_same_run_and_drops_it_when_questions_or_prom
         "one", answer, (1, 1)
     )
     assert assayer_harness.checkpoint_for(System("rag-naive", 5), questions, "p2").done == {}
+
+
+def test_a_failing_publish_does_not_fail_the_run_and_hears_the_result():
+    meter = UsageMeter(FakeProvider())
+    heard = []
+
+    def publish(result):
+        heard.append(result)
+        raise RuntimeError("langsmith down")
+
+    def ask(query: str) -> CitedAnswer:
+        return CitedAnswer(query, "x", "ok", [], [A])
+
+    report = run_evaluation(
+        [Question("one", "q", (A,), (A,))], ask, meter, lambda a: False, publish=publish
+    )
+    assert len(report.questions) == 1 and len(heard) == 1

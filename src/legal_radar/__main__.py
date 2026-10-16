@@ -10,6 +10,7 @@ contradictions and graph paths under assayer (needs `uv sync --extra eval`);
 questions with a pure-RAG baseline (no graph) instead; `legal-radar index-rag <naive|contextual>`
 builds its vector index ahead of time; `legal-radar compare-evals [run.json ...]` tables the graph
 and the baselines per metric and per nivel;
+with `LANGSMITH_API_KEY` set, `ask` and `eval` trace the LangGraph run and the experiment there;
 `legal-radar refresh-prompts` re-snapshots the pinned LangSmith Hub prompts into prompts/lock.json;
 `legal-radar export-seed [path]` / `legal-radar seed [path]` write / rebuild the versioned seed."""
 
@@ -27,6 +28,7 @@ from legal_radar.enrichment import DECISION_PROMPT, ENRICHMENT_PROMPT
 from legal_radar.ingest import ingest
 from legal_radar.pipeline import run
 from legal_radar.rag import BASELINES, CHUNKINGS
+from legal_radar.tracing import configure_tracing, publisher_if_enabled
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 DEFAULT_SEED = Path(__file__).resolve().parents[2] / "seed" / "graph.jsonl"
@@ -200,6 +202,7 @@ def main(argv: list[str] | None = None) -> None:
             from legal_radar.assunto import AssuntoResolver
             from legal_radar.router_config import build_router, load_config
 
+            configure_tracing()
             router = build_router(load_config("router.yaml"))
             result = ask(
                 args.query, AssuntoResolver(router).resolve, Neo4jGraphReader(store.driver), router
@@ -235,6 +238,7 @@ def main(argv: list[str] | None = None) -> None:
             from legal_radar.prompts import default_lock
             from legal_radar.router_config import build_router, load_config
 
+            publisher = publisher_if_enabled()  # also switches the LangGraph tracing on or off
             meter = UsageMeter(build_router(load_config("router.yaml")))
             reader, lock = Neo4jGraphReader(store.driver), default_lock()
             if args.baseline:
@@ -259,6 +263,7 @@ def main(argv: list[str] | None = None) -> None:
                 pricing=Pricing(args.price_in, args.price_out),
                 grounding_llm=ragas_llm_from_env() if args.grounding else None,
                 fresh=args.fresh,
+                publisher=publisher,
                 on_report=lambda report, path: print(f"{report.render()}\nwrote {path}"),
                 on_resume=lambda system, answered: print(
                     f"{system.label}: resuming with {answered} answers already saved"

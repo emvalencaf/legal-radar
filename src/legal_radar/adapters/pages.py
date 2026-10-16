@@ -27,6 +27,28 @@ _SUBMIT_FORM = """([name, fields]) => {
 }"""
 
 
+_playwright = None  # one driver shared by every browser: a second sync_playwright() in the same
+_users = 0  # thread fails inside the first one's event loop
+
+
+def _acquire_playwright():
+    global _playwright, _users
+    if _playwright is None:
+        from playwright.sync_api import sync_playwright
+
+        _playwright = sync_playwright().start()
+    _users += 1
+    return _playwright
+
+
+def _release_playwright() -> None:
+    global _playwright, _users
+    _users -= 1
+    if _users == 0 and _playwright is not None:
+        _playwright.stop()
+        _playwright = None
+
+
 class BrowserPageSource:
     """Chromium via Playwright (optional `browser` extra); waits out the JS challenge. STJ's
     Cloudflare Turnstile rejects bundled headless Chromium; use `channel="chrome"` for it."""
@@ -39,9 +61,7 @@ class BrowserPageSource:
         headless: bool = True,
         channel: str | None = None,
     ):
-        from playwright.sync_api import sync_playwright
-
-        self._playwright = sync_playwright().start()
+        self._playwright = _acquire_playwright()
         self._browser = self._playwright.chromium.launch(
             headless=headless,
             channel=channel,
@@ -109,4 +129,4 @@ class BrowserPageSource:
 
     def close(self) -> None:
         self._browser.close()
-        self._playwright.stop()
+        _release_playwright()

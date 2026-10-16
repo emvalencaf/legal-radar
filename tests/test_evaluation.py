@@ -303,6 +303,20 @@ def test_a_run_is_written_as_it_goes_and_read_back_to_resume(tmp_path):
     assert outcomes == [first, second]
 
 
+def test_out_of_vocabulary_ids_and_revocations_survive_the_run_file(tmp_path):
+    revoked = Dispositivo(ART3.id, LEI, "art3", "texto", revocations=("(Revogado pela Lei X)",))
+    first = Outcome(revoked, [], out_of_vocabulary=["invented_concept"])
+    path = start_run(tmp_path, {}, run_id="r3")
+    append_outcome(path, first)
+
+    _, outcomes = read_run(path, {revoked.id: revoked})
+
+    assert outcomes[0].out_of_vocabulary == ["invented_concept"]
+    assert json.loads(path.read_text("utf-8").splitlines()[1])["input"]["revocations"] == [
+        "(Revogado pela Lei X)"
+    ]
+
+
 def test_persist_run_still_writes_the_whole_run_at_once(tmp_path):
     path = persist_run(tmp_path, [outcome(ART3)], {"model": "m1"}, run_id="r2")
 

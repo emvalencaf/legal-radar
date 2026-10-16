@@ -12,6 +12,8 @@ builds its vector index ahead of time; `legal-radar compare-evals [run.json ...]
 and the baselines per metric and per nivel;
 with `LANGSMITH_API_KEY` set, `ask` and `eval` trace the LangGraph run and the experiment there;
 `legal-radar refresh-prompts` re-snapshots the pinned LangSmith Hub prompts into prompts/lock.json;
+`legal-radar report [out]` writes the static HTML report (ingestion, evaluation, example answers)
+from the latest runs in eval-runs/ (`make publish-report` publishes it to GitHub Pages);
 `legal-radar export-seed [path]` / `legal-radar seed [path]` write / rebuild the versioned seed."""
 
 import argparse
@@ -32,6 +34,7 @@ from legal_radar.tracing import configure_tracing, publisher_if_enabled
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 DEFAULT_SEED = Path(__file__).resolve().parents[2] / "seed" / "graph.jsonl"
+DEFAULT_REPORT = Path(__file__).resolve().parents[2] / "report" / "index.html"
 DEFAULT_METADATA = Path(__file__).resolve().parents[2] / "data" / "ingestion.sqlite"
 DEFAULT_FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "mini_lei.txt"
 
@@ -151,6 +154,7 @@ def main(argv: list[str] | None = None) -> None:
         type=Path,
         help="run files (default: the latest of each system in eval-runs/)",
     )
+    commands.add_parser("report").add_argument("out", nargs="?", type=Path, default=DEFAULT_REPORT)
     for name in ("export-seed", "seed"):
         commands.add_parser(name).add_argument("path", nargs="?", type=Path, default=DEFAULT_SEED)
     args = parser.parse_args(argv)
@@ -163,6 +167,18 @@ def main(argv: list[str] | None = None) -> None:
 
         lock = refresh_lock(langsmith_fetch)
         print(f"wrote {LOCK_PATH} ({len(lock.prompts)} prompts, {lock.snapshot_hash})")
+        return
+
+    if args.command == "report":
+        from legal_radar.assayer_harness import RUNS_DIR
+        from legal_radar.prompts import default_lock
+        from legal_radar.report import build_report
+
+        if not any(RUNS_DIR.glob("*.json")):
+            print(f"warning: no evaluation run in {RUNS_DIR}; the report will be empty")
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(build_report(RUNS_DIR, default_lock()), encoding="utf-8")
+        print(f"wrote {args.out}")
         return
 
     if args.command == "compare-evals":

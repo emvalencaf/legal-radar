@@ -9,6 +9,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Static report and GitHub Pages publish (#46): `legal-radar report` (`make report`) writes
+  `report/index.html` from the latest runs in `eval-runs/`: ingestion statistics (target-resolved,
+  valid-evidence and drop rates, out-of-vocabulary terms), evaluation metrics per system, example
+  answers with the graph path of each citation, and the `prompt_hash` of every pinned prompt and
+  the run ids; it links to no LangSmith trace (ADR-0004). `make publish-report` pushes it to the
+  `gh-pages` branch by hand, with no CI. Enrichment run files now record each chunk's
+  out-of-vocabulary ids and revocation marks, and evaluation reports record each citation's path.
 - Optional LangSmith tracing (#45): with `LANGSMITH_API_KEY` set, `ask` traces each LangGraph node
   and `eval` publishes the experiment (a run per question, evaluations as feedback); without it, nothing changes and nothing fails.
   Ingestion and enrichment emit no traces (ADR-0004). `LANGSMITH_TRACING=false` opts out.

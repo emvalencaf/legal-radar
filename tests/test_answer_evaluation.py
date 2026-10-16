@@ -149,6 +149,14 @@ def test_outcome_carries_the_usage_metadata_assayer_reads():
     assert outcome["answer"] == "resposta"
 
 
+def test_outcome_keeps_the_hops_that_led_to_each_citation():
+    path = [Hop("PARTS", B, A), Hop("REFERENCES", A, D)]
+    outcome = outcome_of(CitedAnswer("q", "a", "r", [Citation(D, "Jurisprudencia", path)]), (0, 0))
+    assert outcome["citation_paths"] == {
+        D: [["PARTS", B, A], ["REFERENCES", A, D]],
+    }
+
+
 def test_unanswered_question_has_no_citations():
     outcome = outcome_of(CitedAnswer("q", None, None, []), usage=(0, 0))
     assert outcome["citations"] == []

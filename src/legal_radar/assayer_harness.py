@@ -330,6 +330,7 @@ def run_evaluation(
                 "nivel": nivel_of.get(run.input),
                 "answer": run.output["answer"],
                 "citations": run.output["citations"],
+                "citation_paths": run.output.get("citation_paths", {}),
                 "scores": {
                     e.evaluator_method: e.score
                     for e in run.evaluations

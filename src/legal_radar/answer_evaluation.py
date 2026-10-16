@@ -271,6 +271,9 @@ def outcome_of(answer: CitedAnswer, usage: tuple[int, int]) -> Outcome:
         sources={c.id: c.text for c in answer.citations},
         citation_check={"cited": cited, "retrieved": list(answer.retrieved)},
         path=sorted(path_nodes(answer.citations)),
+        citation_paths={
+            c.id: [[h.type, h.source, h.target] for h in c.path] for c in answer.citations
+        },
         contradiction_check={"answer": text, "cited": cited},
         abstention_check={"answer": text},
         mentions_check=list(answer.unsupported),

@@ -12,6 +12,10 @@
     citations you can trace back to the graph.
     <br />
     <a href="ARCHITECTURE.md"><strong>Explore the architecture »</strong></a>
+    &middot;
+    <a href="https://emvalencaf.github.io/legal-radar/">Live report</a>
+    &middot;
+    <a href="https://emvalencaf.github.io/legal-radar/graph.html">Graph sample</a>
     <br />
     <br />
     <a href="https://github.com/emvalencaf/legal-radar/issues/new">Report Bug</a>
@@ -82,7 +86,8 @@ gold set annotated by a single person. An earlier run of the same graph system s
 4,274 input tokens per question; the two runs differ in which provider answered (the router falls back
 between Groq and Gemini) and in a re-ingestion of the graph in between, so run-to-run variance is not
 separated from real change. See [evaluation/BASELINE.md](evaluation/BASELINE.md) and
-`uv run legal-radar compare-evals`; the runs live in `eval-runs/`, which is not versioned.
+`uv run legal-radar compare-evals`; the runs live in `eval-runs/`, which is not versioned, and the
+full results are in the [live report](https://emvalencaf.github.io/legal-radar/).
 
 ### Design decisions
 

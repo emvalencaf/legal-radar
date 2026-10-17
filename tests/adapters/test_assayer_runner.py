@@ -87,15 +87,15 @@ def test_a_system_that_dies_resumes_and_fresh_starts_over(tmp_path):
     assert asked == ["q1", "q1", "q2"]  # fresh: q1 asked again
 
 
-def test_a_publisher_hears_each_experiment_under_the_eval_dataset(tmp_path):
+def test_a_publisher_hears_each_assayer_experiment(tmp_path):
     class Publisher:
         def __init__(self):
             self.heard = []
 
-        def publish(self, result, dataset):
-            self.heard.append((result.experiment_name, dataset))
+        def publish(self, experiment):
+            self.heard.append(experiment.name)
 
     publisher = Publisher()
     reports, _ = run(tmp_path, [(System(), answering([]))], publisher=publisher)
 
-    assert publisher.heard == [(reports[0].experiment, "legal-radar-eval")]
+    assert publisher.heard == [reports[0].experiment]

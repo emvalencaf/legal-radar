@@ -138,12 +138,11 @@ def test_usage_meter_sums_the_tokens_of_every_call_since_the_last_reset():
     assert meter.model == provider.model
 
 
-def test_outcome_carries_the_usage_metadata_assayer_reads():
+def test_outcome_has_one_field_per_metric():
     answer = CitedAnswer(
         "q", "assunto", "resposta", [Citation(A, "Dispositivo", [], text="t")], [A, B]
     )
-    outcome = outcome_of(answer, usage=(12, 4))
-    assert outcome.usage_metadata == {"input_tokens": 12, "output_tokens": 4}
+    outcome = outcome_of(answer)
     assert outcome["citations"] == [A]
     assert outcome["retrieved"] == [A, B]
     assert outcome["answer"] == "resposta"
@@ -151,14 +150,14 @@ def test_outcome_carries_the_usage_metadata_assayer_reads():
 
 def test_outcome_keeps_the_hops_that_led_to_each_citation():
     path = [Hop("PARTS", B, A), Hop("REFERENCES", A, D)]
-    outcome = outcome_of(CitedAnswer("q", "a", "r", [Citation(D, "Jurisprudencia", path)]), (0, 0))
+    outcome = outcome_of(CitedAnswer("q", "a", "r", [Citation(D, "Jurisprudencia", path)]))
     assert outcome["citation_paths"] == {
         D: [["PARTS", B, A], ["REFERENCES", A, D]],
     }
 
 
 def test_unanswered_question_has_no_citations():
-    outcome = outcome_of(CitedAnswer("q", None, None, []), usage=(0, 0))
+    outcome = outcome_of(CitedAnswer("q", None, None, []))
     assert outcome["citations"] == []
     assert outcome["answer"] == ""
 

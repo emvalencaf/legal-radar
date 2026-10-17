@@ -256,14 +256,52 @@ def test_a_failing_publish_does_not_fail_the_run_and_hears_the_result():
     meter = UsageMeter(FakeProvider())
     heard = []
 
-    def publish(result):
-        heard.append(result)
+    def publish(experiment):
+        heard.append(experiment)
         raise RuntimeError("langsmith down")
 
     def ask(query: str) -> CitedAnswer:
         return CitedAnswer(query, "x", "ok", [], [A])
 
     report = run_evaluation(
-        [Question("one", "q", (A,), (A,))], ask, meter, lambda a: False, publish=publish
+        [Question("one", "q", (A,), (A,))],
+        ask,
+        meter,
+        lambda a: False,
+        experiment="t",
+        publish=publish,
     )
     assert len(report.questions) == 1 and len(heard) == 1
+    assert heard[0].name == "t" and heard[0].scores  # the assayer Experiment, scores included
+
+
+def test_a_question_that_dies_stops_the_run_and_is_raised_not_scored():
+    asked = []
+
+    def ask(query: str) -> CitedAnswer:
+        asked.append(query)
+        raise RuntimeError("network down")
+
+    with pytest.raises(RuntimeError, match="network down"):
+        run_evaluation(QUESTIONS, ask, UsageMeter(FakeProvider()), lambda a: False)
+    assert asked == ["q1"]  # the second question was not spent on a lost run
+
+
+def test_a_judge_that_fails_aborts_the_run_instead_of_scoring_zero():
+    def judge(answer: str) -> bool:
+        raise RuntimeError("judge down")
+
+    questions = [Question("c", "q", (A,), (A,), contradictions=((A, B),))]
+    with pytest.raises(RuntimeError, match="judge down"):
+        run_evaluation(
+            questions,
+            lambda q: CitedAnswer(
+                q,
+                "x",
+                "ok",
+                [Citation(A, "Dispositivo", [], "t"), Citation(B, "Dispositivo", [], "t")],
+                [A, B],
+            ),  # a pair of disagreeing sources is cited: the judge is asked
+            UsageMeter(FakeProvider()),
+            judge,
+        )

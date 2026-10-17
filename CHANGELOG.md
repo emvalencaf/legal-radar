@@ -21,9 +21,15 @@ heading when `development` is released to `master`.
   `by_nivel` keys of run files and checkpoints, so earlier runs still load.
 - README rewritten for an international reader: the problem, the graph against RAG results, the
   design decisions, the Portuguese to English terms and a real roadmap.
+- The `eval` extra depends on `llm-assayer-eval` from PyPI (import name `assayer`) instead of the
+  git legacy API. The harness runs a `Runner` with one `Metric` per output field, and the
+  LangSmith export goes through assayer's `LangSmithAdapter` (the questions as examples of the
+  `legal-radar-eval` dataset, each run as a project of its own). Run files keep their shape. The
+  extra no longer installs torch or transformers.
 
 ### Removed
 
+- `scripts/setup-assayer.sh` and `docs/research/assayer-fit.md`, written against the legacy API.
 - Obsolete scripts: the `setup-langsmith-*` wizards (the prompts are published and pinned in
   `prompts/pins.yml`; `make refresh-prompts` maintains them), `skeleton.sh` (replaced by
   `docker compose up -d neo4j` and `legal-radar run`) and `check_enricher.py` (covered by

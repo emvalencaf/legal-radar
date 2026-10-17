@@ -38,31 +38,19 @@ def test_a_failing_trace_publish_is_logged_and_never_raised(caplog):
     assert "network down" in caplog.text
 
 
-def test_the_experiment_is_published_as_runs_with_feedback_after_a_flush():
+def test_the_experiment_goes_through_the_adapter_and_an_incomplete_export_is_only_logged(caplog):
     from types import SimpleNamespace as Ns
 
     from legal_radar.adapters.tracing import ExperimentPublisher
 
-    calls = []
+    exported = []
 
-    class Client:
-        def create_run(self, **kw):
-            calls.append(("run", kw))
+    class Adapter:
+        def export(self, experiment):
+            exported.append(experiment)
+            return Ns(ok=False, failed=["a"], skipped=[])
 
-        def flush(self):
-            calls.append(("flush", None))
+    with caplog.at_level(logging.WARNING):
+        ExperimentPublisher(Adapter()).publish("experiment")
 
-        def create_feedback(self, run_id, key, **kw):
-            calls.append(("feedback", (run_id, key, kw["score"])))
-
-    evaluation = Ns(field_name="citation_check", evaluator_method="citation_correctness",
-                    score=0.5, metadata={"precision": 1})  # fmt: skip
-    run = Ns(input="q1", output={"answer": "a"}, evaluations=[evaluation],
-             token_usage=Ns(input_tokens=3, output_tokens=2))  # fmt: skip
-    ExperimentPublisher(Client()).publish(Ns(experiment_name="graph-1", runs=[run]), "proj")
-
-    kinds = [kind for kind, _ in calls]
-    assert kinds == ["run", "flush", "feedback", "flush"]
-    run_call, feedback = calls[0][1], calls[2][1]
-    assert run_call["project_name"] == "proj" and run_call["run_type"] == "chain"
-    assert feedback == (run_call["id"], "citation_check/citation_correctness", 0.5)
+    assert exported == ["experiment"] and "1 failed" in caplog.text

@@ -12,7 +12,6 @@ from legal_radar.adapters.assayer.harness import (
     checkpoint_for,
     run_evaluation,
 )
-from legal_radar.adapters.tracing import DATASET
 from legal_radar.application.answer import CitedAnswer
 from legal_radar.application.evaluation.answers import (
     Question,
@@ -41,8 +40,8 @@ def run_systems(
     """Scores each `(system, ask)` over `questions` in turn. A run that dies resumes next time
     from its saved answers (`fresh` discards them); the checkpoint is dropped once the report is
     written (to `runs_dir`), and `on_report` hears of each report and its file as soon as it is.
-    A LangSmith `publisher` (see `tracing`) gets each experiment's result."""
-    publish = (lambda result: publisher.publish(result, DATASET)) if publisher else None
+    A LangSmith `publisher` (see `tracing`) gets each assayer Experiment."""
+    publish = publisher.publish if publisher else None
     reports = []
     for system, ask in systems:
         checkpoint = checkpoint_for(system, questions, lock.snapshot_hash)

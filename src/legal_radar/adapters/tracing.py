@@ -2,12 +2,9 @@
 experiment). Off without credentials, and a failed trace never fails the run. Ingestion and
 enrichment never call this: they stay on wide events (ADR-0004)."""
 
-import json
 import logging
 import os
 from collections.abc import Callable, MutableMapping
-from datetime import UTC, datetime
-from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
@@ -28,54 +25,30 @@ def configure_tracing(env: MutableMapping[str, str] | None = None) -> bool:
 
 
 class ExperimentPublisher:
-    """Publishes an assayer experiment to LangSmith: one run per question, under the project
-    `dataset`, with each evaluation as feedback on it. (assayer's own publisher calls an older
-    `Client.create_run` signature, so it is not used.)"""
+    """Publishes an assayer Experiment to LangSmith through assayer's `LangSmithAdapter`: the
+    questions become examples of the dataset `DATASET`, the experiment a project of its own, each
+    answer a run tree and each score feedback on it."""
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, adapter):
+        self.adapter = adapter
 
-    def publish(self, result, dataset: str) -> None:
-        now = datetime.now(UTC)
-        runs = []
-        for run in result.runs:
-            run_id = uuid4()
-            self.client.create_run(
-                id=run_id,
-                name=result.experiment_name,
-                run_type="chain",
-                inputs={"question": run.input},
-                outputs=run.output,
-                project_name=dataset,
-                start_time=now,
-                end_time=now,
-                extra={
-                    "metadata": {
-                        "input_tokens": run.token_usage.input_tokens,
-                        "output_tokens": run.token_usage.output_tokens,
-                    }
-                },
+    def publish(self, experiment) -> None:
+        report = self.adapter.export(experiment)
+        if not report.ok:  # the adapter reports what failed instead of raising
+            log.warning(
+                "LangSmith export incomplete: %d failed, %d skipped",
+                len(report.failed),
+                len(report.skipped),
             )
-            runs.append((run_id, run))
-        self.client.flush()  # the runs must exist before feedback refers to them
-        for run_id, run in runs:
-            for e in run.evaluations:
-                self.client.create_feedback(
-                    run_id,
-                    f"{e.field_name}/{e.evaluator_method}",
-                    score=e.score,
-                    comment=json.dumps(e.metadata, default=str),
-                )
-        self.client.flush()
 
 
 def publisher_if_enabled(env: MutableMapping[str, str] | None = None):
-    """The experiment publisher when tracing is on (needs `langsmith`), else None."""
+    """The experiment publisher when tracing is on (needs the `eval` extra), else None."""
     if not configure_tracing(env):
         return None
-    import langsmith
+    from assayer.adapters import LangSmithAdapter
 
-    return ExperimentPublisher(langsmith.Client())
+    return ExperimentPublisher(LangSmithAdapter(dataset_name=DATASET))
 
 
 def safely(action: Callable[[], None]) -> None:

@@ -259,33 +259,25 @@ class Checkpoint:
         self.path.unlink(missing_ok=True)
 
 
-class Outcome(dict):
-    """What one question yields: a dict assayer routes by field, with the `usage_metadata` it
-    reads token counts from."""
-
-    usage_metadata: dict
-
-
-def outcome_of(answer: CitedAnswer, usage: tuple[int, int]) -> Outcome:
-    """One field per evaluator, so assayer's field router can hand each its own slice."""
+def outcome_of(answer: CitedAnswer) -> dict:
+    """What one question yields: one field per metric, so assayer's field map can hand each its
+    own slice."""
     cited = [c.id for c in answer.citations]
     text = answer.answer or ""
-    outcome = Outcome(
-        answer=text,
-        citations=cited,
-        retrieved=list(answer.retrieved),
-        sources={c.id: c.text for c in answer.citations},
-        citation_check={"cited": cited, "retrieved": list(answer.retrieved)},
-        path=sorted(path_nodes(answer.citations)),
-        citation_paths={
+    return {
+        "answer": text,
+        "citations": cited,
+        "retrieved": list(answer.retrieved),
+        "sources": {c.id: c.text for c in answer.citations},
+        "citation_check": {"cited": cited, "retrieved": list(answer.retrieved)},
+        "path": sorted(path_nodes(answer.citations)),
+        "citation_paths": {
             c.id: [[h.type, h.source, h.target] for h in c.path] for c in answer.citations
         },
-        contradiction_check={"answer": text, "cited": cited},
-        abstention_check={"answer": text},
-        mentions_check=list(answer.unsupported),
-    )
-    outcome.usage_metadata = {"input_tokens": usage[0], "output_tokens": usage[1]}
-    return outcome
+        "contradiction_check": {"answer": text, "cited": cited},
+        "abstention_check": {"answer": text},
+        "mentions_check": list(answer.unsupported),
+    }
 
 
 def llm_flags_contradiction(provider: Provider) -> Callable[[str], bool]:

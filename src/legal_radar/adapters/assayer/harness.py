@@ -1,20 +1,33 @@
-"""Runs the evaluation under the `assayer` harness (`uv sync --extra eval`): it orchestrates the
-questions and counts tokens and cost per run; the custom metrics come from
-`legal_radar.application.evaluation.answers` and the flat grounding metric from RAGAS. Both
-libraries are imported lazily so the rest of the package runs without them."""
+"""Runs the evaluation under the `assayer` library (`uv sync --extra eval`): its `Runner`
+orchestrates the questions and keeps their tokens; the custom metrics come from
+`legal_radar.application.evaluation.answers` and the flat grounding metric from RAGAS (imported
+lazily). Only the CLI and the tests import this module, so the rest of the package runs without
+the `eval` extra."""
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+
+from assayer.metrics import Detailed, Metric
+from assayer.models import (
+    Case,
+    Dataset,
+    Experiment,
+    PricingConfig,
+    Score,
+    Step,
+    TokenUsage,
+    Trajectory,
+)
+from assayer.runner import Runner
 
 from legal_radar.adapters.tracing import safely
 from legal_radar.application.answer import CitedAnswer
 from legal_radar.application.evaluation.answers import (
     BASE_LEVEL,
     Checkpoint,
-    Outcome,
     Question,
     System,
     UsageMeter,
@@ -85,81 +98,65 @@ class Report:
         return path
 
 
-def build_registries(
+def build_metrics(
     flags_contradiction: Callable[[str], bool],
     states_insufficient: Callable[[str], bool] = lambda answer: False,
-):
-    """assayer evaluator and metric registries holding the three custom evaluators."""
-    from assayer.evaluators.base import BaseEvaluator
-    from assayer.models import FieldEvaluation
-    from assayer.registries import EvaluatorRegistry, MetricRegistry
+) -> dict[str, Metric]:
+    """The field map of the evaluation: each output field with the assayer metric that scores it.
+    A metric that returns None does not apply to the question: no score, and no failure."""
 
-    class CitationEvaluator(BaseEvaluator):
-        def evaluate(self, prediction, reference, **kwargs):
-            score = citation_correctness(
-                prediction["cited"],
-                prediction["retrieved"],
-                reference["expected"],
-                reference["also_ok"],
-            )
-            return FieldEvaluation(
-                CITATIONS, "citation_correctness", reference, prediction["cited"], score.f1, None,
-                {
-                    "precision": score.precision,
-                    "recall": score.recall,
-                    "fabricated": score.fabricated,
-                    "applicable": bool(reference["expected"]),  # none: an abstain question
-                },
-            )  # fmt: skip
+    def citation(trajectory, case):
+        reference = case.expected_output
+        if not reference["expected"]:  # an abstain question
+            return None
+        prediction = trajectory.final_output
+        score = citation_correctness(
+            prediction["cited"],
+            prediction["retrieved"],
+            reference["expected"],
+            reference["also_ok"],
+        )
+        return Detailed(
+            score.f1,
+            metadata={
+                "precision": score.precision,
+                "recall": score.recall,
+                "fabricated": score.fabricated,
+            },
+        )
 
-    class PathEvaluator(BaseEvaluator):
-        def evaluate(self, prediction, reference, **kwargs):
-            score = graph_path(set(prediction), set(reference))
-            return FieldEvaluation(
-                PATH, "graph_path", reference, prediction, score.f1, None,
-                {
-                    "precision": score.precision,
-                    "recall": score.recall,
-                    "applicable": bool(reference),
-                },
-            )  # fmt: skip
+    def path(trajectory, case):
+        if not case.expected_output:
+            return None
+        score = graph_path(set(trajectory.final_output), set(case.expected_output))
+        return Detailed(score.f1, metadata={"precision": score.precision, "recall": score.recall})
 
-    class ContradictionEvaluator(BaseEvaluator):
-        def evaluate(self, prediction, reference, **kwargs):
-            surfaced = contradiction_surfaced(
-                prediction["answer"],
-                prediction["cited"],
-                [tuple(pair) for pair in reference],
-                flags_contradiction,
-            )
-            return FieldEvaluation(
-                CONTRADICTIONS, "contradiction_surfaced", reference, prediction["cited"],
-                surfaced or 0.0, None, {"applicable": surfaced is not None},
-            )  # fmt: skip
+    def contradiction(trajectory, case):
+        prediction = trajectory.final_output
+        return contradiction_surfaced(
+            prediction["answer"],
+            prediction["cited"],
+            [tuple(pair) for pair in case.expected_output],
+            flags_contradiction,
+        )
 
-    class AbstentionEvaluator(BaseEvaluator):
-        def evaluate(self, prediction, reference, **kwargs):
-            score = abstention(prediction["answer"], bool(reference), states_insufficient)
-            return FieldEvaluation(
-                ABSTENTION, "abstention", reference, prediction["answer"], score or 0.0, None,
-                {"applicable": score is not None},
-            )  # fmt: skip
+    def abstains(trajectory, case):
+        return abstention(
+            trajectory.final_output["answer"], bool(case.expected_output), states_insufficient
+        )
 
-    class MentionsEvaluator(BaseEvaluator):
-        def evaluate(self, prediction, reference, **kwargs):
-            """1.0 when every article the answer names was among its sources, else 0.0."""
-            return FieldEvaluation(
-                MENTIONS, "grounded_mentions", reference, prediction,
-                0.0 if prediction else 1.0, None, {"unsupported": list(prediction)},
-            )  # fmt: skip
+    def mentions(trajectory, case):
+        """1.0 when every article the answer names was among its sources, else 0.0."""
+        unsupported = list(trajectory.final_output)
+        return Detailed(0.0 if unsupported else 1.0, metadata={"unsupported": unsupported})
 
-    evaluators = EvaluatorRegistry()
-    evaluators.register("citation_correctness", CitationEvaluator)
-    evaluators.register("graph_path", PathEvaluator)
-    evaluators.register("contradiction_surfaced", ContradictionEvaluator)
-    evaluators.register("abstention", AbstentionEvaluator)
-    evaluators.register("grounded_mentions", MentionsEvaluator)
-    return evaluators, MetricRegistry()
+    return {
+        CITATIONS: Metric("citation_correctness", "trajectory", citation),
+        PATH: Metric("graph_path", "trajectory", path),
+        CONTRADICTIONS: Metric("contradiction_surfaced", "trajectory", contradiction),
+        ABSTENTION: Metric("abstention", "trajectory", abstains),
+        MENTIONS: Metric("grounded_mentions", "trajectory", mentions),
+    }
 
 
 def _import_ragas() -> None:
@@ -190,26 +187,25 @@ def ragas_faithfulness(rows: list[dict], llm) -> list[float]:
     return [score for score in scores if score == score]  # RAGAS reports a failed judge as nan
 
 
-def aggregate(runs, graph_paths: bool = True) -> dict[str, float | None]:
-    """Mean per metric over the questions it applies to: the evaluator's score (F1 for the set
+def aggregate(scores: Iterable[Score], graph_paths: bool = True) -> dict[str, float | None]:
+    """Mean per metric over the questions it applies to: the metric's score (F1 for the set
     metrics), its precision and recall, and the fabricated citations per question."""
     values: dict[str, list[float]] = {}
-    for run in runs:
-        for e in run.evaluations:
-            if e.metadata.get("applicable") is False:
-                continue
-            values.setdefault(e.evaluator_method, []).append(e.score)
-            for key in ("precision", "recall"):
-                if key in e.metadata:
-                    values.setdefault(f"{e.evaluator_method}_{key}", []).append(e.metadata[key])
-            if "fabricated" in e.metadata:
-                values.setdefault("fabricated_citations", []).append(len(e.metadata["fabricated"]))
-    scores: dict[str, float | None] = {k: sum(v) / len(v) for k, v in values.items()}
-    scores.setdefault("contradiction_surfaced", None)  # no question labeled a contradiction
-    scores.setdefault("abstention", None)  # no question the graph cannot answer
+    for score in scores:
+        if score.field is None:
+            continue
+        values.setdefault(score.name, []).append(score.value)
+        for key in ("precision", "recall"):
+            if key in score.metadata:
+                values.setdefault(f"{score.name}_{key}", []).append(score.metadata[key])
+        if "fabricated" in score.metadata:
+            values.setdefault("fabricated_citations", []).append(len(score.metadata["fabricated"]))
+    result: dict[str, float | None] = {k: sum(v) / len(v) for k, v in values.items()}
+    result.setdefault("contradiction_surfaced", None)  # no question labeled a contradiction
+    result.setdefault("abstention", None)  # no question the graph cannot answer
     if not graph_paths:
-        scores["graph_path"] = None  # not applicable: there is no graph to walk
-    return scores
+        result["graph_path"] = None  # not applicable: there is no graph to walk
+    return result
 
 
 CHECKPOINT_DIR = RUNS_DIR / "checkpoints"
@@ -227,12 +223,12 @@ def checkpoint_for(
 
 
 def aggregate_by_level(
-    runs, level_of: dict[str, str | None], graph_paths: bool = True
+    scores: Iterable[Score], level_of: dict[str, str | None], graph_paths: bool = True
 ) -> dict[str, dict]:
-    """`aggregate` over the questions of each `nivel` (`nivel_of` maps a question id to it)."""
-    groups: dict[str, list] = {}
-    for run in runs:
-        groups.setdefault(level_of.get(run.input) or BASE_LEVEL, []).append(run)
+    """`aggregate` over the questions of each `nivel` (`level_of` maps a question id to it)."""
+    groups: dict[str, list[Score]] = {}
+    for score in scores:
+        groups.setdefault(level_of.get(score.target_id) or BASE_LEVEL, []).append(score)
     return {level: aggregate(group, graph_paths) for level, group in sorted(groups.items())}
 
 
@@ -249,79 +245,94 @@ def run_evaluation(
     experiment: str | None = None,
     system: System | None = None,
     checkpoint: Checkpoint | None = None,
-    publish: Callable[[object], None] | None = None,
+    publish: Callable[[Experiment], None] | None = None,
 ) -> Report:
     """Answers every question through `ask` (whose model calls go through `meter`) and scores it.
     A `checkpoint` keeps each answer as it arrives, so a run that dies resumes without asking
     again (the caller discards it once the report is written). A system with no graph (a RAG
-    baseline) leaves `graph_path` unscored: n/a. `publish`, when given, hears of the experiment's
-    result (to trace it in LangSmith); it never fails the run."""
-    from assayer.runner.pipeline import EvaluationPipeline
-    from assayer.runner.pricing import PricingConfig
-
+    baseline) leaves `graph_path` unscored: n/a. `publish`, when given, hears of the assayer
+    Experiment (to trace it in LangSmith); it never fails the run."""
     price = pricing or Pricing()
     system = system or System()
 
     by_id = {q.id: q for q in questions}
+    died: list[BaseException] = []  # assayer keeps a target's exception as data: raise it again
 
-    def target(question_id: str) -> Outcome:
-        if (
-            checkpoint and question_id in checkpoint.done
-        ):  # answered before a crash: not asked again
-            answer, usage = checkpoint.done[question_id]
-            meter.total_input += usage[0]
-            meter.total_output += usage[1]
-            return outcome_of(answer, usage)
-        meter.reset()
-        answer = ask(by_id[question_id].query)
-        if checkpoint:
-            checkpoint.save(question_id, answer, meter.usage)
-        return outcome_of(answer, meter.usage)
+    def target(question_id: str) -> Trajectory:
+        if died:  # the run is lost: do not spend tokens on the questions after it
+            raise died[0]
+        try:
+            if checkpoint and question_id in checkpoint.done:  # answered before a crash
+                answer, usage = checkpoint.done[question_id]
+                meter.total_input += usage[0]
+                meter.total_output += usage[1]
+            else:
+                meter.reset()
+                answer = ask(by_id[question_id].query)
+                usage = meter.usage
+                if checkpoint:
+                    checkpoint.save(question_id, answer, usage)
+        except Exception as error:
+            died.append(error)
+            raise
+        return Trajectory(
+            steps=[
+                Step(
+                    "model",
+                    input=by_id[question_id].query,
+                    output=answer.answer,
+                    usage=TokenUsage(usage[0], usage[1], None),
+                )
+            ],
+            final_output=outcome_of(answer),
+        )
 
-    dataset = [
-        {
-            "input": q.id,
-            "expected_output": {
-                CITATIONS: {"expected": list(q.citations), "also_ok": list(q.also_ok)},
-                **({PATH: list(q.nodes)} if system.has_graph else {}),
-                CONTRADICTIONS: [list(pair) for pair in q.contradictions],
-                ABSTENTION: q.abstain,
-                MENTIONS: [],
-            },
-        }
-        for q in questions
-    ]
-    evaluators, metrics = build_registries(flags_contradiction, states_insufficient)
+    metrics = build_metrics(flags_contradiction, states_insufficient)
+    if not system.has_graph:
+        del metrics[PATH]
     name = experiment or datetime.now(UTC).strftime("eval-%Y%m%dT%H%M%S%fZ")
-    result = EvaluationPipeline(
-        target_fn=target,
-        dataset=dataset,
-        field_evaluators={
-            CITATIONS: ["citation_correctness"],
-            **({PATH: ["graph_path"]} if system.has_graph else {}),
-            CONTRADICTIONS: ["contradiction_surfaced"],
-            ABSTENTION: ["abstention"],
-            MENTIONS: ["grounded_mentions"],
-        },
-        metrics=[],
-        evaluator_registry=evaluators,
-        metric_registry=metrics,
-        pricing_config=PricingConfig(price.input / 1e6, price.output / 1e6),
-        experiment_name=name,
-    ).run()
+    dataset = Dataset(
+        name,
+        [
+            Case(
+                input=q.id,
+                id=q.id,
+                expected_output={
+                    CITATIONS: {"expected": list(q.citations), "also_ok": list(q.also_ok)},
+                    **({PATH: list(q.nodes)} if system.has_graph else {}),
+                    CONTRADICTIONS: [list(pair) for pair in q.contradictions],
+                    ABSTENTION: q.abstain,
+                    MENTIONS: [],
+                },
+            )
+            for q in questions
+        ],
+    )
+    result = Runner(
+        target,
+        field_metrics={path: [metric] for path, metric in metrics.items()},
+        pricing=PricingConfig(price.input / 1e6, price.output / 1e6),
+    ).run(dataset)
+    if died:
+        raise died[0]
+    if result.failures:  # a judge that fails is a lost score, not a score of zero
+        raise RuntimeError(
+            "metrics failed: " + "; ".join(f"{f.metric}: {f.error}" for f in result.failures)
+        )
     if publish is not None:
         safely(lambda: publish(result))
 
+    trajectories = {t.case_id: t for t in result.trajectories}
     grounding = {}
     if grounding_llm is not None:
         rows = [
             {
-                "user_input": by_id[run.input].query,
-                "response": run.output["answer"],
-                "retrieved_contexts": list(run.output["sources"].values()),
+                "user_input": by_id[case_id].query,
+                "response": t.final_output["answer"],
+                "retrieved_contexts": list(t.final_output["sources"].values()),
             }
-            for run in result.runs
-            if run.output["answer"] and run.output["sources"]
+            for case_id, t in trajectories.items()
+            if t.final_output["answer"] and t.final_output["sources"]
         ]
         faithfulness = ragas_faithfulness(rows, grounding_llm)
         grounding["faithfulness"] = sum(faithfulness) / len(faithfulness) if faithfulness else None
@@ -329,23 +340,23 @@ def run_evaluation(
     level_of = {q.id: q.level for q in questions}
     return Report(
         name,
-        aggregate(result.runs, system.has_graph),
+        aggregate(result.scores, system.has_graph),
         [
             {
-                "id": run.input,
-                "nivel": level_of.get(run.input),
-                "answer": run.output["answer"],
-                "citations": run.output["citations"],
-                "citation_paths": run.output.get("citation_paths", {}),
+                "id": case_id,
+                "nivel": level_of.get(case_id),
+                "answer": t.final_output["answer"],
+                "citations": t.final_output["citations"],
+                "citation_paths": t.final_output.get("citation_paths", {}),
                 "scores": {
-                    e.evaluator_method: e.score
-                    for e in run.evaluations
-                    if e.metadata.get("applicable") is not False
+                    s.name: s.value
+                    for s in result.scores
+                    if s.target_id == case_id and s.field is not None
                 },
-                "input_tokens": run.token_usage.input_tokens,
-                "output_tokens": run.token_usage.output_tokens,
+                "input_tokens": t.total_usage().input_tokens,
+                "output_tokens": t.total_usage().output_tokens,
             }
-            for run in result.runs
+            for case_id, t in trajectories.items()
         ],
         meter.total_input,  # the answers plus the contradiction judge, unlike the per-question rows
         meter.total_output,
@@ -354,7 +365,7 @@ def run_evaluation(
         grounding,
         system.name,
         system.k,
-        aggregate_by_level(result.runs, level_of, system.has_graph),
+        aggregate_by_level(result.scores, level_of, system.has_graph),
     )
 
 

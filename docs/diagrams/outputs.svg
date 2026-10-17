@@ -1,0 +1,75 @@
+<svg width="100%" viewBox="0 70 1000 530" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="outputs-title outputs-desc">
+      <title id="outputs-title">What each command produces</title>
+      <desc id="outputs-desc">Map of the pipeline's artifacts and the commands that write them: the graph, the seed, enrichment records, concept drafts, vector indexes, evaluation runs and the report.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto-start-reverse"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+      </defs>
+      <rect x="0" y="70" width="1000" height="530" fill="#f5f5f5"/>
+      <path d="M240,272 H380" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="287.8" y="255" width="44.4" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="310.0" y="264" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">INGEST</text>
+      <path d="M140,240 V154" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="146.0" y="193" width="55.2" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="173.6" y="202" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">--ENRICH</text>
+      <path d="M580,260 H760" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="634.3" y="243" width="71.4" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="670.0" y="252" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">EXPORT-SEED</text>
+      <path d="M760,284 H580" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="653.2" y="299" width="33.6" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="670.0" y="308" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SEED</text>
+      <path d="M480,240 V154" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="486.0" y="193" width="87.6" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="529.8" y="202" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">DRAFT-CONCEPTS</text>
+      <path d="M560,304 V400" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="566.0" y="347" width="33.6" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="582.8" y="356" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">EVAL</text>
+      <path d="M700,432 H780" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="717.8" y="415" width="44.4" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="740.0" y="424" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">REPORT</text>
+      <path d="M420,304 V424 Q420,432 412,432 H240" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="295.7" y="415" width="60.6" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="326.0" y="424" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">INDEX-RAG</text>
+      <rect x="40" y="240" width="200" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="40" y="240" width="200" height="64" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+      <text x="140.0" y="268.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Sources</text>
+      <text x="140.0" y="284.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">LexML · Planalto · STF · STJ</text>
+      <rect x="40" y="90" width="200" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="40" y="90" width="200" height="64" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="140.0" y="118.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Enrichment records</text>
+      <text x="140.0" y="134.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">data/ingestion.sqlite</text>
+      <rect x="380" y="240" width="200" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="380" y="240" width="200" height="64" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="480.0" y="268.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Knowledge graph</text>
+      <text x="480.0" y="284.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">neo4j · docker compose</text>
+      <rect x="380" y="90" width="200" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="380" y="90" width="200" height="64" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="480.0" y="118.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Concept drafts</text>
+      <text x="480.0" y="134.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">concepts/*.draft.yml</text>
+      <rect x="760" y="240" width="200" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="760" y="240" width="200" height="64" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="860.0" y="268.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Seed</text>
+      <text x="860.0" y="284.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">seed/graph.jsonl</text>
+      <rect x="520" y="400" width="180" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="520" y="400" width="180" height="64" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="610.0" y="428.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Evaluation runs</text>
+      <text x="610.0" y="444.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">eval-runs/*.json</text>
+      <rect x="780" y="400" width="180" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="780" y="400" width="180" height="64" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="870.0" y="428.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Report</text>
+      <text x="870.0" y="444.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">report/index.html</text>
+      <rect x="40" y="400" width="200" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="40" y="400" width="200" height="64" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="140.0" y="428.0" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Vector indexes</text>
+      <text x="140.0" y="444.0" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">data/rag-*.sqlite</text>
+      <text x="40" y="516" fill="#4f5d75" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">run-all chains ingest, export-seed, eval and report in one command.</text>
+      <line x1="30" y1="552" x2="970" y2="552" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="30" y="568" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+      <line x1="110" y1="565" x2="138" y2="565" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="146" y="569" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">command writes</text>
+      <line x1="244" y1="565" x2="272" y2="565" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="280" y="569" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">optional flag</text>
+      <rect x="373" y="560" width="20" height="11" rx="3" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="401" y="569" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">headline output</text>
+    </svg>

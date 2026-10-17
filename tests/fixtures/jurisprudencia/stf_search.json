@@ -1,0 +1,126 @@
+{
+ "result": {
+  "took": 453,
+  "timed_out": false,
+  "_shards": {
+   "total": 5,
+   "successful": 5,
+   "skipped": 0,
+   "failed": 0
+  },
+  "hits": {
+   "total": {
+    "value": 516,
+    "relation": "eq"
+   },
+   "max_score": 28.17288,
+   "hits": [
+    {
+     "_index": "jurisprudencia-idx20230518",
+     "_id": "sjur226446",
+     "_score": 28.17288,
+     "_ignored": [
+      "documental_acordao_mesmo_sentido_lista_html.keyword",
+      "documental_observacao_html.keyword"
+     ],
+     "_source": {
+      "id": "sjur226446",
+      "titulo": "AI 794836 ED",
+      "base": "acordaos",
+      "ementa_texto": "E M E N T A: AGRAVO DE INSTRUMENTO – EMBARGOS DE DECLARAÇÃO RECEBIDOS COMO RECURSO DE AGRAVO – EXECUÇÃO DE CRÉDITOS TRABALHISTAS – EMPRESA EXECUTADA EM PROCESSO DE RECUPERAÇÃO JUDICIAL – CONSTRIÇÃO DE BENS PERTENCENTES A ACIONISTA DA EMPRESA DEVEDORA, ESTRANHO À EXECUÇÃO TRABALHISTA – APLICAÇÃO, PARA ESSE EFEITO, DA TEORIA DA DESCONSIDERAÇÃO DA PERSONALIDADE JURÍDICA (CÓDIGO CIVIL, ART. 50) – COMPETÊNCIA DA JUSTIÇA ESTADUAL PARA DIRIMIR ESSA CONTROVÉRSIA, AFASTADA, DESSE MODO, A COMPETÊNCIA DA JUSTIÇA DO TRABALHO – ORIENTAÇÃO QUE PREVALECE NO SUPREMO TRIBUNAL FEDERAL EM RAZÃO DE JULGAMENTO FINAL, COM REPERCUSSÃO GERAL, DO RE 583.955/RJ – RECURSO DE AGRAVO IMPROVIDO.",
+      "documental_tese_texto": null,
+      "acordao_ata": "A Turma, preliminarmente, por votação unânime, conheceu dos embargos de declaração como recurso de agravo, a que, também por unanimidade, negou provimento, nos termos do voto do Relator. Ausente, justificadamente, neste julgamento, o Senhor Ministro Ricardo Lewandowski. Presidiu, este julgamento, o Senhor Ministro Celso de Mello. 2ª Turma, 19.02.2013.",
+      "decisao_texto": null,
+      "orgao_julgador": "Segunda Turma",
+      "julgamento_data": "2013-02-19",
+      "inteiro_teor_url": "https://portal.stf.jus.br/jurisprudencia/obterInteiroTeor.asp?idDocumento=3500020",
+      "relator_acordao_nome": null
+     }
+    },
+    {
+     "_index": "jurisprudencia-idx20230518",
+     "_id": "sjur538050",
+     "_score": 23.694178,
+     "_ignored": [
+      "documental_acordao_mesmo_sentido_lista_html.keyword",
+      "documental_observacao_html.keyword"
+     ],
+     "_source": {
+      "id": "sjur538050",
+      "titulo": "CC 8318 AgR",
+      "base": "acordaos",
+      "ementa_texto": "Ementa: Agravo regimental. Conflito de competência. Juízo universal da falência. Desconsideração da personalidade jurídica da empresa falida. Conflito não conhecido.\n\n\n\n    I. Caso em exame\n\n\n\n    1. Conflito positivo de competência entre o Tribunal Superior do Trabalho e o juízo universal da falência. Insurgem-se os suscitantes contra decisão da Justiça do Trabalho que atingiu o patrimônio pessoal dos sócios da empresa falida em sede de incidente de desconsideração da personalidade jurídica.\n\n\n\n    II. Questão em discussão\n\n\n\n    2. A questão em discussão consiste em saber se a desconsideração da personalidade jurídica da sociedade falida configura, ou não, competência exclusiva do juízo da falência (Lei nº 11.101/2005, art. 82-A, parágrafo único).\n\n\n\n    III. Razões de decidir\n\n\n\n    3. Conflito de competência não formado. A instauração de conflito pressupõe a existência de manifestação expressa de ambos os juízos antagônicos quanto à sua competência, positiva ou negativa, para o processamento do feito. No caso, o juízo das falências jamais se pronunciou quanto à sua competência para a desconsideração de personalidade jurídica da empresa falida. Precedentes.\n\n\n\n    4. Sujeição do patrimônio pessoal dos sócios ao concurso de credores. Incabível o argumento de que os efeitos da falência atingiriam, automaticamente, os sócios da empresa falida, pois, tratando-se de sociedade por ações, não existem sócios de responsabilidade ilimitada (Lei nº 6.404/76, art. 1º). A sentença declaratória de falência é clara ao delimitar a quebra apenas à sociedade, não atingindo o patrimônio pessoal dos sócios.\n\n\n\n    5. Competência. A norma inscrita no art. 82-A, parágrafo único, da Lei de Recuperação e Falência (incluído pela Lei nº 14.112/2020) não institui competência absoluta em favor do Juízo das Falências. Apenas condiciona a desconsideração da personalidade jurídica à observância dos requisitos legais (CC, art. 50) e processuais (CPC, art. 133 a 137). Não se trata, portanto, de norma de competência, mas de garantia instituída em favor dos sócios e administradores, para evitar que sejam estendidos a eles os efeitos da falência sem o devido processo legal.\n\n\n\n    6. Incabível a utilização do conflito de competências com o fim de provocar a manifestação antecipada dos Tribunais superiores sobre o mérito da controvérsia discutida nas instâncias inferiores. A jurisprudência desta Corte tem rejeitado o uso indevido dessa especial figura processual como indevido sucedâneo recursal ou via imprópria de impugnação de decisões judiciais. Precedentes.\n\n\n\n    IV. Dispositivo\n\n\n\n    7. Agravo conhecido e improvido.",
+      "documental_tese_texto": null,
+      "acordao_ata": "Após o voto do Ministro Flávio Dino (Relator), que conhecia do agravo e negava provimento ao recurso, pediu vista dos autos o Ministro Alexandre de Moraes. Plenário, Sessão Virtual de 22.11.2024 a 29.11.2024.\r\n\n           Decisão: Após o voto-vista do Ministro Alexandre de Moraes, que acompanhava o voto do Ministro Flávio Dino (Relator), conhecendo do agravo e negando provimento ao recurso, pediu vista dos autos o Ministro Gilmar Mendes. Plenário, Sessão Virtual de 7.2.2025 a 14.2.2025.\r\n\n           Decisão: O Tribunal, por maioria, conheceu do agravo e negou provimento ao recurso, mantendo a decisão agravada, nos termos do voto do Relator, vencidos os Ministros Gilmar Mendes, Dias Toffoli e Nunes Marques. Os Ministros Cristiano Zanin e André Mendonça acompanharam o Relator com ressalvas. Plenário, Sessão Virtual de 6.6.2025 a 14.6.2025.",
+      "decisao_texto": null,
+      "orgao_julgador": "Tribunal Pleno",
+      "julgamento_data": "2025-06-16",
+      "inteiro_teor_url": "https://portal.stf.jus.br/jurisprudencia/obterInteiroTeor.asp?idDocumento=789327279",
+      "relator_acordao_nome": null
+     }
+    },
+    {
+     "_index": "jurisprudencia-idx20230518",
+     "_id": "sjur538281",
+     "_score": 23.404013,
+     "_ignored": [
+      "documental_observacao_html.keyword"
+     ],
+     "_source": {
+      "id": "sjur538281",
+      "titulo": "CC 8341",
+      "base": "acordaos",
+      "ementa_texto": "Ementa: Conflito de competência. Juízo universal da falência. Desconsideração da personalidade jurídica da empresa falida. Conflito não conhecido.\n\n\n\n    I. Caso em exame\n\n\n\n    1. Conflito positivo de competência entre o Tribunal Superior do Trabalho e o juízo universal da falência. Insurgem-se os suscitantes contra decisão da Justiça do Trabalho que atingiu o patrimônio pessoal dos sócios da empresa falida em sede de incidente de desconsideração da personalidade jurídica.\n\n\n\n    II. Questão em discussão\n\n\n\n    2. A questão em discussão consiste em saber se a desconsideração da personalidade jurídica da sociedade falida configura, ou não, competência exclusiva do juízo da falência (Lei nº 11.101/2005, art. 82-A, parágrafo único).\n\n\n\n    III. Razões de decidir\n\n\n\n    3. Conflito de competência não formado. A instauração de conflito pressupõe a existência de manifestação expressa de ambos os juízos antagônicos quanto à sua competência, positiva ou negativa, para o processamento do feito. No caso, o juízo das falências jamais se pronunciou quanto à sua competência para a desconsideração de personalidade jurídica da empresa falida. Precedentes.\n\n\n\n    4. Sujeição do patrimônio pessoal dos sócios ao concurso de credores. Incabível o argumento de que os efeitos da falência atingiriam, automaticamente, os sócios da empresa falida, pois, tratando-se de sociedade por ações, não existem sócios de responsabilidade ilimitada (Lei nº 6.404/76, art. 1º). A sentença declaratória de falência é clara ao delimitar a quebra apenas à sociedade, não atingindo o patrimônio pessoal dos sócios.\n\n\n\n    5. Competência. A norma inscrita no art. 82-A, parágrafo único, da Lei de Recuperação e Falência (incluído pela Lei nº 14.112/2020) não institui competência absoluta em favor do Juízo das Falências. Apenas condiciona a desconsideração da personalidade jurídica à observância dos requisitos legais (CC, art. 50) e processuais (CPC, art. 133 a 137). Não se trata, portanto, de norma de competência, mas de garantia instituída em favor dos sócios e administradores, para evitar que sejam estendidos a eles os efeitos da falência sem o devido processo legal.\n\n\n\n    6. Incabível a utilização do conflito de competências com o fim de provocar a manifestação antecipada dos Tribunais superiores sobre o mérito da controvérsia discutida nas instâncias inferiores. A jurisprudência desta Corte tem rejeitado o uso indevido dessa especial figura processual como indevido sucedâneo recursal ou via imprópria de impugnação de decisões judiciais. Precedentes.\n\n\n\n    IV. Dispositivo\n\n\n\n    7. Conflito não conhecido.",
+      "documental_tese_texto": null,
+      "acordao_ata": "Após o voto do Ministro Flávio Dino (Relator), que não conhecia do conflito de competência, pediu vista dos autos o Ministro Alexandre de Moraes. Plenário, Sessão Virtual de 22.11.2024 a 29.11.2024.\r\n\n           Decisão: Após o voto-vista do Ministro Alexandre de Moraes, que acompanhava o Ministro Flávio Dino (Relator), não conhecendo do conflito de competência, pediu vista dos autos o Ministro Gilmar Mendes. Plenário, Sessão Virtual de 7.2.2025 a 14.2.2025.\r\n\n           Decisão: O Tribunal, por maioria, não conheceu do conflito de competência, nos termos do voto do Relator, vencidos os Ministros Gilmar Mendes, Dias Toffoli e Nunes Marques. Os Ministros Cristiano Zanin e André Mendonça acompanharam o Relator com ressalvas. Plenário, Sessão Virtual de 6.6.2025 a 14.6.2025.",
+      "decisao_texto": null,
+      "orgao_julgador": "Tribunal Pleno",
+      "julgamento_data": "2025-06-16",
+      "inteiro_teor_url": "https://portal.stf.jus.br/jurisprudencia/obterInteiroTeor.asp?idDocumento=789454240",
+      "relator_acordao_nome": null
+     }
+    },
+    {
+     "_index": "jurisprudencia-idx20230518",
+     "_id": "sjur525580",
+     "_score": 23.381693,
+     "_source": {
+      "id": "sjur525580",
+      "titulo": "Rcl 71533 AgR",
+      "base": "acordaos",
+      "ementa_texto": "Ementa: DIREITO PROCESSUAL CIVIL E FALIMENTAR. AGRAVO INTERNO EM RECLAMAÇÃO. SÚMULA VINCULANTE 10. INTERPRETAÇÃO DE NORMAS. AUSÊNCIA DE OFENSA. RECURSO DESPROVIDO. \n\n\n\n    I. CASO EM EXAME\n\n\n\n    1. Agravo interno interposto de decisão que negou seguimento à reclamação por concluir não configurada ofensa à Súmula Vinculante 10.\n\n\n\n    2. A parte agravante sustenta que o órgão reclamado afastou, sem observância da cláusula de reserva de plenário, a aplicação do art. 82-A, parágrafo único, da Lei n. 11.101/2005.\n\n\n\n    II. QUESTÃO EM DISCUSSÃO \n\n\n\n    3. A questão em discussão consiste em saber se o órgão reclamado, ao reconhecer a competência do Juízo trabalhista para conduzir o incidente de desconsideração de personalidade jurídica, afastou o art. 82-A da Lei n. 11.101/2005, com base em fundamento constitucional, a implicar ofensa à Súmula Vinculante 10.\n\n\n\n    III. RAZÕES DE DECIDIR \n\n\n\n    4. O art. 82-A da Lei n. 11.101/2005, alterado pela Lei n. 14.112/2020, estabelece que a desconsideração da personalidade jurídica de sociedade falida, decretada pelo Juízo falimentar, deve observar os requisitos do art. 50 do CC, mas não exclui a competência de outros órgãos judiciais para instaurar e conduzir o incidente no âmbito de suas competências. \n\n\n\n    5. Segundo a Súmula Vinculante 10, viola a cláusula de reserva de plenário decisão de órgão fracionário de tribunal que, embora não declare expressamente a inconstitucionalidade de lei ou ato normativo do poder público, afasta sua incidência no todo ou em parte. \n\n\n\n    6. Não há falar em ofensa à Súmula Vinculante 10 nos casos em que resolvida a controvérsia a partir da interpretação de normas infraconstitucionais. \n\n\n\n    IV. DISPOSITIVO \n\n\n\n    7. Agravo interno desprovido.",
+      "documental_tese_texto": null,
+      "acordao_ata": "A Turma, por unanimidade, negou provimento ao agravo regimental, nos termos do voto do Relator. Segunda Turma, Sessão Virtual de 21.2.2025 a 28.2.2025.",
+      "decisao_texto": null,
+      "orgao_julgador": "Segunda Turma",
+      "julgamento_data": "2025-03-03",
+      "inteiro_teor_url": "https://portal.stf.jus.br/jurisprudencia/obterInteiroTeor.asp?idDocumento=784986574",
+      "relator_acordao_nome": null
+     }
+    },
+    {
+     "_index": "jurisprudencia-idx20230518",
+     "_id": "sjur569717",
+     "_score": 23.233498,
+     "_ignored": [
+      "documental_acordao_mesmo_sentido_lista_html.keyword"
+     ],
+     "_source": {
+      "id": "sjur569717",
+      "titulo": "Rcl 96545 ED",
+      "base": "acordaos",
+      "ementa_texto": "Ementa: DIREITO CONSTITUCIONAL E TRABALHISTA. EMBARGOS DE DECLARAÇÃO RECEBIDOS COMO AGRAVO REGIMENTAL. RECLAMAÇÃO CONSTITUCIONAL. ALEGAÇÃO DE OFENSA À SÚMULA VINCULANTE 10. NÃO CONFIGURAÇÃO. AUSÊNCIA DE ADERÊNCIA ESTRITA. AGRAVO DESPROVIDO.\n\n\n\n    I. Caso em exame\n\n\n\n    1. Agravo regimental interposto contra decisão que julgou improcedente a reclamação, a qual foi proposta para garantir a observância da Súmula Vinculante 10.\n\n\n\n    II. Questão em discussão\n\n\n\n    2. A questão em discussão consiste em saber se a decisão reclamada violou a Súmula Vinculante 10.\n\n\n\n    III. Razões de decidir\n\n\n\n    3. O ato reclamado não declarou inválido, ainda que de forma implícita, nenhum dispositivo de legislação infraconstitucional, nem afastou a aplicação de preceitos com apoio em fundamentos extraídos da Constituição. \n\n\n\n    4. No caso específico dos autos, ao incluir as reclamantes, não falidas e condenadas solidariamente, na execução trabalhista, não houve afastamento da vigência do art. 82-A da Lei n. 11.101/2005, por motivo de inconstitucionalidade e, portanto, descabe falar sobre violação da Súmula Vinculante 10.\n\n\n\n    5. A jurisprudência do Supremo Tribunal Federal exige, para o cabimento da reclamação, a demonstração de aderência estrita entre o ato reclamado e os paradigmas apontados como violados, o que não se verifica no caso. \n\n\n\n    IV. Dispositivo e tese\n\n\n\n    6. Agravo regimental desprovido.\n\n\n\n    _________\n\n\n\n    Dispositivos relevantes citados: Súmula Vinculante 10; CLT, art. 82-A da Lei n. 11.101/2005.\n\n\n\n    Jurisprudência relevante citada: STF, CC 8.143/SP, Rel. Min. Marco Aurélio, Rel. p/ acórdão Min. Nunes Marques, Tribunal Pleno, DJe 26/11/2021; CC 8.426 MC-Ref, Rel. Min. Gilmar Mendes, Tribunal Pleno, DJe 10/3/2025; Rcl 93.227 AgR/SP, Rel. Min. Cristiano Zanin, Primeira Turma, DJe 27/5/2026.",
+      "documental_tese_texto": null,
+      "acordao_ata": "A Turma, por unanimidade, recebeu os embargos de declaração como agravo regimental e, por maioria, negou-lhe provimento, nos termos do voto do Relator, Ministro Cristiano Zanin, vencido o Ministro Flávio Dino. Não votou a Ministra Cármen Lúcia. Primeira Turma, Sessão Virtual de 14.8.2026 a 21.8.2026.",
+      "decisao_texto": null,
+      "orgao_julgador": "Primeira Turma",
+      "julgamento_data": "2026-08-24",
+      "inteiro_teor_url": "https://portal.stf.jus.br/jurisprudencia/obterInteiroTeor.asp?idDocumento=800124650",
+      "relator_acordao_nome": null
+     }
+    }
+   ]
+  }
+ },
+ "search_id": 1
+}

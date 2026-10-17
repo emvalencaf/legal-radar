@@ -3,9 +3,41 @@ name = "legal-radar"
 version = "0.1.0"
 description = "A RAG-based project that ingests a given legal topic (pointing to a law) and finds jurisprudence precedents, doctrine, and law amendments via the LexML Brasil portal."
 requires-python = ">=3.11"
+dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "jsonschema>=4.26.0",
+    "langgraph>=1.2.14",
+    "neo4j>=6.4.0",
+    "pyyaml>=6.0.3",
+]
+
+[project.optional-dependencies]
+browser = ["playwright>=1.40"]
+prompts = ["langsmith>=0.4"]
+eval = [
+    "assayer @ git+https://github.com/emvalencaf/assayer",
+    "ragas>=0.3",
+]
+
+[project.scripts]
+legal-radar = "legal_radar.entrypoints.cli.app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true  # the eval extra installs assayer from GitHub
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/legal_radar"]
 
 [dependency-groups]
-dev = ["pytest"]
+dev = [
+    "import-linter>=2.15",
+    "pytest",
+    "testcontainers>=4.15.0",
+]
 
 [tool.ruff]
 line-length = 100
@@ -18,3 +50,28 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "RUF"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests", "tests/application", "tests/adapters"]  # tests import each other's helpers
+addopts = "-m 'not live'"
+markers = ["live: hits the real STF/STJ sources through a browser; run with `pytest -m live`"]
+
+[tool.importlinter]
+root_package = "legal_radar"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers point inward"
+type = "layers"
+layers = ["legal_radar.entrypoints", "legal_radar.adapters", "legal_radar.application", "legal_radar.domain"]
+
+[[tool.importlinter.contracts]]
+name = "The domain stays free of infrastructure"
+type = "forbidden"
+source_modules = ["legal_radar.domain"]
+forbidden_modules = ["neo4j", "bs4", "sqlite3", "langsmith", "playwright", "langgraph", "yaml", "jsonschema"]
+
+[[tool.importlinter.contracts]]
+name = "The application stays free of infrastructure"
+type = "forbidden"
+source_modules = ["legal_radar.application"]
+# `yaml` and `jsonschema` stay allowed: the application parses vocabularies and validates replies
+forbidden_modules = ["neo4j", "bs4", "sqlite3", "langsmith", "playwright"]

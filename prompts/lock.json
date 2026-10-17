@@ -1,0 +1,246 @@
+{
+  "prompts": {
+    "cited-answer": {
+      "commit": "f10ba1925bebf219128544e5253acf4674ab4a1bc9ac6a2f69f4278903aa87f9",
+      "schema": {
+        "additionalProperties": false,
+        "description": "A resposta à pergunta, com os ids das fontes em que se apoia.",
+        "properties": {
+          "answer": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "citations": {
+            "description": "Ids dos dispositivos e das jurisprudências do contexto citados.",
+            "items": {
+              "enum": [
+                "placeholder"
+              ],
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "answer",
+          "citations"
+        ],
+        "title": "cited_answer",
+        "type": "object"
+      },
+      "template": "Responda à pergunta usando apenas as fontes abaixo.\n\nRegras:\n- Use somente o que está nas fontes. Não use conhecimento externo e não mencione artigo, lei ou decisão que não esteja nelas.\n- Em `citations`, liste só as fontes indispensáveis: a menor quantidade que sustenta a resposta. Prefira o dispositivo específico (parágrafo, inciso) ao artigo inteiro quando só ele responde. Não cite uma fonte só por ser do mesmo assunto.\n- Se as fontes não respondem à pergunta, diga que não bastam e deixe `citations` vazio.\n- Se duas fontes divergem, aponte a divergência.\n\nFontes:\n{context}\n\nPergunta: {query}"
+    },
+    "concepts-count": {
+      "commit": "2a7f98d218db17f1208f41443889d168643a588e7d2d2c7dc9586156811a1ff5",
+      "schema": {
+        "additionalProperties": false,
+        "description": "Contagem dos conceitos jurídicos distintos presentes nos textos.",
+        "properties": {
+          "quantidade": {
+            "description": "Número de conceitos jurídicos distintos e recorrentes nos textos, contando sinônimos como um só.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quantidade"
+        ],
+        "title": "concepts_count",
+        "type": "object"
+      },
+      "template": "Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto\n\"{assunto}\". Leia os textos abaixo (artigos de lei e ementas/teses de decisões) e conte quantos\nconceitos jurídicos distintos e recorrentes eles contêm (institutos, atores, requisitos, teorias,\nprincípios, efeitos, procedimentos e direitos). Sinônimos contam como um único conceito.\n\nTextos:\n{corpus}\n"
+    },
+    "concepts-extract": {
+      "commit": "773dfbfc658ca4da42340288682a644a22561fe583203d1e7364247e2d85dff8",
+      "schema": {
+        "additionalProperties": false,
+        "description": "Os conceitos jurídicos extraídos dos textos.",
+        "properties": {
+          "conceitos": {
+            "description": "Um item por conceito jurídico distinto.",
+            "items": {
+              "additionalProperties": false,
+              "description": "Um conceito jurídico candidato ao vocabulário controlado do assunto.",
+              "properties": {
+                "aliases": {
+                  "description": "Outros termos que os textos usam para o mesmo conceito.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "category": {
+                  "description": "O que o conceito é: DIREITO, ATOR, PROCESSO, REQUISITO, PRINCIPIO, TEORIA, EFEITO.",
+                  "enum": [
+                    "DIREITO",
+                    "ATOR",
+                    "PROCESSO",
+                    "REQUISITO",
+                    "PRINCIPIO",
+                    "TEORIA",
+                    "EFEITO"
+                  ],
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Identificador em minúsculas, ASCII e snake_case, ex.: abuso_da_personalidade.",
+                  "type": "string"
+                },
+                "instructions": {
+                  "description": "Uma frase, em português, começando por 'Quando o texto...', que diz quando um trecho trata do conceito.",
+                  "type": "string"
+                },
+                "label": {
+                  "description": "Nome do conceito, em português.",
+                  "type": "string"
+                },
+                "sources": {
+                  "description": "Ids, entre colchetes nos textos, dos trechos onde ele aparece.",
+                  "items": {
+                    "enum": [
+                      "placeholder"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "aliases",
+                "instructions",
+                "category",
+                "sources"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "conceitos"
+        ],
+        "title": "concepts_extract",
+        "type": "object"
+      },
+      "template": "Você ajuda a curar um vocabulário controlado de conceitos jurídicos brasileiros para o assunto\n\"{assunto}\". Os textos abaixo (artigos de lei e ementas/teses de decisões) contêm {quantidade}\nconceitos jurídicos distintos e recorrentes. Extraia exatamente esses {quantidade} conceitos.\n\nNão proponha hierarquia entre conceitos: cada um tem uma única categoria.\n\nTextos:\n{corpus}\n"
+    },
+    "dispositivo-concept": {
+      "commit": "7d8c97158da926a173967c90cccfdb0365dcf4710a1f21b983d64d626154e198",
+      "schema": {
+        "additionalProperties": false,
+        "description": "O conceito jurídico de que o dispositivo trata.",
+        "properties": {
+          "conceito_id": {
+            "description": "Id (snake_case) de um conceito do vocabulário do assunto.",
+            "enum": [
+              "placeholder"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "conceito_id"
+        ],
+        "title": "dispositivo_concept",
+        "type": "object"
+      },
+      "template": "Return the conceito id (snake_case) that this dispositivo is about:\n{text}"
+    },
+    "dispositivo-enrichment": {
+      "commit": "869ba373344b775ec4db4f0167a832486ab3dc68abcff77caecce2a9b0014584",
+      "schema": {
+        "properties": {
+          "conceitos": {
+            "items": {
+              "properties": {
+                "conceito_id": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                },
+                "relacao": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "conceito_id",
+                "relacao",
+                "evidence"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "referencias": {
+            "items": {
+              "properties": {
+                "alvo": {
+                  "type": "string"
+                },
+                "citacao": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "citacao",
+                "alvo",
+                "evidence"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "conceitos",
+          "referencias"
+        ],
+        "title": "dispositivo_enrichment",
+        "type": "object"
+      },
+      "template": "Você relaciona dispositivos legais a conceitos do assunto \"{assunto}\".\n\n## Relações possíveis\n{relacoes}\n\n## Vocabulário de conceitos\nUse somente os ids abaixo. Se nenhum conceito se aplicar, devolva a lista vazia.\n{vocabulario}\n\n## Dispositivo\nLei: {lei}\nCaminho: {caminho}\n\nTexto dos dispositivos superiores (apenas contexto; não use como evidência):\n{ancestrais}\n\nTexto do dispositivo alvo:\n{texto}\n\n## Citações não resolvidas\n{citacoes}\n\nAlvos possíveis para as citações (escolha um da lista ou omita a citação):\n{candidatos}\n\nResponda em JSON. `evidence` é sempre um trecho literal do texto do dispositivo alvo.\nCada item de `conceitos` tem `conceito_id`, `relacao` e `evidence`.\nCada item de `referencias` tem `citacao`, `alvo` e `evidence`."
+    },
+    "jurisprudencia-enrichment": {
+      "commit": "1cf987887839967f635744580da77169ead6405df6cd8bd36dff6b66f09df45c",
+      "schema": {
+        "properties": {
+          "conceitos": {
+            "items": {
+              "properties": {
+                "conceito_id": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                },
+                "relacao": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "conceito_id",
+                "relacao",
+                "evidence"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "conceitos"
+        ],
+        "title": "jurisprudencia_enrichment",
+        "type": "object"
+      },
+      "template": "Você relaciona uma decisão judicial a conceitos do assunto \"{assunto}\".\nSeja conservador: uma lista vazia é a resposta esperada quando houver dúvida.\n\n## Relações possíveis\n{relacoes}\n\n## Regras\n- Só conta a posição da própria corte. Ignore o que a parte alega (\"o recorrente sustenta\")\n  e o que a instância de origem decidiu (\"o tribunal a quo entendeu\").\n- Citar um dispositivo, transcrever doutrina ou apenas mencionar um conceito não é relação.\n- Uma negação muda a relação: se a corte afasta ou não admite o conceito, use EXCEPTS ou\n  PROHIBITS, nunca APPLIES_TO.\n- OBLIGES, PROHIBITS, EXCEPTS e DEFINES precisam de evidência da tese ou do que a corte\n  decide; na dúvida, use APPLIES_TO ou omita.\n- No máximo uma relação por conceito: a mais específica.\n- `evidence` é uma oração completa e literal, nunca um título ou cabeçalho em letras maiúsculas.\n\n## Vocabulário de conceitos\nUse somente os ids abaixo. Se nenhum conceito se aplicar, devolva a lista vazia.\n{vocabulario}\n\n## Decisão\nTribunal: {tribunal}\nNúmero: {numero}\n\nEmenta:\n{ementa}\n\nTese:\n{tese}\n\nResponda em JSON. `evidence` é sempre um trecho literal da ementa ou da tese.\nCada item de `conceitos` tem `conceito_id`, `relacao` e `evidence`."
+    }
+  },
+  "snapshot_hash": "sha256:56020b0368b85c30e4d8ed0c7c41470fe91c6aa30c9c83073a6d250e0b2ef07f"
+}

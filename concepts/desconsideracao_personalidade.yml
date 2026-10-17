@@ -1,0 +1,444 @@
+# Concept vocabulary (ADR-0003) for the assunto "desconsideração da personalidade jurídica".
+# Drafted by an LLM and approved by the reviewer named on each entry; the instructions were rewritten
+# and re-approved on 2026-10-12.
+# The examples are invented on purpose: no dispositivo is cited or quoted, so the instructions do not
+# leak the evaluation slice (evaluation/enrichment_gold.yml) into the prompt.
+assunto: desconsideração da personalidade jurídica
+status: curated
+conceitos:
+  # DIREITO
+  - id: autonomia_patrimonial
+    label: "Autonomia patrimonial"
+    aliases: ["separação patrimonial", "patrimônio da pessoa jurídica"]
+    instructions: "Use quando o texto trata da separação entre o patrimônio da pessoa jurídica e o das pessoas que a compõem ou administram, seja como regra, seja como instrumento de alocação de riscos. Exemplo de redação: 'o patrimônio da empresa não se comunica com o de seus donos'. Não use para a violação dessa separação (confusao_patrimonial) nem para o limite do que o sócio responde (limitacao_de_responsabilidade)."
+    category: DIREITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: limitacao_de_responsabilidade
+    label: "Limitação de responsabilidade"
+    aliases: ["responsabilidade limitada", "benefício da limitação"]
+    instructions: "Use quando o texto trata de a responsabilidade do sócio ou membro se limitar ao capital subscrito, às cotas ou ao que a lei prevê, ou de dizer se os membros respondem ou não pelas dívidas da entidade. Exemplo de redação: 'cada sócio responde apenas até o valor de suas cotas'. Não use para a regra de separação dos patrimônios em si (autonomia_patrimonial) nem para a responsabilização do sócio depois da desconsideração (extensao_da_responsabilidade)."
+    category: DIREITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: direito_do_consumidor
+    label: "Direito do consumidor"
+    aliases: ["relação de consumo", "proteção do consumidor"]
+    instructions: "Use quando o texto trata da relação de consumo ou da proteção e defesa do consumidor como sistema normativo, seus princípios e seu alcance. Exemplo de redação: 'as regras de proteção valem nas relações de consumo'. Não use apenas porque a palavra 'consumidor' aparece: para quem adquire o produto ou sofre o dano, use consumidor."
+    category: DIREITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: direito_do_trabalho
+    label: "Direito do trabalho"
+    aliases: ["execução trabalhista", "relação de trabalho"]
+    instructions: "Use quando o texto trata de relação de trabalho, de verbas trabalhistas ou da execução de crédito trabalhista. Exemplo de redação: 'os bens dos donos respondem pelas verbas devidas ao empregado quando a empresa não paga'. Se o texto trata de empresas do grupo tidas como um só empregador, use também teoria_do_empregador_unico."
+    category: DIREITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: direito_ao_credito
+    label: "Direito ao crédito"
+    aliases: ["satisfação do crédito", "pretensão do credor"]
+    instructions: "Use quando o texto trata do direito do credor de receber o que lhe é devido ou da garantia patrimonial do crédito. Exemplo de redação: 'o patrimônio do devedor garante o pagamento de suas dívidas'. Não use para quem tem o crédito (credor) nem para o dano que a personalidade causa ao ressarcimento (prejuizo_ao_credor)."
+    category: DIREITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  # ATOR
+  - id: pessoa_juridica
+    label: "Pessoa jurídica"
+    aliases: ["personalidade jurídica", "autonomia da pessoa jurídica", "pessoa coletiva"]
+    instructions: "Use quando o texto se refere à pessoa jurídica como sujeito de direitos e obrigações distinto das pessoas que a compõem: sua existência, espécies (de direito público ou privado, associação, sociedade, fundação), registro, administração, dissolução, ou a pessoa jurídica cujos bens respondem pela obrigação. Um dispositivo que apenas enumera ou classifica espécies de pessoa jurídica também trata dela. Exemplos de redação: 'a sociedade empresária contratou em nome próprio'; 'a empresa devedora responde com seus bens'. Para a separação entre os patrimônios use autonomia_patrimonial; para empresas ligadas entre si use grupo_economico."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: socio
+    label: "Sócio"
+    aliases: ["quotista", "acionista", "sócio atingido"]
+    instructions: "Use quando o texto se refere ao sócio, associado ou membro da pessoa jurídica, em especial o que pode ser atingido pela desconsideração. Exemplo de redação: 'os bens particulares do sócio podem responder pela dívida'. Para quem administra, use administrador; se o sócio é o beneficiado por um abuso, use também beneficio_direto_ou_indireto."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: administrador
+    label: "Administrador"
+    aliases: ["gestor", "diretor", "sócio administrador"]
+    instructions: "Use quando o texto se refere a quem administra ou representa a pessoa jurídica (administrador, diretor, gestor, representante legal) ou à pessoa que exerce a administração. Exemplos de redação: 'o diretor assinou o contrato em nome da empresa'; 'o representante legal prestou contas aos sócios'. Não use para o sócio que não administra (socio). Um trecho que só descreve como a administração funciona, sem se referir à pessoa do administrador, não basta."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: credor
+    label: "Credor"
+    aliases: ["exequente", "autor da execução"]
+    instructions: "Use quando o texto se refere a quem tem crédito a receber da pessoa jurídica ou do sócio. Exemplo de redação: 'o credor pode pedir a medida'. Para o consumidor lesado, use consumidor; para o direito de receber, direito_ao_credito."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: consumidor
+    label: "Consumidor"
+    aliases: ["consumidor lesado"]
+    instructions: "Use quando o texto se refere ao consumidor, como destinatário final de produto ou serviço ou como parte prejudicada, inclusive por equiparação. Exemplos de redação: 'quem compra para uso próprio'; 'quem usa o serviço sem tê-lo contratado também é protegido'. Para o sistema de proteção, use direito_do_consumidor."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: grupo_economico
+    label: "Grupo econômico"
+    aliases: ["empresa do mesmo grupo", "sociedades coligadas"]
+    instructions: "Use quando o texto se refere a empresas integrantes de um mesmo grupo econômico ou societário, ou à relação entre elas. Exemplo de redação: 'as empresas do grupo atuam sob direção comum'. Para o tipo de vínculo entre as empresas, use também sociedade_controlada, sociedade_consorciada ou sociedade_coligada."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: ministerio_publico
+    label: "Ministério Público"
+    aliases: ["parquet"]
+    instructions: "Use quando o texto atribui ao Ministério Público a legitimidade para requerer a medida ou o faz intervir no processo. Exemplo de redação: 'o Ministério Público pode requerer, quando atuar no feito'. Para a legitimidade em geral, use também legitimidade_para_requerer."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: sociedade_controlada
+    label: "Sociedade controlada"
+    aliases: ["empresa controlada"]
+    instructions: "Use quando o texto se refere à sociedade controlada por outra, no contexto do grupo societário. Exemplo de redação: 'a sociedade controlada responde junto com a controladora'. Para a empresa que apenas pertence ao grupo, sem relação de controle, use grupo_economico."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: sociedade_consorciada
+    label: "Sociedade consorciada"
+    aliases: ["empresa consorciada"]
+    instructions: "Use quando o texto se refere às sociedades reunidas em consórcio e à sua responsabilidade. Exemplo de redação: 'cada empresa do consórcio responde pelo que contratou em conjunto'. Não confunda com sociedade_coligada."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: sociedade_coligada
+    label: "Sociedade coligada"
+    aliases: ["empresa coligada"]
+    instructions: "Use quando o texto se refere à sociedade coligada, distinta da controlada e da consorciada. Exemplo de redação: 'a empresa coligada só responde nas hipóteses previstas'. Se o texto também condiciona a responsabilidade à culpa, use culpa_ou_dolo."
+    category: ATOR
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  # PROCESSO
+  - id: incidente_de_desconsideracao
+    label: "Incidente de desconsideração da personalidade jurídica"
+    aliases: ["IDPJ", "incidente de desconsideração"]
+    instructions: "Use quando o texto trata do incidente processual que viabiliza a desconsideração: seu cabimento, instauração, processamento e decisão. Exemplo de redação: 'o incidente será instaurado a pedido da parte'. Não use para o pedido feito já na petição inicial (pedido_na_inicial) nem para o critério material da medida (abuso_da_personalidade)."
+    category: PROCESSO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: citacao_do_socio
+    label: "Citação do sócio"
+    aliases: ["citação para se manifestar", "chamamento do sócio"]
+    instructions: "Use quando o texto trata de citar o sócio ou a pessoa jurídica para se manifestar e requerer provas no incidente. Exemplo de redação: 'o sócio será citado para se defender e produzir provas no prazo legal'. Se o ponto é o direito ao contraditório em si, use também devido_processo_legal."
+    category: PROCESSO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: suspensao_do_processo
+    label: "Suspensão do processo"
+    aliases: ["suspensão do feito"]
+    instructions: "Use quando o texto trata da suspensão do processo durante o incidente. Exemplo de redação: 'instaurado o incidente, o processo fica suspenso'. Não use para o pedido formulado na petição inicial, em que não há suspensão (pedido_na_inicial)."
+    category: PROCESSO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: legitimidade_para_requerer
+    label: "Legitimidade para requerer"
+    aliases: ["parte legítima", "legitimidade ativa"]
+    instructions: "Use quando o texto trata de quem pode pedir a desconsideração. Exemplo de redação: 'a medida pode ser requerida pela parte interessada ou pelo Ministério Público'. Se cita o Ministério Público, use também ministerio_publico."
+    category: PROCESSO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: pedido_na_inicial
+    label: "Pedido na petição inicial"
+    aliases: ["requerimento na inicial", "desconsideração na inicial"]
+    instructions: "Use quando o texto trata de pedir a desconsideração já na petição inicial, o que dispensa o incidente. Exemplo de redação: 'se o pedido consta da petição inicial, não há incidente'. Para o incidente em si, use incidente_de_desconsideracao."
+    category: PROCESSO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: fase_de_execucao
+    label: "Fase de execução"
+    aliases: ["cumprimento de sentença", "execução de título"]
+    instructions: "Use quando o texto trata da desconsideração na fase de cumprimento de sentença ou na execução, ou em qualquer fase do processo. Exemplo de redação: 'a medida cabe também depois da sentença, na execução'. Não use para qualquer menção a processo: o texto deve situar a medida em uma fase."
+    category: PROCESSO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: desconsideracao_inversa
+    label: "Desconsideração inversa"
+    aliases: ["desconsideração invertida"]
+    instructions: "Use quando o texto trata de atingir o patrimônio da pessoa jurídica por dívida do sócio ou do administrador, o caminho inverso da desconsideração. Exemplo de redação: 'o patrimônio da sociedade responde pela dívida pessoal do sócio'."
+    category: PROCESSO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  # REQUISITO
+  - id: abuso_da_personalidade
+    label: "Abuso da personalidade"
+    aliases: ["abuso da personalidade jurídica", "uso abusivo da pessoa jurídica"]
+    instructions: "Use quando o texto trata do abuso da personalidade como pressuposto da desconsideração, de forma geral. Exemplo de redação: 'a pessoa jurídica foi usada de modo abusivo para frustrar obrigações'. Para cada forma específica, use desvio_de_finalidade ou confusao_patrimonial; para fundamentos como abuso de direito, excesso de poder ou infração da lei, veja também excesso_de_poder_ou_infracao."
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: desvio_de_finalidade
+    label: "Desvio de finalidade"
+    aliases: ["finalidade ilícita", "propósito fraudulento"]
+    instructions: "Use quando o texto trata da utilização da pessoa jurídica com propósito diverso do seu, para lesar credores ou praticar atos ilícitos, ou da exclusão dessa figura. Exemplos de redação: 'a empresa foi criada para ocultar bens'."
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: confusao_patrimonial
+    label: "Confusão patrimonial"
+    aliases: ["mistura de patrimônios", "ausência de separação patrimonial"]
+    instructions: "Use quando o texto trata da ausência de separação de fato entre os patrimônios da sociedade e das pessoas que a compõem ou administram, inclusive suas hipóteses. Exemplos de redação: 'o dono usava a conta da empresa como se fosse sua'; 'bens eram transferidos sem pagamento'. Um item que lista uma hipótese de confusão patrimonial aplica o conceito."
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: insolvencia
+    label: "Insolvência"
+    aliases: ["inadimplemento", "insuficiência de bens"]
+    instructions: "Use quando o texto trata da insuficiência de bens da pessoa jurídica para pagar a dívida, de falência, estado de insolvência, encerramento ou inatividade. Exemplo de redação: 'a empresa encerrou as atividades sem bens para pagar os credores'. Se o texto admite desconsiderar por essa mera insuficiência, use também teoria_menor."
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: prejuizo_ao_credor
+    label: "Prejuízo ao credor"
+    aliases: ["dano ao credor", "obstáculo ao ressarcimento"]
+    instructions: "Use quando o texto trata de a personalidade ser obstáculo ao ressarcimento de prejuízos, ou de dano causado a credores. Exemplo de redação: 'a forma societária impede o credor de ser pago'. Para a pessoa do credor, use credor."
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: beneficio_direto_ou_indireto
+    label: "Benefício direto ou indireto"
+    aliases: ["proveito do abuso"]
+    instructions: "Use quando o texto trata de o sócio ou administrador ter se beneficiado do abuso, direta ou indiretamente, como condição de ser atingido. Exemplo de redação: 'respondem os que se beneficiaram do ato'. Não use só porque o texto cita o sócio: ele precisa tratar do benefício."
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: culpa_ou_dolo
+    label: "Culpa ou dolo"
+    aliases: ["culpa", "dolo", "responsabilidade subjetiva"]
+    instructions: "Use quando o texto condiciona a responsabilidade à culpa ou ao dolo de quem responde, ou ressalva o direito de regresso contra quem agiu com culpa ou dolo. Exemplos de redação: 'a obrigação de indenizar depende de ter havido culpa'; 'resguarda-se o regresso contra o autor do dano, se houve dolo'. Não use para a responsabilidade objetiva."
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: excesso_de_poder_ou_infracao
+    label: "Excesso de poder ou infração"
+    aliases: ["excesso de poder", "infração da lei", "violação dos estatutos"]
+    instructions: "Use quando o texto trata de excesso de poder, infração da lei, fato ou ato ilícito, ou violação dos estatutos ou do contrato social como pressuposto da medida. Exemplo de redação: 'o administrador extrapolou os poderes do estatuto'. Para o abuso da personalidade em geral, use abuso_da_personalidade."
+    category: REQUISITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  # PRINCIPIO
+  - id: devido_processo_legal
+    label: "Devido processo legal"
+    aliases: ["contraditório e ampla defesa", "contraditório"]
+    instructions: "Use quando o texto trata de contraditório, ampla defesa ou devido processo legal, em especial a defesa de quem seria atingido. Exemplo de redação: 'ninguém é atingido sem ser ouvido'. Não use para qualquer regra procedimental sem relação com a defesa."
+    category: PRINCIPIO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: boa_fe
+    label: "Boa-fé"
+    aliases: ["boa-fé objetiva", "lealdade"]
+    instructions: "Use quando o texto invoca a boa-fé, subjetiva ou objetiva, ou a sua violação, inclusive a proteção de terceiros de boa-fé. Exemplo de redação: 'protege-se o terceiro que agiu de boa-fé'. Não use para qualquer menção a honestidade: o texto deve tratar da boa-fé como critério."
+    category: PRINCIPIO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  # TEORIA
+  - id: teoria_maior
+    label: "Teoria maior da desconsideração"
+    aliases: ["teoria maior"]
+    instructions: "Use quando o texto exige abuso da personalidade (desvio de finalidade ou confusão patrimonial) para desconsiderar, ou reafirma que sem esses requisitos a medida não cabe. Exemplo de redação: 'sem desvio de finalidade ou confusão patrimonial, não se desconsidera'. Use também abuso_da_personalidade quando o texto trata do abuso em si."
+    category: TEORIA
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: teoria_menor
+    label: "Teoria menor da desconsideração"
+    aliases: ["teoria menor"]
+    instructions: "Use quando o texto admite desconsiderar pela mera insolvência ou pelo simples obstáculo ao ressarcimento, sem exigir abuso. Exemplo de redação: 'basta que a personalidade dificulte o pagamento'. É a teoria adotada em relações de proteção ao vulnerável, em contraste com teoria_maior."
+    category: TEORIA
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: teoria_do_empregador_unico
+    label: "Teoria do empregador único"
+    aliases: ["empregador único"]
+    instructions: "Use quando o texto trata de empresas do mesmo grupo tidas como um só empregador, respondendo todas pelos créditos do empregado. Exemplo de redação: 'as empresas do grupo respondem em conjunto perante o trabalhador'. Em geral vem com direito_do_trabalho; não use para grupos fora da relação de trabalho."
+    category: TEORIA
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  # EFEITO
+  - id: extensao_da_responsabilidade
+    label: "Extensão da responsabilidade"
+    aliases: ["responsabilização do sócio", "atingimento do patrimônio do sócio"]
+    instructions: "Use quando o texto trata de os efeitos de certas obrigações alcançarem bens de sócios ou administradores (ou, na inversa, da pessoa jurídica). Exemplo de redação: 'a dívida da empresa pode atingir os bens particulares do sócio'. Se o texto classifica a responsabilidade como subsidiária ou solidária, use também responsabilidade_subsidiaria ou responsabilidade_solidaria."
+    category: EFEITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: ineficacia_relativa
+    label: "Ineficácia relativa da personalidade"
+    aliases: ["afastamento episódico da personalidade", "superação da personalidade"]
+    instructions: "Use quando o texto trata de a personalidade ser afastada só para o caso concreto, sem extinguir a pessoa jurídica. Exemplo de redação: 'a medida vale apenas para esta dívida; a empresa continua existindo'. Não use para dissolução ou extinção da pessoa jurídica."
+    category: EFEITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-11
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: responsabilidade_subsidiaria
+    label: "Responsabilidade subsidiária"
+    aliases: ["responder subsidiariamente"]
+    instructions: "Use quando o texto atribui responsabilidade subsidiária, que só alcança o responsável se o devedor principal não pagar. Exemplo de redação: 'responde subsidiariamente, depois de esgotados os bens do devedor'."
+    category: EFEITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12
+  - id: responsabilidade_solidaria
+    label: "Responsabilidade solidária"
+    aliases: ["responder solidariamente"]
+    instructions: "Use quando o texto atribui responsabilidade solidária, em que cada responsável responde pela dívida toda. Exemplo de redação: 'respondem solidariamente pela totalidade da obrigação'."
+    category: EFEITO
+    origin: llm
+    model: anthropic/claude-sonnet-5-5
+    created_at: 2026-10-12
+    updated_at: 2026-10-12
+    reviewed_by: Edson Mota Valença Filho
+    reviewed_on: 2026-10-12

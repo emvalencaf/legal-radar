@@ -1,0 +1,66 @@
+{
+  "lc": 1,
+  "type": "constructor",
+  "id": [
+    "langchain_core",
+    "prompts",
+    "structured",
+    "StructuredPrompt"
+  ],
+  "kwargs": {
+    "input_variables": [
+      "text"
+    ],
+    "messages": [
+      {
+        "lc": 1,
+        "type": "constructor",
+        "id": [
+          "langchain",
+          "prompts",
+          "chat",
+          "HumanMessagePromptTemplate"
+        ],
+        "kwargs": {
+          "prompt": {
+            "lc": 1,
+            "type": "constructor",
+            "id": [
+              "langchain",
+              "prompts",
+              "prompt",
+              "PromptTemplate"
+            ],
+            "kwargs": {
+              "input_variables": [
+                "text"
+              ],
+              "template": "Return the conceito id (snake_case) that this dispositivo is about:\n{text}",
+              "template_format": "f-string"
+            },
+            "name": "PromptTemplate"
+          }
+        }
+      }
+    ],
+    "schema_": {
+      "title": "dispositivo_concept",
+      "type": "object",
+      "description": "O conceito jurídico de que o dispositivo trata.",
+      "properties": {
+        "conceito_id": {
+          "type": "string",
+          "description": "Id (snake_case) de um conceito do vocabulário do assunto.",
+          "enum": [
+            "placeholder"
+          ]
+        }
+      },
+      "required": [
+        "conceito_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "name": "StructuredPrompt"
+}
